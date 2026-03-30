@@ -27,4 +27,10 @@ public interface SchoolMapper extends BaseMapperX<SchoolDO> {
                 .orderByDesc(SchoolDO::getId));
     }
 
+    default List<SchoolDO> selectListByAreaIds(List<Long> areaIds) {
+        return selectList(new LambdaQueryWrapperX<SchoolDO>()
+                .inIfPresent(SchoolDO::getAreaId, areaIds)
+                .orderByAsc(SchoolDO::getId));
+    }
+
 }

@@ -6,8 +6,6 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.framework.ip.core.Area;
-import cn.iocoder.yudao.framework.ip.core.utils.AreaUtils;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.GradeCatalogSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassSimpleRespVO;
@@ -32,14 +30,16 @@ import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.Collection;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,9 +69,16 @@ public class SchoolServiceImpl implements SchoolService {
     private SchoolYearMapper schoolYearMapper;
     @Resource
     private SchoolClassMapper schoolClassMapper;
+    @Resource
+    private StudentMapper studentMapper;
+    @Resource
+    private StudentClassMapper studentClassMapper;
+    @Resource
+    private AreaApi areaApi;
 
     @Override
     public Long createSchool(SchoolSaveReqVO createReqVO) {
+        validateAreaSelectable(createReqVO.getAreaId());
         // 插入
         SchoolDO school = BeanUtils.toBean(createReqVO, SchoolDO.class);
         schoolMapper.insert(school);
@@ -83,7 +90,10 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     public void updateSchool(SchoolSaveReqVO updateReqVO) {
         // 校验存在
-        validateSchoolExists(updateReqVO.getId());
+        SchoolDO school = validateSchoolExists(updateReqVO.getId());
+        if (!Objects.equals(school.getAreaId(), updateReqVO.getAreaId())) {
+            validateAreaSelectable(updateReqVO.getAreaId());
+        }
         // 更新
         SchoolDO updateObj = BeanUtils.toBean(updateReqVO, SchoolDO.class);
         schoolMapper.updateById(updateObj);
@@ -94,6 +104,7 @@ public class SchoolServiceImpl implements SchoolService {
     public void deleteSchool(Long id) {
         // 校验存在
         validateSchoolExists(id);
+        validateSchoolUnused(id);
         // 删除
         schoolMapper.deleteById(id);
 
@@ -106,20 +117,34 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteSchoolListByIds(List<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return;
+        }
+        List<Long> existedSchoolIds = convertList(schoolMapper.selectList(SchoolDO::getId, ids), SchoolDO::getId);
+        if (CollUtil.isEmpty(existedSchoolIds)) {
+            return;
+        }
+        validateSchoolUnused(existedSchoolIds);
         // 删除
-        schoolMapper.deleteByIds(ids);
+        schoolMapper.deleteByIds(existedSchoolIds);
 
         // 删除子表
-        deleteSchoolClassBySchoolIds(ids);
-        deleteSchoolGradeBySchoolIds(ids);
-        deleteSchoolYearBySchoolIds(ids);
+        deleteSchoolClassBySchoolIds(existedSchoolIds);
+        deleteSchoolGradeBySchoolIds(existedSchoolIds);
+        deleteSchoolYearBySchoolIds(existedSchoolIds);
     }
 
 
-    private void validateSchoolExists(Long id) {
-        if (schoolMapper.selectById(id) == null) {
+    private SchoolDO validateSchoolExists(Long id) {
+        SchoolDO school = schoolMapper.selectById(id);
+        if (school == null) {
             throw exception(SCHOOL_NOT_EXISTS);
         }
+        return school;
+    }
+
+    private void validateAreaSelectable(Long areaId) {
+        areaApi.validateAreaSelectable(Math.toIntExact(areaId));
     }
 
     @Override
@@ -129,7 +154,9 @@ public class SchoolServiceImpl implements SchoolService {
 
     @Override
     public PageResult<SchoolDO> getSchoolPage(SchoolPageReqVO pageReqVO) {
-        return schoolMapper.selectPage(pageReqVO, buildAreaIds(pageReqVO.getAreaId()));
+        List<Long> areaIds = pageReqVO.getAreaId() == null ? null
+                : convertList(areaApi.getSelectableAreaIds(Math.toIntExact(pageReqVO.getAreaId())), Long::valueOf);
+        return schoolMapper.selectPage(pageReqVO, areaIds);
     }
 
     @Override
@@ -384,6 +411,7 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     public void deleteSchoolClass(Long id) {
         validateSchoolClassExists(id);
+        validateSchoolClassUnused(id);
         schoolClassMapper.deleteById(id);
     }
 
@@ -392,7 +420,12 @@ public class SchoolServiceImpl implements SchoolService {
         if (CollUtil.isEmpty(ids)) {
             return;
         }
-        schoolClassMapper.deleteByIds(ids);
+        List<Long> existedClassIds = convertList(schoolClassMapper.selectList(SchoolClassDO::getId, ids), SchoolClassDO::getId);
+        if (CollUtil.isEmpty(existedClassIds)) {
+            return;
+        }
+        validateSchoolClassUnused(existedClassIds);
+        schoolClassMapper.deleteByIds(existedClassIds);
     }
 
     @Override
@@ -401,9 +434,12 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     @Override
-    public List<SchoolClassSimpleRespVO> getSchoolClassList(Long schoolId) {
+    public List<SchoolClassSimpleRespVO> getSchoolClassList(Long schoolId, Long schoolYearId) {
         validateSchoolExists(schoolId);
-        return buildSchoolClassSimpleRespList(schoolClassMapper.selectListBySchoolId(schoolId));
+        List<SchoolClassDO> schoolClasses = schoolYearId == null
+                ? schoolClassMapper.selectListBySchoolId(schoolId)
+                : schoolClassMapper.selectListBySchoolIdAndSchoolYearId(schoolId, schoolYearId);
+        return buildSchoolClassSimpleRespList(schoolClasses);
     }
 
     private SchoolClassDO validateSchoolClassExists(Long id) {
@@ -425,6 +461,40 @@ public class SchoolServiceImpl implements SchoolService {
             return;
         }
         throw exception(SCHOOL_CLASS_DUPLICATE);
+    }
+
+    private void validateSchoolUnused(Long schoolId) {
+        if (studentMapper.countByCurrentSchoolId(schoolId) > 0) {
+            throw exception(SCHOOL_IN_USE_BY_STUDENT);
+        }
+        List<Long> classIds = convertList(schoolClassMapper.selectListBySchoolId(schoolId), SchoolClassDO::getId);
+        if (CollUtil.isNotEmpty(classIds) && studentClassMapper.countByClassIds(classIds) > 0) {
+            throw exception(SCHOOL_IN_USE_BY_STUDENT);
+        }
+    }
+
+    private void validateSchoolUnused(List<Long> schoolIds) {
+        if (studentMapper.countByCurrentSchoolIds(schoolIds) > 0) {
+            throw exception(SCHOOL_IN_USE_BY_STUDENT);
+        }
+        List<Long> classIds = convertList(
+                schoolClassMapper.selectList(SchoolClassDO::getSchoolId, schoolIds),
+                SchoolClassDO::getId);
+        if (CollUtil.isNotEmpty(classIds) && studentClassMapper.countByClassIds(classIds) > 0) {
+            throw exception(SCHOOL_IN_USE_BY_STUDENT);
+        }
+    }
+
+    private void validateSchoolClassUnused(Long classId) {
+        if (studentClassMapper.countByClassId(classId) > 0) {
+            throw exception(SCHOOL_CLASS_IN_USE_BY_STUDENT);
+        }
+    }
+
+    private void validateSchoolClassUnused(List<Long> classIds) {
+        if (studentClassMapper.countByClassIds(classIds) > 0) {
+            throw exception(SCHOOL_CLASS_IN_USE_BY_STUDENT);
+        }
     }
 
     private void deleteSchoolClassBySchoolId(Long schoolId) {
@@ -548,6 +618,7 @@ public class SchoolServiceImpl implements SchoolService {
             SchoolClassSimpleRespVO respVO = new SchoolClassSimpleRespVO();
             respVO.setId(schoolClass.getId());
             respVO.setEntryYear(schoolClass.getEntryYear());
+            respVO.setSchoolGradeId(schoolClass.getSchoolGradeId());
             respVO.setClassName(schoolClass.getClassName());
             respVO.setStage(schoolClass.getStage());
             respVO.setGradeNo(schoolClass.getGradeNo());
@@ -607,33 +678,12 @@ public class SchoolServiceImpl implements SchoolService {
         return schoolYear.getYearStart() + "-" + schoolYear.getYearEnd() + "学年";
     }
 
-    private List<Long> buildAreaIds(Long areaId) {
-        if (areaId == null) {
-            return null;
-        }
-        Area root = AreaUtils.getArea(areaId.intValue());
-        if (root == null) {
-            return Collections.singletonList(areaId);
-        }
-        List<Long> areaIds = new ArrayList<>();
-        collectAreaIds(root, areaIds);
-        return areaIds;
-    }
-
-    private void collectAreaIds(Area area, List<Long> areaIds) {
-        areaIds.add(area.getId().longValue());
-        if (CollUtil.isEmpty(area.getChildren())) {
-            return;
-        }
-        area.getChildren().forEach(child -> collectAreaIds(child, areaIds));
-    }
-
     private void fillClassNameIfBlank(SchoolClassDO schoolClass, GradeCatalogDO gradeCatalog) {
         if (StrUtil.isNotBlank(schoolClass.getClassName())) {
             return;
         }
         String gradeName = gradeCatalog != null ? gradeCatalog.getGradeName() : "";
-        schoolClass.setClassName(StrUtil.format("{}级{}{}班", schoolClass.getEntryYear(), gradeName, schoolClass.getClassNo()));
+        schoolClass.setClassName(SchoolClassUtils.buildClassName(schoolClass.getEntryYear(), gradeName, schoolClass.getClassNo()));
     }
 
 }

@@ -16,6 +16,7 @@ import cn.iocoder.yudao.module.member.convert.user.MemberUserConvert;
 import cn.iocoder.yudao.module.member.dal.dataobject.user.MemberUserDO;
 import cn.iocoder.yudao.module.member.dal.mysql.user.MemberUserMapper;
 import cn.iocoder.yudao.module.member.mq.producer.user.MemberUserProducer;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import cn.iocoder.yudao.module.system.api.sms.SmsCodeApi;
 import cn.iocoder.yudao.module.system.api.sms.dto.code.SmsCodeUseReqDTO;
 import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
@@ -63,6 +64,8 @@ public class MemberUserServiceImpl implements MemberUserService {
 
     @Resource
     private MemberUserProducer memberUserProducer;
+    @Resource
+    private AreaApi areaApi;
 
     @Override
     public MemberUserDO getUserByMobile(String mobile) {
@@ -235,9 +238,11 @@ public class MemberUserServiceImpl implements MemberUserService {
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(MemberUserUpdateReqVO updateReqVO) {
         // 校验存在
-        validateUserExists(updateReqVO.getId());
+        MemberUserDO oldUser = validateUserExists(updateReqVO.getId());
         // 校验手机唯一
         validateMobileUnique(updateReqVO.getId(), updateReqVO.getMobile());
+        // 校验地区可选
+        validateAreaSelectableIfChanged(oldUser.getAreaId(), updateReqVO.getAreaId());
 
         // 更新
         MemberUserDO updateObj = MemberUserConvert.INSTANCE.convert(updateReqVO);
@@ -272,6 +277,21 @@ public class MemberUserServiceImpl implements MemberUserService {
         if (!user.getId().equals(id)) {
             throw exception(USER_MOBILE_USED, mobile);
         }
+    }
+
+    private void validateAreaSelectable(Long areaId) {
+        if (areaId == null) {
+            return;
+        }
+        areaApi.validateAreaSelectable(Math.toIntExact(areaId));
+    }
+
+    private void validateAreaSelectableIfChanged(Integer oldAreaId, Long newAreaId) {
+        Integer nextAreaId = newAreaId == null ? null : Math.toIntExact(newAreaId);
+        if (ObjUtil.equal(oldAreaId, nextAreaId)) {
+            return;
+        }
+        validateAreaSelectable(newAreaId);
     }
 
     @Override

@@ -7,6 +7,7 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -34,6 +35,13 @@ public interface SchoolYearMapper extends BaseMapperX<SchoolYearDO> {
         return selectOne(new LambdaQueryWrapperX<SchoolYearDO>()
                 .eq(SchoolYearDO::getSchoolId, schoolId)
                 .eq(SchoolYearDO::getYearStart, yearStart));
+    }
+
+    default List<SchoolYearDO> selectListBySchoolIdsAndYearStarts(Collection<Long> schoolIds,
+                                                                  Collection<Integer> yearStarts) {
+        return selectList(new LambdaQueryWrapperX<SchoolYearDO>()
+                .inIfPresent(SchoolYearDO::getSchoolId, schoolIds)
+                .inIfPresent(SchoolYearDO::getYearStart, yearStarts));
     }
 
     default int deleteBySchoolId(Long schoolId) {

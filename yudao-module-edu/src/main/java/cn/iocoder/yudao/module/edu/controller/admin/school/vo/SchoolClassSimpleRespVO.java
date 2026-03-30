@@ -13,6 +13,9 @@ public class SchoolClassSimpleRespVO {
     @Schema(description = "入学批次", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023")
     private Integer entryYear;
 
+    @Schema(description = "学校年级ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long schoolGradeId;
+
     @Schema(description = "班级名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023级一年级1班")
     private String className;
 

@@ -5,6 +5,7 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.expresstemplate.*;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressTemplateChargeDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressTemplateDO;
@@ -41,12 +42,16 @@ public class DeliveryExpressTemplateServiceImpl implements DeliveryExpressTempla
     private DeliveryExpressTemplateChargeMapper expressTemplateChargeMapper;
     @Resource
     private DeliveryExpressTemplateFreeMapper expressTemplateFreeMapper;
+    @Resource
+    private AreaApi areaApi;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createDeliveryExpressTemplate(DeliveryExpressTemplateCreateReqVO createReqVO) {
         // 校验模板名是否唯一
         validateTemplateNameUnique(createReqVO.getName(), null);
+        // 校验区域可选
+        validateAreaSelectable(createReqVO.getCharges(), createReqVO.getFrees());
 
         // 插入
         DeliveryExpressTemplateDO template = INSTANCE.convert(createReqVO);
@@ -73,6 +78,8 @@ public class DeliveryExpressTemplateServiceImpl implements DeliveryExpressTempla
         validateDeliveryExpressTemplateExists(updateReqVO.getId());
         // 校验模板名是否唯一
         validateTemplateNameUnique(updateReqVO.getName(), updateReqVO.getId());
+        // 校验区域可选
+        validateAreaSelectable(updateReqVO.getId(), updateReqVO.getCharges(), updateReqVO.getFrees());
 
         // 更新运费从表
         updateExpressTemplateCharge(updateReqVO.getId(), updateReqVO.getChargeMode(), updateReqVO.getCharges());
@@ -164,6 +171,42 @@ public class DeliveryExpressTemplateServiceImpl implements DeliveryExpressTempla
         if (expressTemplateMapper.selectById(id) == null) {
             throw exception(EXPRESS_TEMPLATE_NOT_EXISTS);
         }
+    }
+
+    private void validateAreaSelectable(List<DeliveryExpressTemplateChargeBaseVO> charges,
+                                        List<DeliveryExpressTemplateFreeBaseVO> frees) {
+        areaApi.validateAreaSelectableList(convertSelectableAreaIds(charges, frees));
+    }
+
+    private void validateAreaSelectable(Long templateId, List<DeliveryExpressTemplateChargeBaseVO> charges,
+                                        List<DeliveryExpressTemplateFreeBaseVO> frees) {
+        Set<Integer> oldAreaIds = new LinkedHashSet<>();
+        expressTemplateChargeMapper.selectListByTemplateId(templateId).stream()
+                .map(DeliveryExpressTemplateChargeDO::getAreaIds)
+                .filter(CollUtil::isNotEmpty)
+                .forEach(oldAreaIds::addAll);
+        expressTemplateFreeMapper.selectListByTemplateId(templateId).stream()
+                .map(DeliveryExpressTemplateFreeDO::getAreaIds)
+                .filter(CollUtil::isNotEmpty)
+                .forEach(oldAreaIds::addAll);
+
+        List<Integer> newAreaIds = convertSelectableAreaIds(charges, frees);
+        newAreaIds.removeIf(oldAreaIds::contains);
+        areaApi.validateAreaSelectableList(newAreaIds);
+    }
+
+    private List<Integer> convertSelectableAreaIds(List<DeliveryExpressTemplateChargeBaseVO> charges,
+                                                   List<DeliveryExpressTemplateFreeBaseVO> frees) {
+        List<Integer> areaIds = new ArrayList<>();
+        if (CollUtil.isNotEmpty(charges)) {
+            charges.stream().filter(charge -> CollUtil.isNotEmpty(charge.getAreaIds()))
+                    .forEach(charge -> areaIds.addAll(charge.getAreaIds()));
+        }
+        if (CollUtil.isNotEmpty(frees)) {
+            frees.stream().filter(free -> CollUtil.isNotEmpty(free.getAreaIds()))
+                    .forEach(free -> areaIds.addAll(free.getAreaIds()));
+        }
+        return areaIds;
     }
 
     @Override

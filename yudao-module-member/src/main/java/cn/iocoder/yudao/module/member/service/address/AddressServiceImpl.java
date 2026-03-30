@@ -6,12 +6,14 @@ import cn.iocoder.yudao.module.member.controller.app.address.vo.AppAddressUpdate
 import cn.iocoder.yudao.module.member.convert.address.AddressConvert;
 import cn.iocoder.yudao.module.member.dal.dataobject.address.MemberAddressDO;
 import cn.iocoder.yudao.module.member.dal.mysql.address.MemberAddressMapper;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import jakarta.annotation.Resource;
 import java.util.List;
+import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.member.enums.ErrorCodeConstants.ADDRESS_NOT_EXISTS;
@@ -27,10 +29,13 @@ public class AddressServiceImpl implements AddressService {
 
     @Resource
     private MemberAddressMapper memberAddressMapper;
+    @Resource
+    private AreaApi areaApi;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createAddress(Long userId, AppAddressCreateReqVO createReqVO) {
+        validateAreaSelectable(createReqVO.getAreaId());
         // 如果添加的是默认收件地址，则将原默认地址修改为非默认
         if (Boolean.TRUE.equals(createReqVO.getDefaultStatus())) {
             List<MemberAddressDO> addresses = memberAddressMapper.selectListByUserIdAndDefaulted(userId, true);
@@ -49,7 +54,8 @@ public class AddressServiceImpl implements AddressService {
     @Transactional(rollbackFor = Exception.class)
     public void updateAddress(Long userId, AppAddressUpdateReqVO updateReqVO) {
         // 校验存在,校验是否能够操作
-        validAddressExists(userId, updateReqVO.getId());
+        MemberAddressDO oldAddress = validAddressExists(userId, updateReqVO.getId());
+        validateAreaSelectableIfChanged(oldAddress.getAreaId(), updateReqVO.getAreaId());
 
         // 如果修改的是默认收件地址，则将原默认地址修改为非默认
         if (Boolean.TRUE.equals(updateReqVO.getDefaultStatus())) {
@@ -71,11 +77,26 @@ public class AddressServiceImpl implements AddressService {
         memberAddressMapper.deleteById(id);
     }
 
-    private void validAddressExists(Long userId, Long id) {
+    private MemberAddressDO validAddressExists(Long userId, Long id) {
         MemberAddressDO addressDO = getAddress(userId, id);
         if (addressDO == null) {
             throw exception(ADDRESS_NOT_EXISTS);
         }
+        return addressDO;
+    }
+
+    private void validateAreaSelectable(Long areaId) {
+        if (areaId == null) {
+            return;
+        }
+        areaApi.validateAreaSelectable(Math.toIntExact(areaId));
+    }
+
+    private void validateAreaSelectableIfChanged(Long oldAreaId, Long newAreaId) {
+        if (Objects.equals(oldAreaId, newAreaId)) {
+            return;
+        }
+        validateAreaSelectable(newAreaId);
     }
 
     @Override

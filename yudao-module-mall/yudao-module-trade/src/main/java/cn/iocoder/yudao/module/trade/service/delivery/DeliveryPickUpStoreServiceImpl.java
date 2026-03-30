@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.trade.service.delivery;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpBindReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.pickup.DeliveryPickUpStoreCreateReqVO;
@@ -16,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PICK_UP_STORE_NOT_EXISTS;
@@ -34,9 +36,12 @@ public class DeliveryPickUpStoreServiceImpl implements DeliveryPickUpStoreServic
 
     @Resource
     private AdminUserApi adminUserApi;
+    @Resource
+    private AreaApi areaApi;
 
     @Override
     public Long createDeliveryPickUpStore(DeliveryPickUpStoreCreateReqVO createReqVO) {
+        validateAreaSelectable(createReqVO.getAreaId());
         // 插入
         DeliveryPickUpStoreDO deliveryPickUpStore = DeliveryPickUpStoreConvert.INSTANCE.convert(createReqVO);
         deliveryPickUpStoreMapper.insert(deliveryPickUpStore);
@@ -47,7 +52,8 @@ public class DeliveryPickUpStoreServiceImpl implements DeliveryPickUpStoreServic
     @Override
     public void updateDeliveryPickUpStore(DeliveryPickUpStoreUpdateReqVO updateReqVO) {
         // 校验存在
-        validateDeliveryPickUpStoreExists(updateReqVO.getId());
+        DeliveryPickUpStoreDO oldStore = validateDeliveryPickUpStoreExists(updateReqVO.getId());
+        validateAreaSelectableIfChanged(oldStore.getAreaId(), updateReqVO.getAreaId());
         // 更新
         DeliveryPickUpStoreDO updateObj = DeliveryPickUpStoreConvert.INSTANCE.convert(updateReqVO);
         deliveryPickUpStoreMapper.updateById(updateObj);
@@ -61,11 +67,26 @@ public class DeliveryPickUpStoreServiceImpl implements DeliveryPickUpStoreServic
         deliveryPickUpStoreMapper.deleteById(id);
     }
 
-    private void validateDeliveryPickUpStoreExists(Long id) {
+    private DeliveryPickUpStoreDO validateDeliveryPickUpStoreExists(Long id) {
         DeliveryPickUpStoreDO deliveryPickUpStore = deliveryPickUpStoreMapper.selectById(id);
         if (deliveryPickUpStore == null) {
             throw exception(PICK_UP_STORE_NOT_EXISTS);
         }
+        return deliveryPickUpStore;
+    }
+
+    private void validateAreaSelectable(Integer areaId) {
+        if (areaId == null) {
+            return;
+        }
+        areaApi.validateAreaSelectable(areaId);
+    }
+
+    private void validateAreaSelectableIfChanged(Integer oldAreaId, Integer newAreaId) {
+        if (Objects.equals(oldAreaId, newAreaId)) {
+            return;
+        }
+        validateAreaSelectable(newAreaId);
     }
 
     @Override

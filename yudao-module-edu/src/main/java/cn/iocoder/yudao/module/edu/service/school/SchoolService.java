@@ -250,8 +250,9 @@ public interface SchoolService {
      * 获得班级精简列表
      *
      * @param schoolId 学校编号
+     * @param schoolYearId 学年编号
      * @return 班级精简列表
      */
-    List<SchoolClassSimpleRespVO> getSchoolClassList(Long schoolId);
+    List<SchoolClassSimpleRespVO> getSchoolClassList(Long schoolId, Long schoolYearId);
 
 }

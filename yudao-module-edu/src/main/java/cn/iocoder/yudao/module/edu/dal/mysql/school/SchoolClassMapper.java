@@ -31,6 +31,15 @@ public interface SchoolClassMapper extends BaseMapperX<SchoolClassDO> {
                 .orderByDesc(SchoolClassDO::getId));
     }
 
+    default List<SchoolClassDO> selectListBySchoolIdAndSchoolYearId(Long schoolId, Long schoolYearId) {
+        return selectList(new LambdaQueryWrapperX<SchoolClassDO>()
+                .eq(SchoolClassDO::getSchoolId, schoolId)
+                .eq(SchoolClassDO::getSchoolYearId, schoolYearId)
+                .orderByDesc(SchoolClassDO::getEntryYear)
+                .orderByAsc(SchoolClassDO::getClassNo)
+                .orderByDesc(SchoolClassDO::getId));
+    }
+
     default SchoolClassDO selectByUniqueKey(Long schoolId, Integer entryYear, Long schoolYearId,
                                             Long schoolGradeId, Integer classNo) {
         return selectOne(new LambdaQueryWrapperX<SchoolClassDO>()

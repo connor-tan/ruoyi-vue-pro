@@ -326,8 +326,10 @@ public class SchoolController {
     @Operation(summary = "获得班级精简列表")
     @Parameter(name = "schoolId", description = "学校ID", required = true)
     @PreAuthorize("@ss.hasPermission('edu:school:query')")
-    public CommonResult<List<SchoolClassSimpleRespVO>> getSchoolClassSimpleList(@RequestParam("schoolId") Long schoolId) {
-        return success(schoolService.getSchoolClassList(schoolId));
+    public CommonResult<List<SchoolClassSimpleRespVO>> getSchoolClassSimpleList(
+            @RequestParam("schoolId") Long schoolId,
+            @RequestParam(value = "schoolYearId", required = false) Long schoolYearId) {
+        return success(schoolService.getSchoolClassList(schoolId, schoolYearId));
     }
 
 }

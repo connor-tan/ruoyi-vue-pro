@@ -20,6 +20,7 @@ import cn.iocoder.yudao.module.crm.service.customer.CrmCustomerService;
 import cn.iocoder.yudao.module.crm.service.permission.CrmPermissionService;
 import cn.iocoder.yudao.module.crm.service.permission.bo.CrmPermissionCreateReqBO;
 import cn.iocoder.yudao.module.crm.service.permission.bo.CrmPermissionTransferReqBO;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
 import com.mzt.logapi.context.LogRecordContext;
 import com.mzt.logapi.service.impl.DiffParseFunction;
@@ -33,6 +34,7 @@ import org.springframework.validation.annotation.Validated;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
@@ -68,6 +70,8 @@ public class CrmContactServiceImpl implements CrmContactService {
 
     @Resource
     private AdminUserApi adminUserApi;
+    @Resource
+    private AreaApi areaApi;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -77,6 +81,8 @@ public class CrmContactServiceImpl implements CrmContactService {
         createReqVO.setId(null);
         // 1. 校验关联数据
         validateRelationDataExists(createReqVO);
+        // 1.2 校验地区可选
+        validateAreaSelectable(createReqVO.getAreaId());
 
         // 2. 插入联系人
         CrmContactDO contact = BeanUtils.toBean(createReqVO, CrmContactDO.class);
@@ -108,6 +114,8 @@ public class CrmContactServiceImpl implements CrmContactService {
         CrmContactDO oldContact = validateContactExists(updateReqVO.getId());
         // 1.2 校验关联数据
         validateRelationDataExists(updateReqVO);
+        // 1.3 校验地区可选
+        validateAreaSelectableIfChanged(oldContact.getAreaId(), updateReqVO.getAreaId());
 
         // 2. 更新联系人
         CrmContactDO updateObj = BeanUtils.toBean(updateReqVO, CrmContactDO.class);
@@ -141,6 +149,20 @@ public class CrmContactServiceImpl implements CrmContactService {
         if (saveReqVO.getBusinessId() != null && businessService.getBusiness(saveReqVO.getBusinessId()) == null) {
             throw exception(BUSINESS_NOT_EXISTS);
         }
+    }
+
+    private void validateAreaSelectable(Integer areaId) {
+        if (areaId == null) {
+            return;
+        }
+        areaApi.validateAreaSelectable(areaId);
+    }
+
+    private void validateAreaSelectableIfChanged(Integer oldAreaId, Integer newAreaId) {
+        if (Objects.equals(oldAreaId, newAreaId)) {
+            return;
+        }
+        validateAreaSelectable(newAreaId);
     }
 
     @Override

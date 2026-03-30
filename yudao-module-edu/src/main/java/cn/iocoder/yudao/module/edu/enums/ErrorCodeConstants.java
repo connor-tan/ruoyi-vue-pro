@@ -18,6 +18,8 @@ public interface ErrorCodeConstants {
     ErrorCode SCHOOL_CLASS_DUPLICATE = new ErrorCode(1_016_001_012, "班级已存在");
     ErrorCode SCHOOL_YEAR_DUPLICATE = new ErrorCode(1_016_001_013, "学校学年已存在");
     ErrorCode SCHOOL_GRADE_IN_USE_UPDATE = new ErrorCode(1_016_001_014, "学校年级已被班级引用，无法修改");
+    ErrorCode SCHOOL_IN_USE_BY_STUDENT = new ErrorCode(1_016_001_015, "学校已被学生引用，无法删除");
+    ErrorCode SCHOOL_CLASS_IN_USE_BY_STUDENT = new ErrorCode(1_016_001_016, "班级已被学生引用，无法删除");
 
     ErrorCode STUDENT_NOT_EXISTS = new ErrorCode(1_017_001_001, "学生不存在");
     ErrorCode STUDENT_PARENT_NOT_EXISTS = new ErrorCode(1_017_001_002, "家长会员不存在");
@@ -28,4 +30,16 @@ public interface ErrorCodeConstants {
     ErrorCode STUDENT_CLASS_MULTI_CURRENT = new ErrorCode(1_017_001_007, "学生班级记录最多只能有一条当前记录");
     ErrorCode STUDENT_CLASS_DUPLICATE_START_DATE = new ErrorCode(1_017_001_008, "学生班级记录入班日期不能重复");
     ErrorCode STUDENT_CLASS_DATE_OVERLAP = new ErrorCode(1_017_001_009, "学生班级记录时间区间不能重叠");
+    ErrorCode STUDENT_PROMOTION_TARGET_SCHOOL_YEAR_INVALID = new ErrorCode(1_017_001_010, "目标学年必须晚于来源学年");
+    ErrorCode STUDENT_PROMOTION_TARGET_YEAR_INVALID = new ErrorCode(1_017_001_011, "目标学年必须晚于来源学年");
+    ErrorCode STUDENT_PROMOTION_SCOPE_INVALID = new ErrorCode(1_017_001_012, "学校范围类型不正确");
+    ErrorCode STUDENT_PROMOTION_SCHOOL_IDS_EMPTY = new ErrorCode(1_017_001_013, "请选择要执行升班的学校");
+    ErrorCode STUDENT_PROMOTION_ADJUST_ACTION_INVALID = new ErrorCode(1_017_001_014, "学生升班调整动作不正确");
+    ErrorCode STUDENT_PROMOTION_ADJUST_TARGET_CLASS_REQUIRED = new ErrorCode(1_017_001_015, "学生升班调整必须指定目标班级");
+    ErrorCode STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID = new ErrorCode(1_017_001_016, "学生升班调整的目标班级不正确");
+    ErrorCode STUDENT_PROMOTION_ADJUST_TARGET_CLASS_NOT_IN_TARGET_YEAR = new ErrorCode(1_017_001_017, "学生升班调整的目标班级不属于目标学年");
+    ErrorCode STUDENT_PROMOTION_TASK_NOT_EXISTS = new ErrorCode(1_017_001_018, "升班任务不存在");
+    ErrorCode STUDENT_PROMOTION_TASK_NOT_ROLLBACKABLE = new ErrorCode(1_017_001_019, "当前升班任务不允许回滚");
+    ErrorCode STUDENT_PROMOTION_TASK_ROLLBACK_STATE_INVALID = new ErrorCode(1_017_001_020, "当前升班任务状态已变化，无法回滚");
+    ErrorCode STUDENT_PROMOTION_NO_ELIGIBLE_STUDENTS = new ErrorCode(1_017_001_021, "当前没有符合升班条件的学生");
 }

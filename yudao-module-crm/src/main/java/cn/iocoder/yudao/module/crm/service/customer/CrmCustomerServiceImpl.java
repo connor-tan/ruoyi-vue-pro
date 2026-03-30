@@ -31,6 +31,7 @@ import cn.iocoder.yudao.module.crm.service.customer.bo.CrmCustomerCreateReqBO;
 import cn.iocoder.yudao.module.crm.service.permission.CrmPermissionService;
 import cn.iocoder.yudao.module.crm.service.permission.bo.CrmPermissionCreateReqBO;
 import cn.iocoder.yudao.module.crm.service.permission.bo.CrmPermissionTransferReqBO;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import cn.iocoder.yudao.module.system.api.user.AdminUserApi;
 import cn.iocoder.yudao.module.system.api.user.dto.AdminUserRespDTO;
 import com.mzt.logapi.context.LogRecordContext;
@@ -86,6 +87,8 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
 
     @Resource
     private AdminUserApi adminUserApi;
+    @Resource
+    private AreaApi areaApi;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -95,6 +98,8 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
         createReqVO.setId(null);
         // 1. 校验拥有客户是否到达上限
         validateCustomerExceedOwnerLimit(createReqVO.getOwnerUserId(), 1);
+        // 1.2 校验地区可选
+        validateAreaSelectable(createReqVO.getAreaId());
 
         // 2. 插入客户
         CrmCustomerDO customer = initCustomer(createReqVO, userId);
@@ -131,6 +136,8 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
         updateReqVO.setOwnerUserId(null);  // 更新的时候，要把 updateReqVO 负责人设置为空，避免修改
         // 1. 校验存在
         CrmCustomerDO oldCustomer = validateCustomerExists(updateReqVO.getId());
+        // 1.2 校验地区可选
+        validateAreaSelectableIfChanged(oldCustomer.getAreaId(), updateReqVO.getAreaId());
 
         // 2. 更新客户
         CrmCustomerDO updateObj = BeanUtils.toBean(updateReqVO, CrmCustomerDO.class);
@@ -277,6 +284,9 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
     @LogRecord(type = CRM_CUSTOMER_TYPE, subType = CRM_CUSTOMER_CREATE_SUB_TYPE, bizNo = "{{#customer.id}}",
             success = CRM_CUSTOMER_CREATE_SUCCESS)
     public Long createCustomer(CrmCustomerCreateReqBO createReqBO, Long userId) {
+        // 1.1 校验地区可选
+        validateAreaSelectable(createReqBO.getAreaId());
+
         // 1. 插入客户
         CrmCustomerDO customer = initCustomer(createReqBO, userId);
         customerMapper.insert(customer);
@@ -541,6 +551,22 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
         if (StrUtil.isEmptyIfStr(importCustomer.getName())) {
             throw exception(CUSTOMER_CREATE_NAME_NOT_NULL);
         }
+        // 校验地区可选
+        validateAreaSelectable(importCustomer.getAreaId());
+    }
+
+    private void validateAreaSelectable(Integer areaId) {
+        if (areaId == null) {
+            return;
+        }
+        areaApi.validateAreaSelectable(areaId);
+    }
+
+    private void validateAreaSelectableIfChanged(Integer oldAreaId, Integer newAreaId) {
+        if (Objects.equals(oldAreaId, newAreaId)) {
+            return;
+        }
+        validateAreaSelectable(newAreaId);
     }
 
     /**

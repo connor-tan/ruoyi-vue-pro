@@ -15,6 +15,9 @@ public class AreaNodeRespVO {
     @Schema(description = "名字", requiredMode = Schema.RequiredMode.REQUIRED, example = "北京")
     private String name;
 
+    @Schema(description = "状态，见 CommonStatusEnum 枚举", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
+    private Integer status;
+
     /**
      * 子节点
      */

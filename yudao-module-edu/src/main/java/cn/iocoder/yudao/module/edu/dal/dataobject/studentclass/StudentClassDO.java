@@ -1,7 +1,9 @@
 package cn.iocoder.yudao.module.edu.dal.dataobject.studentclass;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.KeySequence;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -48,6 +50,7 @@ public class StudentClassDO extends BaseDO {
     /**
      * 离班日期
      */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private LocalDate endDate;
 
 }
