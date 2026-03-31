@@ -3,7 +3,10 @@ package cn.iocoder.yudao.module.edu.dal.mysql.studentclass;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -83,5 +86,11 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
     default int deleteByStudentIds(List<Long> studentIds) {
         return deleteBatch(StudentClassDO::getStudentId, studentIds);
     }
+
+    @Delete("DELETE FROM edu_student_class WHERE id = #{id}")
+    int deletePhysicallyById(Long id);
+
+    @Update("UPDATE edu_student_class SET end_date = NULL, update_time = NOW() WHERE id = #{id} AND deleted = b'0'")
+    int restoreEndDateById(@Param("id") Long id);
 
 }

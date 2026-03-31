@@ -30,8 +30,8 @@ public interface ErrorCodeConstants {
     ErrorCode STUDENT_CLASS_MULTI_CURRENT = new ErrorCode(1_017_001_007, "学生班级记录最多只能有一条当前记录");
     ErrorCode STUDENT_CLASS_DUPLICATE_START_DATE = new ErrorCode(1_017_001_008, "学生班级记录入班日期不能重复");
     ErrorCode STUDENT_CLASS_DATE_OVERLAP = new ErrorCode(1_017_001_009, "学生班级记录时间区间不能重叠");
-    ErrorCode STUDENT_PROMOTION_TARGET_SCHOOL_YEAR_INVALID = new ErrorCode(1_017_001_010, "目标学年必须晚于来源学年");
-    ErrorCode STUDENT_PROMOTION_TARGET_YEAR_INVALID = new ErrorCode(1_017_001_011, "目标学年必须晚于来源学年");
+    ErrorCode STUDENT_PROMOTION_TARGET_SCHOOL_YEAR_INVALID = new ErrorCode(1_017_001_010, "目标学年必须是来源学年的下一学年");
+    ErrorCode STUDENT_PROMOTION_TARGET_YEAR_INVALID = new ErrorCode(1_017_001_011, "目标学年必须是来源学年的下一学年");
     ErrorCode STUDENT_PROMOTION_SCOPE_INVALID = new ErrorCode(1_017_001_012, "学校范围类型不正确");
     ErrorCode STUDENT_PROMOTION_SCHOOL_IDS_EMPTY = new ErrorCode(1_017_001_013, "请选择要执行升班的学校");
     ErrorCode STUDENT_PROMOTION_ADJUST_ACTION_INVALID = new ErrorCode(1_017_001_014, "学生升班调整动作不正确");

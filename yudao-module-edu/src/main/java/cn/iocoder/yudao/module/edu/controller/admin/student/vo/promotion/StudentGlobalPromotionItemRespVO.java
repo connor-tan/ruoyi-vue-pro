@@ -31,6 +31,9 @@ public class StudentGlobalPromotionItemRespVO {
     @Schema(description = "来源年级名称", example = "一年级")
     private String fromGradeName;
 
+    @Schema(description = "来源年级别名", example = "七年级")
+    private String fromGradeAliasName;
+
     @Schema(description = "目标学校年级ID", example = "2")
     private Long toSchoolGradeId;
 
@@ -42,6 +45,9 @@ public class StudentGlobalPromotionItemRespVO {
 
     @Schema(description = "目标年级名称", example = "二年级")
     private String toGradeName;
+
+    @Schema(description = "目标年级别名", example = "八年级")
+    private String toGradeAliasName;
 
     @Schema(description = "目标班级是否缺失", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean targetClassMissing;

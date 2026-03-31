@@ -39,8 +39,8 @@ public class StudentPromotionBatchRespVO {
     @Schema(description = "留级人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "2")
     private Integer repeatCount;
 
-    @Schema(description = "毕业人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
-    private Integer graduatedCount;
+    @Schema(description = "待升学人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
+    private Integer pendingAdvanceCount;
 
     @Schema(description = "跳过人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer skippedCount;

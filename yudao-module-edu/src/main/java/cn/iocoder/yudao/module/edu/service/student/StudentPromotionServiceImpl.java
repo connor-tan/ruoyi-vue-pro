@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.edu.service.student;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.dynamic.datasource.annotation.Master;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.StudentPromotionAdjustmentReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.StudentPromotionExecuteReqVO;
@@ -27,6 +28,7 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentFlowMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionBatchMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.edu.service.school.SchoolClassUtils;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -65,24 +67,26 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMO
 @Validated
 public class StudentPromotionServiceImpl implements StudentPromotionService {
 
-    private static final Integer STUDENT_STATUS_READING = 1;
-    private static final Integer STUDENT_STATUS_GRADUATED = 2;
+    private static final int BATCH_WRITE_SIZE = 500;
+
+    private static final Integer STUDENT_STATUS_READING = StudentStatusEnum.READING.getStatus();
+    private static final Integer STUDENT_STATUS_PENDING_ADVANCE = StudentStatusEnum.PENDING_ADVANCE.getStatus();
 
     private static final Integer BATCH_STATUS_SUCCESS = 1;
     private static final Integer FLOW_STATUS_ACTIVE = 1;
     private static final String FLOW_TYPE_PROMOTE = "PROMOTE";
     private static final String FLOW_TYPE_REPEAT = "REPEAT";
-    private static final String FLOW_TYPE_GRADUATE = "GRADUATE";
+    private static final String FLOW_TYPE_PENDING_ADVANCE = "PENDING_ADVANCE";
 
     private static final String ACTION_PROMOTE = "PROMOTE";
     private static final String ACTION_REPEAT = "REPEAT";
-    private static final String ACTION_GRADUATE = "GRADUATE";
+    private static final String ACTION_PENDING_ADVANCE = "PENDING_ADVANCE";
     private static final String ACTION_SKIP = "SKIP";
 
     private static final String REASON_READY = "READY";
     private static final String REASON_TARGET_CLASS_AUTO_CREATE = "TARGET_CLASS_AUTO_CREATE";
     private static final String REASON_TARGET_CLASS_NOT_FOUND = "TARGET_CLASS_NOT_FOUND";
-    private static final String REASON_TERMINAL_GRADE_GRADUATE = "TERMINAL_GRADE_GRADUATE";
+    private static final String REASON_TERMINAL_GRADE_PENDING_ADVANCE = "TERMINAL_GRADE_PENDING_ADVANCE";
     private static final String REASON_TERMINAL_GRADE_SKIP = "TERMINAL_GRADE_SKIP";
     private static final String REASON_GRADE_SEQUENCE_GAP = "GRADE_SEQUENCE_GAP";
     private static final String REASON_MULTI_CURRENT_CLASS = "MULTI_CURRENT_CLASS";
@@ -119,12 +123,14 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public StudentPromotionExecuteRespVO executeStudentPromotion(StudentPromotionExecuteReqVO reqVO) {
         return executeStudentPromotion(reqVO, null);
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public StudentPromotionExecuteRespVO executeStudentPromotion(StudentPromotionExecuteReqVO reqVO, Long taskId) {
         PromotionPreviewResult previewResult = buildPreviewResult(reqVO);
@@ -141,7 +147,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                 .totalCount(previewResult.getCandidates().size())
                 .promotedCount(previewResult.getPromotedCount())
                 .repeatCount(previewResult.getRepeatCount())
-                .graduatedCount(previewResult.getGraduatedCount())
+                .graduatedCount(previewResult.getPendingAdvanceCount())
                 .skippedCount(previewResult.getSkippedCount())
                 .status(BATCH_STATUS_SUCCESS)
                 .remark(reqVO.getRemark())
@@ -150,19 +156,21 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         studentPromotionBatchMapper.insert(batch);
 
         Map<String, SchoolClassDO> ensuredTargetClassMap = new HashMap<>();
+        PromotionExecutionPlan executionPlan = new PromotionExecutionPlan();
         for (PromotionCandidate candidate : previewResult.getCandidates()) {
             if (Objects.equals(candidate.getAction(), ACTION_PROMOTE)) {
-                executePromote(reqVO, batch.getId(), previewResult, candidate, ensuredTargetClassMap);
+                executePromote(reqVO, batch.getId(), previewResult, candidate, ensuredTargetClassMap, executionPlan);
                 continue;
             }
             if (Objects.equals(candidate.getAction(), ACTION_REPEAT)) {
-                executeRepeat(reqVO, batch.getId(), previewResult, candidate);
+                executeRepeat(reqVO, batch.getId(), previewResult, candidate, executionPlan);
                 continue;
             }
-            if (Objects.equals(candidate.getAction(), ACTION_GRADUATE)) {
-                executeGraduate(reqVO, batch.getId(), previewResult, candidate);
+            if (Objects.equals(candidate.getAction(), ACTION_PENDING_ADVANCE)) {
+                executePendingAdvance(reqVO, batch.getId(), previewResult, candidate, executionPlan);
             }
         }
+        persistExecutionPlan(executionPlan);
 
         StudentPromotionExecuteRespVO respVO = new StudentPromotionExecuteRespVO();
         respVO.setBatchId(batch.getId());
@@ -171,7 +179,8 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
     }
 
     private void executePromote(StudentPromotionExecuteReqVO reqVO, Long batchId, PromotionPreviewResult previewResult,
-                                PromotionCandidate candidate, Map<String, SchoolClassDO> ensuredTargetClassMap) {
+                                PromotionCandidate candidate, Map<String, SchoolClassDO> ensuredTargetClassMap,
+                                PromotionExecutionPlan executionPlan) {
         SchoolClassDO targetClass = candidate.getTargetClass();
         boolean targetClassCreated = false;
         if (targetClass == null) {
@@ -191,7 +200,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
             }
         }
 
-        studentClassMapper.updateById(StudentClassDO.builder()
+        executionPlan.addCurrentStudentClassUpdate(StudentClassDO.builder()
                 .id(candidate.getCurrentStudentClass().getId())
                 .endDate(previewResult.getFromSchoolYear().getEndDate())
                 .build());
@@ -202,7 +211,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                 .startDate(previewResult.getToSchoolYear().getStartDate())
                 .build();
         newStudentClass.clean();
-        studentClassMapper.insert(newStudentClass);
+        executionPlan.addNewStudentClass(newStudentClass);
 
         StudentFlowDO studentFlow = StudentFlowDO.builder()
                 .studentId(candidate.getStudent().getId())
@@ -216,17 +225,17 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                 .remark(reqVO.getRemark())
                 .build();
         studentFlow.clean();
-        studentFlowMapper.insert(studentFlow);
+        executionPlan.addStudentFlow(studentFlow);
     }
 
     private void executeRepeat(StudentPromotionExecuteReqVO reqVO, Long batchId, PromotionPreviewResult previewResult,
-                               PromotionCandidate candidate) {
+                               PromotionCandidate candidate, PromotionExecutionPlan executionPlan) {
         SchoolClassDO targetClass = candidate.getTargetClass();
         if (targetClass == null) {
             throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_REQUIRED);
         }
 
-        studentClassMapper.updateById(StudentClassDO.builder()
+        executionPlan.addCurrentStudentClassUpdate(StudentClassDO.builder()
                 .id(candidate.getCurrentStudentClass().getId())
                 .endDate(previewResult.getFromSchoolYear().getEndDate())
                 .build());
@@ -237,7 +246,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                 .startDate(previewResult.getToSchoolYear().getStartDate())
                 .build();
         newStudentClass.clean();
-        studentClassMapper.insert(newStudentClass);
+        executionPlan.addNewStudentClass(newStudentClass);
 
         StudentFlowDO studentFlow = StudentFlowDO.builder()
                 .studentId(candidate.getStudent().getId())
@@ -251,32 +260,48 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                 .remark(reqVO.getRemark())
                 .build();
         studentFlow.clean();
-        studentFlowMapper.insert(studentFlow);
+        executionPlan.addStudentFlow(studentFlow);
     }
 
-    private void executeGraduate(StudentPromotionExecuteReqVO reqVO, Long batchId,
-                                 PromotionPreviewResult previewResult, PromotionCandidate candidate) {
-        studentClassMapper.updateById(StudentClassDO.builder()
+    private void executePendingAdvance(StudentPromotionExecuteReqVO reqVO, Long batchId,
+                                       PromotionPreviewResult previewResult, PromotionCandidate candidate,
+                                       PromotionExecutionPlan executionPlan) {
+        executionPlan.addCurrentStudentClassUpdate(StudentClassDO.builder()
                 .id(candidate.getCurrentStudentClass().getId())
                 .endDate(previewResult.getFromSchoolYear().getEndDate())
                 .build());
-        studentMapper.updateById(StudentDO.builder()
+        executionPlan.addStudentStatusUpdate(StudentDO.builder()
                 .id(candidate.getStudent().getId())
-                .status(STUDENT_STATUS_GRADUATED)
+                .status(STUDENT_STATUS_PENDING_ADVANCE)
                 .build());
 
         StudentFlowDO studentFlow = StudentFlowDO.builder()
                 .studentId(candidate.getStudent().getId())
                 .batchId(batchId)
                 .fromClassId(candidate.getCurrentClass().getId())
-                .changeType(FLOW_TYPE_GRADUATE)
+                .changeType(FLOW_TYPE_PENDING_ADVANCE)
                 .effectiveDate(previewResult.getFromSchoolYear().getEndDate())
                 .status(FLOW_STATUS_ACTIVE)
                 .targetClassCreated(Boolean.FALSE)
                 .remark(reqVO.getRemark())
                 .build();
         studentFlow.clean();
-        studentFlowMapper.insert(studentFlow);
+        executionPlan.addStudentFlow(studentFlow);
+    }
+
+    private void persistExecutionPlan(PromotionExecutionPlan executionPlan) {
+        if (CollUtil.isNotEmpty(executionPlan.getCurrentStudentClassUpdates())) {
+            studentClassMapper.updateBatch(executionPlan.getCurrentStudentClassUpdates(), BATCH_WRITE_SIZE);
+        }
+        if (CollUtil.isNotEmpty(executionPlan.getNewStudentClasses())) {
+            studentClassMapper.insertBatch(executionPlan.getNewStudentClasses(), BATCH_WRITE_SIZE);
+        }
+        if (CollUtil.isNotEmpty(executionPlan.getStudentStatusUpdates())) {
+            studentMapper.updateBatch(executionPlan.getStudentStatusUpdates(), BATCH_WRITE_SIZE);
+        }
+        if (CollUtil.isNotEmpty(executionPlan.getStudentFlows())) {
+            studentFlowMapper.insertBatch(executionPlan.getStudentFlows(), BATCH_WRITE_SIZE);
+        }
     }
 
     private PromotionPreviewResult buildPreviewResult(StudentPromotionPreviewReqVO reqVO) {
@@ -285,8 +310,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         validateSchoolYearBelongsToSchool(fromSchoolYear, reqVO.getSchoolId());
         SchoolYearDO toSchoolYear = validateSchoolYearExists(reqVO.getToSchoolYearId());
         validateSchoolYearBelongsToSchool(toSchoolYear, reqVO.getSchoolId());
-        if (Objects.equals(fromSchoolYear.getId(), toSchoolYear.getId())
-                || !toSchoolYear.getStartDate().isAfter(fromSchoolYear.getEndDate())) {
+        if (!isNextSchoolYear(fromSchoolYear, toSchoolYear)) {
             throw exception(STUDENT_PROMOTION_TARGET_SCHOOL_YEAR_INVALID);
         }
 
@@ -404,8 +428,8 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         SchoolGradeDO targetSchoolGrade = nextSchoolGradeMap.get(currentSchoolGrade.getId());
         if (targetSchoolGrade == null) {
             if (Boolean.TRUE.equals(reqVO.getGraduateTerminalStudent())) {
-                candidate.setAction(ACTION_GRADUATE);
-                candidate.setReason(REASON_TERMINAL_GRADE_GRADUATE);
+                candidate.setAction(ACTION_PENDING_ADVANCE);
+                candidate.setReason(REASON_TERMINAL_GRADE_PENDING_ADVANCE);
             } else {
                 candidate.setAction(ACTION_SKIP);
                 candidate.setReason(REASON_TERMINAL_GRADE_SKIP);
@@ -541,6 +565,12 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         return nextMap;
     }
 
+    private boolean isNextSchoolYear(SchoolYearDO fromSchoolYear, SchoolYearDO toSchoolYear) {
+        return toSchoolYear.getYearStart() == fromSchoolYear.getYearStart() + 1
+                && toSchoolYear.getYearEnd() == fromSchoolYear.getYearEnd() + 1
+                && toSchoolYear.getStartDate().isAfter(fromSchoolYear.getEndDate());
+    }
+
     private Map<Long, SchoolGradeDO> buildNextSchoolGradeMap(List<SchoolGradeDO> schoolGrades,
                                                              Map<Long, GradeCatalogDO> gradeCatalogMap) {
         List<SchoolGradeDO> sortedSchoolGrades = schoolGrades.stream()
@@ -568,10 +598,12 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
             itemRespVO.setFromSchoolGradeId(candidate.getCurrentSchoolGrade() == null ? null : candidate.getCurrentSchoolGrade().getId());
             itemRespVO.setFromClassName(candidate.getCurrentClass().getClassName());
             itemRespVO.setFromGradeName(candidate.getCurrentGradeCatalog() == null ? null : candidate.getCurrentGradeCatalog().getGradeName());
+            itemRespVO.setFromGradeAliasName(candidate.getCurrentGradeCatalog() == null ? null : candidate.getCurrentGradeCatalog().getAliasName());
             itemRespVO.setToClassId(candidate.getTargetClass() == null ? null : candidate.getTargetClass().getId());
             itemRespVO.setToSchoolGradeId(candidate.getTargetSchoolGrade() == null ? null : candidate.getTargetSchoolGrade().getId());
             itemRespVO.setToClassName(candidate.getTargetClass() == null ? candidate.getPredictedTargetClassName() : candidate.getTargetClass().getClassName());
             itemRespVO.setToGradeName(candidate.getTargetGradeCatalog() == null ? null : candidate.getTargetGradeCatalog().getGradeName());
+            itemRespVO.setToGradeAliasName(candidate.getTargetGradeCatalog() == null ? null : candidate.getTargetGradeCatalog().getAliasName());
             itemRespVO.setTargetClassMissing(Boolean.TRUE.equals(candidate.getTargetClassMissing()));
             itemRespVO.setAction(candidate.getAction());
             itemRespVO.setReason(candidate.getReason());
@@ -583,7 +615,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         StudentPromotionSummaryRespVO summaryRespVO = new StudentPromotionSummaryRespVO();
         summaryRespVO.setTotalCount(previewResult.getCandidates().size());
         summaryRespVO.setPromotedCount(previewResult.getPromotedCount());
-        summaryRespVO.setGraduatedCount(previewResult.getGraduatedCount());
+        summaryRespVO.setPendingAdvanceCount(previewResult.getPendingAdvanceCount());
         summaryRespVO.setRepeatCount(previewResult.getRepeatCount());
         summaryRespVO.setSkippedCount(previewResult.getSkippedCount());
         summaryRespVO.setMissingTargetClassCount(previewResult.getMissingTargetClassCount());
@@ -672,8 +704,8 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
             return Math.toIntExact(candidates.stream().filter(item -> Objects.equals(item.getAction(), ACTION_PROMOTE)).count());
         }
 
-        public Integer getGraduatedCount() {
-            return Math.toIntExact(candidates.stream().filter(item -> Objects.equals(item.getAction(), ACTION_GRADUATE)).count());
+        public Integer getPendingAdvanceCount() {
+            return Math.toIntExact(candidates.stream().filter(item -> Objects.equals(item.getAction(), ACTION_PENDING_ADVANCE)).count());
         }
 
         public Integer getRepeatCount() {
@@ -689,7 +721,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         }
 
         public boolean hasExecutableCandidates() {
-            return getPromotedCount() > 0 || getGraduatedCount() > 0 || getRepeatCount() > 0;
+            return getPromotedCount() > 0 || getPendingAdvanceCount() > 0 || getRepeatCount() > 0;
         }
     }
 
@@ -821,6 +853,46 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
 
         public void setReason(String reason) {
             this.reason = reason;
+        }
+    }
+
+    private static class PromotionExecutionPlan {
+
+        private final List<StudentClassDO> currentStudentClassUpdates = new ArrayList<>();
+        private final List<StudentClassDO> newStudentClasses = new ArrayList<>();
+        private final List<StudentDO> studentStatusUpdates = new ArrayList<>();
+        private final List<StudentFlowDO> studentFlows = new ArrayList<>();
+
+        public List<StudentClassDO> getCurrentStudentClassUpdates() {
+            return currentStudentClassUpdates;
+        }
+
+        public List<StudentClassDO> getNewStudentClasses() {
+            return newStudentClasses;
+        }
+
+        public List<StudentDO> getStudentStatusUpdates() {
+            return studentStatusUpdates;
+        }
+
+        public List<StudentFlowDO> getStudentFlows() {
+            return studentFlows;
+        }
+
+        public void addCurrentStudentClassUpdate(StudentClassDO studentClass) {
+            this.currentStudentClassUpdates.add(studentClass);
+        }
+
+        public void addNewStudentClass(StudentClassDO studentClass) {
+            this.newStudentClasses.add(studentClass);
+        }
+
+        public void addStudentStatusUpdate(StudentDO student) {
+            this.studentStatusUpdates.add(student);
+        }
+
+        public void addStudentFlow(StudentFlowDO studentFlow) {
+            this.studentFlows.add(studentFlow);
         }
     }
 

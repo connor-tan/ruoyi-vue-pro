@@ -6,6 +6,8 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.StudentFlowPageReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentFlowDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -42,13 +44,18 @@ public interface StudentFlowMapper extends BaseMapperX<StudentFlowDO> {
                 .in(StudentFlowDO::getBatchId, batchIds));
     }
 
-    default int updateStatusByBatchIds(Collection<Long> batchIds, Integer status) {
-        if (batchIds == null || batchIds.isEmpty()) {
-            return 0;
-        }
-        return update(StudentFlowDO.builder().status(status).build(), new LambdaQueryWrapperX<StudentFlowDO>()
-                .in(StudentFlowDO::getBatchId, batchIds));
-    }
+    @Update({
+            "<script>",
+            "UPDATE edu_student_flow",
+            "SET status = #{status}, update_time = NOW()",
+            "WHERE deleted = b'0'",
+            "AND batch_id IN",
+            "<foreach collection='batchIds' item='batchId' open='(' separator=',' close=')'>",
+            "#{batchId}",
+            "</foreach>",
+            "</script>"
+    })
+    int updateStatusByBatchIds(@Param("batchIds") Collection<Long> batchIds, @Param("status") Integer status);
 
     default PageResult<StudentFlowDO> selectPage(StudentFlowPageReqVO reqVO, Collection<Long> studentIds,
                                                  Collection<Long> batchIds) {

@@ -28,6 +28,9 @@ public class SchoolClassSimpleRespVO {
     @Schema(description = "年级名称", example = "一年级")
     private String gradeName;
 
+    @Schema(description = "年级别名", example = "七年级")
+    private String aliasName;
+
     @Schema(description = "所属学年名称", example = "2023-2024学年")
     private String schoolYearName;
 

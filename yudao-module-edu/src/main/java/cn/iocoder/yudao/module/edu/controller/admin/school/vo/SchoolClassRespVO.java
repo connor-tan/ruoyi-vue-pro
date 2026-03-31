@@ -36,6 +36,9 @@ public class SchoolClassRespVO {
     @Schema(description = "年级名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "一年级")
     private String gradeName;
 
+    @Schema(description = "年级别名", example = "七年级")
+    private String aliasName;
+
     @Schema(description = "班级号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer classNo;
 

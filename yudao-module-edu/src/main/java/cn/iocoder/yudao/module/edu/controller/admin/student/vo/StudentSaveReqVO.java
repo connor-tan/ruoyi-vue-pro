@@ -1,5 +1,7 @@
 package cn.iocoder.yudao.module.edu.controller.admin.student.vo;
 
+import cn.iocoder.yudao.framework.common.validation.InEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -34,7 +36,8 @@ public class StudentSaveReqVO {
     @Schema(description = "学号")
     private Integer studentCode;
 
-    @Schema(description = "状态", example = "2")
+    @Schema(description = "状态（1-在读，2-毕业，3-休学，4-待升学）", example = "1")
+    @InEnum(value = StudentStatusEnum.class, message = "状态必须是 {value}")
     private Integer status;
 
     @Schema(description = "学生班级记录列表")

@@ -52,7 +52,7 @@ public class StudentDO extends BaseDO {
      */
     private Integer studentCode;
     /**
-     * 状态
+     * 状态：1-在读，2-毕业，3-休学，4-待升学
      */
     private Integer status;
 

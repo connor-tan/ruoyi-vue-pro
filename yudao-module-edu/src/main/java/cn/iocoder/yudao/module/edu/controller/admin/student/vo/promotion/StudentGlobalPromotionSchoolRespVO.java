@@ -34,8 +34,8 @@ public class StudentGlobalPromotionSchoolRespVO {
     @Schema(description = "升班人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "25")
     private Integer promotedCount;
 
-    @Schema(description = "毕业人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "4")
-    private Integer graduatedCount;
+    @Schema(description = "待升学人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "4")
+    private Integer pendingAdvanceCount;
 
     @Schema(description = "留级人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "2")
     private Integer repeatCount;

@@ -6,6 +6,8 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentPageReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.Collection;
 import java.util.List;
@@ -46,5 +48,8 @@ public interface StudentMapper extends BaseMapperX<StudentDO> {
         return selectList(new LambdaQueryWrapperX<StudentDO>()
                 .likeIfPresent(StudentDO::getStudentName, studentName));
     }
+
+    @Update("UPDATE edu_student SET status = #{status}, update_time = NOW() WHERE id = #{id} AND deleted = b'0'")
+    int updateStatusById(@Param("id") Long id, @Param("status") Integer status);
 
 }

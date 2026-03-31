@@ -1,9 +1,13 @@
 package cn.iocoder.yudao.module.edu.service.student;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.exceptions.ExceptionUtil;
+import com.baomidou.dynamic.datasource.annotation.Master;
+import com.baomidou.dynamic.datasource.annotation.Slave;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
+import cn.iocoder.yudao.framework.common.util.string.StrUtils;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.StudentGlobalPromotionRollbackReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.StudentGlobalPromotionRollbackRespVO;
@@ -42,6 +46,7 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionTaskMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionBatchMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.edu.service.school.SchoolService;
 import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import jakarta.annotation.Resource;
@@ -103,14 +108,17 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     private static final Integer BATCH_STATUS_FAILED = 3;
     private static final Integer BATCH_STATUS_ROLLED_BACK = 4;
 
-    private static final Integer STUDENT_STATUS_READING = 1;
-    private static final Integer STUDENT_STATUS_GRADUATED = 2;
+    private static final Integer STUDENT_STATUS_READING = StudentStatusEnum.READING.getStatus();
+    private static final Integer STUDENT_STATUS_GRADUATED = StudentStatusEnum.GRADUATED.getStatus();
+    private static final Integer STUDENT_STATUS_PENDING_ADVANCE = StudentStatusEnum.PENDING_ADVANCE.getStatus();
 
     private static final Integer FLOW_STATUS_ROLLED_BACK = 2;
+    private static final Integer BATCH_REASON_MAX_LENGTH = 255;
 
     private static final String FLOW_TYPE_PROMOTE = "PROMOTE";
     private static final String FLOW_TYPE_REPEAT = "REPEAT";
-    private static final String FLOW_TYPE_GRADUATE = "GRADUATE";
+    private static final String FLOW_TYPE_GRADUATE_LEGACY = "GRADUATE";
+    private static final String FLOW_TYPE_PENDING_ADVANCE = "PENDING_ADVANCE";
 
     @Resource
     private StudentPromotionService studentPromotionService;
@@ -136,6 +144,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     private AreaApi areaApi;
 
     @Override
+    @Slave
     public List<StudentPromotionYearOptionRespVO> getPromotionYearOptions() {
         return schoolYearMapper.selectList().stream()
                 .collect(Collectors.toMap(SchoolYearDO::getYearStart, Function.identity(), (item1, item2) -> item1,
@@ -147,13 +156,19 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     @Override
+    @Slave
     public PageResult<StudentPromotionTaskRespVO> getPromotionTaskPage(StudentPromotionTaskPageReqVO reqVO) {
         PageResult<StudentPromotionTaskDO> pageResult = studentPromotionTaskMapper.selectPage(reqVO);
-        return BeanUtils.toBean(pageResult, StudentPromotionTaskRespVO.class, item ->
-                item.setRollbackable(isTaskRollbackable(item.getStatus())));
+        return new PageResult<>(convertList(pageResult.getList(), task -> {
+            StudentPromotionTaskRespVO respVO = BeanUtils.toBean(task, StudentPromotionTaskRespVO.class);
+            respVO.setPendingAdvanceCount(task.getGraduatedCount());
+            respVO.setRollbackable(isTaskRollbackable(task.getStatus()));
+            return respVO;
+        }), pageResult.getTotal());
     }
 
     @Override
+    @Slave
     public List<StudentPromotionBatchRespVO> getPromotionBatchListByTaskId(Long taskId) {
         List<StudentPromotionBatchDO> batches = studentPromotionBatchMapper.selectListByTaskId(taskId);
         if (CollUtil.isEmpty(batches)) {
@@ -169,6 +184,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     @Override
+    @Slave
     public PageResult<StudentFlowRespVO> getStudentFlowPage(StudentFlowPageReqVO reqVO) {
         List<Long> studentIds = null;
         if (reqVO.getStudentName() != null && !reqVO.getStudentName().isBlank()) {
@@ -217,6 +233,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     @Override
+    @Master
     public StudentGlobalPromotionExecuteRespVO executeGlobalStudentPromotion(StudentGlobalPromotionExecuteReqVO reqVO) {
         GlobalPreviewResult previewResult = buildGlobalPreviewResult(reqVO);
         StudentGlobalPromotionSummaryRespVO previewSummary = buildGlobalSummaryResp(previewResult.getSchools());
@@ -253,10 +270,11 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
                 schoolPreview.setBatchId(executeRespVO.getBatchId());
                 applySchoolSummary(schoolPreview, executeRespVO.getSummary());
             } catch (Exception ex) {
+                String reason = buildFailureReason(ex);
                 schoolPreview.setStatus(SCHOOL_STATUS_FAILED);
-                schoolPreview.setReason(ex.getMessage());
+                schoolPreview.setReason(reason);
                 StudentPromotionBatchDO batch = createTaskSchoolBatch(task.getId(), schoolPreview, reqVO,
-                        BATCH_STATUS_FAILED, ex.getMessage());
+                        BATCH_STATUS_FAILED, reason);
                 schoolPreview.setBatchId(batch.getId());
             }
         }
@@ -271,7 +289,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
                 .totalCount(summaryRespVO.getTotalCount())
                 .promotedCount(summaryRespVO.getPromotedCount())
                 .repeatCount(summaryRespVO.getRepeatCount())
-                .graduatedCount(summaryRespVO.getGraduatedCount())
+                .graduatedCount(summaryRespVO.getPendingAdvanceCount())
                 .skippedCount(summaryRespVO.getSkippedCount())
                 .status(buildTaskStatus(previewResult.getSchools()))
                 .build());
@@ -284,6 +302,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public StudentGlobalPromotionRollbackRespVO rollbackGlobalStudentPromotion(StudentGlobalPromotionRollbackReqVO reqVO) {
         StudentPromotionTaskDO task = validateRollbackTask(reqVO.getTaskId());
@@ -369,7 +388,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     private void validateGlobalReq(StudentGlobalPromotionPreviewReqVO reqVO) {
-        if (reqVO.getToYearStart() <= reqVO.getFromYearStart()) {
+        if (reqVO.getToYearStart() != reqVO.getFromYearStart() + 1) {
             throw exception(STUDENT_PROMOTION_TARGET_YEAR_INVALID);
         }
         if (!Objects.equals(reqVO.getScopeType(), SCOPE_TYPE_ALL)
@@ -462,7 +481,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     private void applySchoolSummary(GlobalSchoolPreview preview, StudentPromotionSummaryRespVO summary) {
         preview.setTotalCount(summary.getTotalCount());
         preview.setPromotedCount(summary.getPromotedCount());
-        preview.setGraduatedCount(summary.getGraduatedCount());
+        preview.setGraduatedCount(summary.getPendingAdvanceCount());
         preview.setRepeatCount(summary.getRepeatCount());
         preview.setSkippedCount(summary.getSkippedCount());
         preview.setMissingTargetClassCount(summary.getMissingTargetClassCount());
@@ -476,7 +495,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
         summaryRespVO.setFailedSchoolCount(countSchools(schools, SCHOOL_STATUS_FAILED));
         summaryRespVO.setTotalCount(sumInt(schools, GlobalSchoolPreview::getTotalCount));
         summaryRespVO.setPromotedCount(sumInt(schools, GlobalSchoolPreview::getPromotedCount));
-        summaryRespVO.setGraduatedCount(sumInt(schools, GlobalSchoolPreview::getGraduatedCount));
+        summaryRespVO.setPendingAdvanceCount(sumInt(schools, GlobalSchoolPreview::getGraduatedCount));
         summaryRespVO.setRepeatCount(sumInt(schools, GlobalSchoolPreview::getRepeatCount));
         summaryRespVO.setSkippedCount(sumInt(schools, GlobalSchoolPreview::getSkippedCount));
         summaryRespVO.setMissingTargetClassCount(sumInt(schools, GlobalSchoolPreview::getMissingTargetClassCount));
@@ -485,13 +504,13 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
 
     private boolean hasExecutableStudents(StudentPromotionSummaryRespVO summary) {
         return defaultInt(summary.getPromotedCount()) > 0
-                || defaultInt(summary.getGraduatedCount()) > 0
+                || defaultInt(summary.getPendingAdvanceCount()) > 0
                 || defaultInt(summary.getRepeatCount()) > 0;
     }
 
     private boolean hasExecutableStudents(StudentGlobalPromotionSummaryRespVO summary) {
         return defaultInt(summary.getPromotedCount()) > 0
-                || defaultInt(summary.getGraduatedCount()) > 0
+                || defaultInt(summary.getPendingAdvanceCount()) > 0
                 || defaultInt(summary.getRepeatCount()) > 0;
     }
 
@@ -507,7 +526,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
             respVO.setReason(item.getReason());
             respVO.setTotalCount(defaultInt(item.getTotalCount()));
             respVO.setPromotedCount(defaultInt(item.getPromotedCount()));
-            respVO.setGraduatedCount(defaultInt(item.getGraduatedCount()));
+            respVO.setPendingAdvanceCount(defaultInt(item.getGraduatedCount()));
             respVO.setRepeatCount(defaultInt(item.getRepeatCount()));
             respVO.setSkippedCount(defaultInt(item.getSkippedCount()));
             respVO.setMissingTargetClassCount(defaultInt(item.getMissingTargetClassCount()));
@@ -531,10 +550,12 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
                 itemRespVO.setFromSchoolGradeId(item.getFromSchoolGradeId());
                 itemRespVO.setFromClassName(item.getFromClassName());
                 itemRespVO.setFromGradeName(item.getFromGradeName());
+                itemRespVO.setFromGradeAliasName(item.getFromGradeAliasName());
                 itemRespVO.setToSchoolGradeId(item.getToSchoolGradeId());
                 itemRespVO.setToClassId(item.getToClassId());
                 itemRespVO.setToClassName(item.getToClassName());
                 itemRespVO.setToGradeName(item.getToGradeName());
+                itemRespVO.setToGradeAliasName(item.getToGradeAliasName());
                 itemRespVO.setTargetClassMissing(item.getTargetClassMissing());
                 itemRespVO.setAction(item.getAction());
                 itemRespVO.setReason(item.getReason());
@@ -562,6 +583,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     private StudentPromotionBatchRespVO buildBatchResp(StudentPromotionBatchDO batch, Map<Long, String> schoolNameMap,
                                                        Map<Long, SchoolYearDO> schoolYearMap) {
         StudentPromotionBatchRespVO respVO = BeanUtils.toBean(batch, StudentPromotionBatchRespVO.class);
+        respVO.setPendingAdvanceCount(batch.getGraduatedCount());
         respVO.setSchoolName(schoolNameMap.get(batch.getSchoolId()));
         respVO.setFromSchoolYearName(buildSchoolYearName(schoolYearMap.get(batch.getFromSchoolYearId())));
         respVO.setToSchoolYearName(buildSchoolYearName(schoolYearMap.get(batch.getToSchoolYearId())));
@@ -631,12 +653,20 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
                 .graduatedCount(defaultInt(schoolPreview.getGraduatedCount()))
                 .skippedCount(defaultInt(schoolPreview.getSkippedCount()))
                 .status(status)
-                .reason(reason)
+                .reason(normalizeBatchReason(reason))
                 .remark(reqVO.getRemark())
                 .build();
         batch.clean();
         studentPromotionBatchMapper.insert(batch);
         return batch;
+    }
+
+    private String buildFailureReason(Exception ex) {
+        return normalizeBatchReason(ExceptionUtil.getRootCauseMessage(ex));
+    }
+
+    private String normalizeBatchReason(String reason) {
+        return StrUtils.maxLength(reason, BATCH_REASON_MAX_LENGTH);
     }
 
     private StudentPromotionTaskDO validateRollbackTask(Long taskId) {
@@ -679,8 +709,10 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
                 }
                 continue;
             }
-            if (Objects.equals(flow.getChangeType(), FLOW_TYPE_GRADUATE)) {
-                if (!Objects.equals(student.getStatus(), STUDENT_STATUS_GRADUATED)
+            if (Objects.equals(flow.getChangeType(), FLOW_TYPE_PENDING_ADVANCE)
+                    || Objects.equals(flow.getChangeType(), FLOW_TYPE_GRADUATE_LEGACY)) {
+                if (!Objects.equals(student.getStatus(), STUDENT_STATUS_PENDING_ADVANCE)
+                        && !Objects.equals(student.getStatus(), STUDENT_STATUS_GRADUATED)
                         || CollUtil.isNotEmpty(studentClassMapper.selectCurrentListByStudentId(flow.getStudentId()))) {
                     throw exception(STUDENT_PROMOTION_TASK_ROLLBACK_STATE_INVALID);
                 }
@@ -699,22 +731,14 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
                 || Objects.equals(flow.getChangeType(), FLOW_TYPE_REPEAT)) {
             StudentClassDO targetStudentClass = studentClassMapper.selectCurrentByStudentIdAndClassIdAndStartDate(
                     flow.getStudentId(), flow.getToClassId(), flow.getEffectiveDate());
-            studentClassMapper.deleteById(targetStudentClass.getId());
-            studentClassMapper.updateById(StudentClassDO.builder()
-                    .id(sourceStudentClass.getId())
-                    .endDate(null)
-                    .build());
+            studentClassMapper.deletePhysicallyById(targetStudentClass.getId());
+            studentClassMapper.restoreEndDateById(sourceStudentClass.getId());
             return;
         }
-        if (Objects.equals(flow.getChangeType(), FLOW_TYPE_GRADUATE)) {
-            studentMapper.updateById(StudentDO.builder()
-                    .id(flow.getStudentId())
-                    .status(STUDENT_STATUS_READING)
-                    .build());
-            studentClassMapper.updateById(StudentClassDO.builder()
-                    .id(sourceStudentClass.getId())
-                    .endDate(null)
-                    .build());
+        if (Objects.equals(flow.getChangeType(), FLOW_TYPE_PENDING_ADVANCE)
+                || Objects.equals(flow.getChangeType(), FLOW_TYPE_GRADUATE_LEGACY)) {
+            studentMapper.updateStatusById(flow.getStudentId(), STUDENT_STATUS_READING);
+            studentClassMapper.restoreEndDateById(sourceStudentClass.getId());
             return;
         }
         throw exception(STUDENT_PROMOTION_TASK_NOT_ROLLBACKABLE);
@@ -727,7 +751,7 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
         if (studentClassMapper.countByClassId(classId) > 0) {
             return;
         }
-        schoolClassMapper.deleteById(classId);
+        schoolClassMapper.deletePhysicallyById(classId);
     }
 
     private String appendRollbackRemark(String originRemark, String rollbackRemark) {

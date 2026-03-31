@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.edu.service.school;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.dynamic.datasource.annotation.Slave;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
@@ -160,6 +161,7 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     @Override
+    @Slave
     public List<SchoolSimpleRespVO> getSchoolSimpleList() {
         return schoolMapper.selectList(new LambdaQueryWrapperX<SchoolDO>()
                         .orderByAsc(SchoolDO::getId))
@@ -171,6 +173,7 @@ public class SchoolServiceImpl implements SchoolService {
     // ==================== 子表（年级定义） ====================
 
     @Override
+    @Slave
     public List<GradeCatalogSimpleRespVO> getGradeCatalogList() {
         List<GradeCatalogDO> gradeCatalogs = gradeCatalogMapper.selectListByStatus(CommonStatusEnum.ENABLE.getStatus());
         return gradeCatalogs.stream().map(this::buildGradeCatalogResp).collect(Collectors.toList());
@@ -534,6 +537,7 @@ public class SchoolServiceImpl implements SchoolService {
         respVO.setStage(gradeCatalog.getStage());
         respVO.setGradeNo(gradeCatalog.getGradeNo());
         respVO.setGradeName(gradeCatalog.getGradeName());
+        respVO.setAliasName(gradeCatalog.getAliasName());
         return respVO;
     }
 
@@ -566,6 +570,7 @@ public class SchoolServiceImpl implements SchoolService {
             respVO.setStage(gradeCatalog.getStage());
             respVO.setGradeNo(gradeCatalog.getGradeNo());
             respVO.setGradeName(gradeCatalog.getGradeName());
+            respVO.setAliasName(gradeCatalog.getAliasName());
         }
         return respVO;
     }
@@ -581,6 +586,7 @@ public class SchoolServiceImpl implements SchoolService {
                 respVO.setStage(gradeCatalog.getStage());
                 respVO.setGradeNo(gradeCatalog.getGradeNo());
                 respVO.setGradeName(gradeCatalog.getGradeName());
+                respVO.setAliasName(gradeCatalog.getAliasName());
             }
             return respVO;
         }).collect(Collectors.toList());
@@ -623,6 +629,7 @@ public class SchoolServiceImpl implements SchoolService {
             respVO.setStage(schoolClass.getStage());
             respVO.setGradeNo(schoolClass.getGradeNo());
             respVO.setGradeName(schoolClass.getGradeName());
+            respVO.setAliasName(schoolClass.getAliasName());
             respVO.setSchoolYearName(schoolClass.getSchoolYearName());
             return respVO;
         }).collect(Collectors.toList());
@@ -662,6 +669,7 @@ public class SchoolServiceImpl implements SchoolService {
             respVO.setStage(gradeCatalog.getStage());
             respVO.setGradeNo(gradeCatalog.getGradeNo());
             respVO.setGradeName(gradeCatalog.getGradeName());
+            respVO.setAliasName(gradeCatalog.getAliasName());
         }
         return respVO;
     }

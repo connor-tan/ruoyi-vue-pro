@@ -47,7 +47,7 @@ public class StudentRespVO {
     @ExcelProperty("学号")
     private Integer studentCode;
 
-    @Schema(description = "状态", example = "2")
+    @Schema(description = "状态（1-在读，2-毕业，3-休学，4-待升学）", example = "1")
     @ExcelProperty("状态")
     private Integer status;
 

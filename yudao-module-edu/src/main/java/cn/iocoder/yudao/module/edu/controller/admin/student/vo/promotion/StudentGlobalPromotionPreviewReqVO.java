@@ -34,8 +34,8 @@ public class StudentGlobalPromotionPreviewReqVO {
     @NotNull(message = "是否自动创建目标班级不能为空")
     private Boolean autoCreateClass;
 
-    @Schema(description = "末级学生是否自动毕业", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "末级学生是否自动毕业不能为空")
+    @Schema(description = "末级学生是否自动转待升学", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "末级学生是否自动转待升学不能为空")
     private Boolean graduateTerminalStudent;
 
     @Schema(description = "备注", example = "2026年度全局升班")

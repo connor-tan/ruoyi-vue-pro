@@ -24,7 +24,7 @@ public class StudentPromotionTaskRespVO {
     @Schema(description = "是否自动创建目标班级", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean autoCreateClass;
 
-    @Schema(description = "末级学生是否自动毕业", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "末级学生是否自动转待升学", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean graduateTerminalStudent;
 
     @Schema(description = "总学校数", requiredMode = Schema.RequiredMode.REQUIRED, example = "12")
@@ -48,8 +48,8 @@ public class StudentPromotionTaskRespVO {
     @Schema(description = "留级人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "8")
     private Integer repeatCount;
 
-    @Schema(description = "毕业人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
-    private Integer graduatedCount;
+    @Schema(description = "待升学人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
+    private Integer pendingAdvanceCount;
 
     @Schema(description = "跳过人数", requiredMode = Schema.RequiredMode.REQUIRED, example = "2")
     private Integer skippedCount;

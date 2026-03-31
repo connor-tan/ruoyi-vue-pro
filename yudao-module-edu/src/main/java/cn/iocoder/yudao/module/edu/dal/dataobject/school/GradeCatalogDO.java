@@ -42,6 +42,10 @@ public class GradeCatalogDO extends BaseDO {
      */
     private String gradeName;
     /**
+     * 年级别名
+     */
+    private String aliasName;
+    /**
      * 排序
      */
     private Integer sort;
