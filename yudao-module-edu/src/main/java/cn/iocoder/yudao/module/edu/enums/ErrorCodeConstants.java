@@ -42,4 +42,7 @@ public interface ErrorCodeConstants {
     ErrorCode STUDENT_PROMOTION_TASK_NOT_ROLLBACKABLE = new ErrorCode(1_017_001_019, "当前升班任务不允许回滚");
     ErrorCode STUDENT_PROMOTION_TASK_ROLLBACK_STATE_INVALID = new ErrorCode(1_017_001_020, "当前升班任务状态已变化，无法回滚");
     ErrorCode STUDENT_PROMOTION_NO_ELIGIBLE_STUDENTS = new ErrorCode(1_017_001_021, "当前没有符合升班条件的学生");
+    ErrorCode STUDENT_IN_USE_BY_FLOW = new ErrorCode(1_017_001_022, "学生已有升班或流转记录，无法删除");
+    ErrorCode STUDENT_STATUS_READING_CURRENT_CLASS_REQUIRED = new ErrorCode(1_017_001_023, "在读学生必须存在一条当前班级记录");
+    ErrorCode STUDENT_STATUS_CURRENT_CLASS_FORBIDDEN = new ErrorCode(1_017_001_024, "非在读学生不能存在当前班级记录");
 }

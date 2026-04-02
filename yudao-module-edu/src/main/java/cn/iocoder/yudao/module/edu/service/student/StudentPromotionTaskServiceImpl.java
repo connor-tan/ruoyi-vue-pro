@@ -47,7 +47,6 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionBatchMapper
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
-import cn.iocoder.yudao.module.edu.service.school.SchoolService;
 import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -138,8 +137,6 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     private SchoolClassMapper schoolClassMapper;
     @Resource
     private SchoolYearMapper schoolYearMapper;
-    @Resource
-    private SchoolService schoolService;
     @Resource
     private AreaApi areaApi;
 
@@ -409,7 +406,10 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
 
     private List<SchoolSimpleRespVO> resolveSchools(StudentGlobalPromotionPreviewReqVO reqVO) {
         if (Objects.equals(reqVO.getScopeType(), SCOPE_TYPE_ALL)) {
-            return schoolService.getSchoolSimpleList();
+            return schoolMapper.selectList().stream()
+                    .sorted(Comparator.comparing(SchoolDO::getId))
+                    .map(this::buildSchoolSimpleResp)
+                    .collect(Collectors.toList());
         }
         if (Objects.equals(reqVO.getScopeType(), SCOPE_TYPE_SCHOOL)) {
             return schoolMapper.selectList(SchoolDO::getId, reqVO.getSchoolIds()).stream()

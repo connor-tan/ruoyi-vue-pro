@@ -31,6 +31,10 @@ public class ProductCategorySaveReqVO {
     @NotNull(message = "开启状态不能为空")
     private Integer status;
 
+    @Schema(description = "是否参与赠送", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "是否参与赠送不能为空")
+    private Boolean supportsGift;
+
     @Schema(description = "分类描述", example = "描述")
     private String description;
 

@@ -44,6 +44,18 @@ public interface StudentFlowMapper extends BaseMapperX<StudentFlowDO> {
                 .in(StudentFlowDO::getBatchId, batchIds));
     }
 
+    default Long countByStudentId(Long studentId) {
+        return selectCount(StudentFlowDO::getStudentId, studentId);
+    }
+
+    default Long countByStudentIds(Collection<Long> studentIds) {
+        if (studentIds == null || studentIds.isEmpty()) {
+            return 0L;
+        }
+        return selectCount(new LambdaQueryWrapperX<StudentFlowDO>()
+                .in(StudentFlowDO::getStudentId, studentIds));
+    }
+
     @Update({
             "<script>",
             "UPDATE edu_student_flow",

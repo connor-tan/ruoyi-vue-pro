@@ -16,8 +16,10 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentFlowMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
 import jakarta.annotation.Resource;
@@ -49,8 +51,11 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS_MULTI_CURRENT;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS_NOT_BELONG_TO_SCHOOL;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS_RECORD_NOT_EXISTS;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_IN_USE_BY_FLOW;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_NOT_EXISTS;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PARENT_NOT_EXISTS;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATUS_CURRENT_CLASS_FORBIDDEN;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATUS_READING_CURRENT_CLASS_REQUIRED;
 
 /**
  * 学生 Service 实现类
@@ -61,10 +66,14 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PAREN
 @Validated
 public class StudentServiceImpl implements StudentService {
 
+    private static final Integer STUDENT_STATUS_READING = StudentStatusEnum.READING.getStatus();
+
     @Resource
     private StudentMapper studentMapper;
     @Resource
     private StudentClassMapper studentClassMapper;
+    @Resource
+    private StudentFlowMapper studentFlowMapper;
     @Resource
     private SchoolMapper schoolMapper;
     @Resource
@@ -98,6 +107,7 @@ public class StudentServiceImpl implements StudentService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteStudent(Long id) {
         validateStudentExists(id);
+        validateStudentUnused(id);
         studentMapper.deleteById(id);
         deleteStudentClassByStudentId(id);
     }
@@ -108,8 +118,13 @@ public class StudentServiceImpl implements StudentService {
         if (CollUtil.isEmpty(ids)) {
             return;
         }
-        studentMapper.deleteByIds(ids);
-        deleteStudentClassByStudentIds(ids);
+        List<Long> existedStudentIds = convertList(studentMapper.selectList(StudentDO::getId, ids), StudentDO::getId);
+        if (CollUtil.isEmpty(existedStudentIds)) {
+            return;
+        }
+        validateStudentUnused(existedStudentIds);
+        studentMapper.deleteByIds(existedStudentIds);
+        deleteStudentClassByStudentIds(existedStudentIds);
     }
 
     @Override
@@ -138,6 +153,7 @@ public class StudentServiceImpl implements StudentService {
         validateParentExists(reqVO.getBelongTo());
         validateSchoolExists(reqVO.getCurrentSchoolId());
         validateStudentClassList(reqVO.getCurrentSchoolId(), reqVO.getEntryYear(), reqVO.getStudentClasses());
+        validateStudentStatusMatchesStudentClassList(reqVO.getStatus(), reqVO.getStudentClasses());
     }
 
     private void validateParentExists(Long parentId) {
@@ -158,6 +174,18 @@ public class StudentServiceImpl implements StudentService {
             throw exception(STUDENT_NOT_EXISTS);
         }
         return student;
+    }
+
+    private void validateStudentUnused(Long studentId) {
+        if (studentFlowMapper.countByStudentId(studentId) > 0) {
+            throw exception(STUDENT_IN_USE_BY_FLOW);
+        }
+    }
+
+    private void validateStudentUnused(List<Long> studentIds) {
+        if (studentFlowMapper.countByStudentIds(studentIds) > 0) {
+            throw exception(STUDENT_IN_USE_BY_FLOW);
+        }
     }
 
     private void validateStudentClassList(Long schoolId, Integer entryYear, List<StudentClassSaveReqVO> studentClasses) {
@@ -194,6 +222,17 @@ public class StudentServiceImpl implements StudentService {
             throw exception(STUDENT_CLASS_MULTI_CURRENT);
         }
         validateStudentClassDateRange(studentClasses);
+    }
+
+    private void validateStudentStatusMatchesStudentClassList(Integer status, List<StudentClassSaveReqVO> studentClasses) {
+        long currentClassCount = studentClasses == null ? 0L
+                : studentClasses.stream().filter(item -> item.getEndDate() == null).count();
+        if (Objects.equals(status, STUDENT_STATUS_READING) && currentClassCount == 0) {
+            throw exception(STUDENT_STATUS_READING_CURRENT_CLASS_REQUIRED);
+        }
+        if (!Objects.equals(status, STUDENT_STATUS_READING) && currentClassCount > 0) {
+            throw exception(STUDENT_STATUS_CURRENT_CLASS_FORBIDDEN);
+        }
     }
 
     private void validateStudentClassDateRange(List<StudentClassSaveReqVO> studentClasses) {

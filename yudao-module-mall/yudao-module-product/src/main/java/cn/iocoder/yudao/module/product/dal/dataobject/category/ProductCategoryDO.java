@@ -61,4 +61,9 @@ public class ProductCategoryDO extends BaseDO {
      */
     private Integer status;
 
+    /**
+     * 是否参与赠送
+     */
+    private Boolean supportsGift;
+
 }
