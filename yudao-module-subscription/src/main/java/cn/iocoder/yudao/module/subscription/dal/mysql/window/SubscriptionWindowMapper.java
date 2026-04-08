@@ -18,11 +18,11 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
                 .likeIfPresent(SubscriptionWindowDO::getName, reqVO.getName())
                 .eqIfPresent(SubscriptionWindowDO::getTargetYearStart, reqVO.getTargetYearStart())
                 .eqIfPresent(SubscriptionWindowDO::getTargetYearEnd, reqVO.getTargetYearEnd())
-                .eqIfPresent(SubscriptionWindowDO::getTargetSemester, reqVO.getTargetSemester())
+                .eqIfPresent(SubscriptionWindowDO::getTargetPeriod, reqVO.getTargetPeriod())
                 .eqIfPresent(SubscriptionWindowDO::getGradeCalcRule, reqVO.getGradeCalcRule())
                 .eqIfPresent(SubscriptionWindowDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(SubscriptionWindowDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SubscriptionWindowDO::getId));
+                .orderByDesc(SubscriptionWindowDO::getCreateTime, SubscriptionWindowDO::getId));
     }
 
     default SubscriptionWindowDO selectCurrentEnabledWindow(LocalDateTime now) {
@@ -30,24 +30,31 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
                 .eq(SubscriptionWindowDO::getStatus, 0)
                 .le(SubscriptionWindowDO::getStartTime, now)
                 .ge(SubscriptionWindowDO::getEndTime, now)
-                .orderByDesc(SubscriptionWindowDO::getId));
+                .orderByDesc(SubscriptionWindowDO::getCreateTime, SubscriptionWindowDO::getId));
         return list.isEmpty() ? null : list.get(0);
     }
 
-    default long countEnabledWindowExceptId(Long excludeId) {
+    default long countEnabledOverlapWindowExceptId(Long excludeId, LocalDateTime startTime, LocalDateTime endTime) {
         return selectCount(new LambdaQueryWrapperX<SubscriptionWindowDO>()
                 .eq(SubscriptionWindowDO::getStatus, 0)
-                .neIfPresent(SubscriptionWindowDO::getId, excludeId));
+                .neIfPresent(SubscriptionWindowDO::getId, excludeId)
+                .lt(SubscriptionWindowDO::getStartTime, endTime)
+                .gt(SubscriptionWindowDO::getEndTime, startTime));
     }
 
     default List<SubscriptionWindowDO> selectEnabledList() {
         return selectList(new LambdaQueryWrapperX<SubscriptionWindowDO>()
                 .eq(SubscriptionWindowDO::getStatus, 0)
-                .orderByDesc(SubscriptionWindowDO::getId));
+                .orderByDesc(SubscriptionWindowDO::getCreateTime, SubscriptionWindowDO::getId));
     }
 
     default List<SubscriptionWindowDO> selectAllList() {
         return selectList(new LambdaQueryWrapperX<SubscriptionWindowDO>()
-                .orderByDesc(SubscriptionWindowDO::getId));
+                .orderByDesc(SubscriptionWindowDO::getCreateTime, SubscriptionWindowDO::getId));
+    }
+
+    default long countByTemplateId(Long templateId) {
+        return selectCount(new LambdaQueryWrapperX<SubscriptionWindowDO>()
+                .eq(SubscriptionWindowDO::getTemplateId, templateId));
     }
 }

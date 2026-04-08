@@ -22,7 +22,9 @@ public class AppSubscriptionCurrentWindowRespVO {
 
     private String targetYearName;
 
-    private Integer targetSemester;
+    private String templateNameSnapshot;
+
+    private String targetPeriod;
 
     private String gradeCalcRule;
 

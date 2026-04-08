@@ -1,9 +1,6 @@
 package cn.iocoder.yudao.module.subscription.controller.admin.window.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import cn.iocoder.yudao.framework.common.validation.InEnum;
-import cn.iocoder.yudao.module.subscription.enums.SubscriptionGradeCalcRuleEnum;
-import cn.iocoder.yudao.module.subscription.enums.SubscriptionSemesterEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -45,14 +42,8 @@ public class SubscriptionWindowSaveReqVO {
     @NotNull(message = "目标学年不能为空")
     private Integer targetYearEnd;
 
-    @Schema(description = "目标学期", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "目标学期不能为空")
-    @InEnum(value = SubscriptionSemesterEnum.class, message = "目标学期必须是 {value}")
-    private Integer targetSemester;
-
-    @Schema(description = "年级计算规则")
-    @InEnum(value = SubscriptionGradeCalcRuleEnum.class, message = "年级计算规则必须是 {value}")
-    private String gradeCalcRule;
+    @Schema(description = "规则模板编号", example = "1")
+    private Long templateId;
 
     @Schema(description = "状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
     @NotNull(message = "状态不能为空")

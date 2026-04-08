@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.subscription.controller.admin.windowspurule.vo.Su
 import cn.iocoder.yudao.module.subscription.dal.dataobject.window.SubscriptionWindowSpuRuleDO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -44,6 +45,9 @@ public interface SubscriptionWindowSpuRuleMapper extends BaseMapperX<Subscriptio
         }
         deletePhysicallyByWindowSpuIds(windowSpuIds);
     }
+
+    @Select("SELECT COUNT(1) FROM sub_window_spu_rule wr INNER JOIN sub_window_spu wsp ON wsp.id = wr.window_spu_id AND wsp.deleted = b'0' WHERE wr.deleted = b'0' AND wsp.window_id = #{windowId}")
+    long countByWindowId(Long windowId);
 
     @Delete("DELETE FROM sub_window_spu_rule WHERE window_spu_id = #{windowSpuId}")
     void deletePhysicallyByWindowSpuId(Long windowSpuId);

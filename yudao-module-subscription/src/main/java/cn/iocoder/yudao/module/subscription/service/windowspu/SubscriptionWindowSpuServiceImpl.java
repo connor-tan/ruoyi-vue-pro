@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.subscription.service.windowspu;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.dynamic.datasource.annotation.Master;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
@@ -150,6 +151,7 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public SubscriptionWindowSpuBatchCreateRespVO batchCreate(SubscriptionWindowSpuBatchCreateReqVO reqVO) {
         subscriptionWindowService.getWindowDO(reqVO.getWindowId());
@@ -199,6 +201,7 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public void updateWindowSpu(SubscriptionWindowSpuSaveReqVO reqVO) {
         SubscriptionWindowSpuDO windowSpu = getWindowSpuDO(reqVO.getId());
@@ -220,6 +223,7 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public void deleteWindowSpu(Long id) {
         getWindowSpuDO(id);

@@ -61,7 +61,8 @@ public class SubscriptionAppQueryServiceImpl implements SubscriptionAppQueryServ
         respVO.setTargetYearStart(window.getTargetYearStart());
         respVO.setTargetYearEnd(window.getTargetYearEnd());
         respVO.setTargetYearName(window.getTargetYearStart() + "-" + window.getTargetYearEnd() + "学年");
-        respVO.setTargetSemester(window.getTargetSemester());
+        respVO.setTemplateNameSnapshot(window.getTemplateNameSnapshot());
+        respVO.setTargetPeriod(window.getTargetPeriod());
         respVO.setGradeCalcRule(normalizeGradeCalcRule(window.getGradeCalcRule()));
         respVO.setStartTime(window.getStartTime());
         respVO.setEndTime(window.getEndTime());

@@ -28,9 +28,15 @@ public class SubscriptionWindowRespVO {
 
     private String targetYearName;
 
-    private Integer targetSemester;
+    private Long templateId;
+
+    private String templateNameSnapshot;
+
+    private String targetPeriod;
 
     private String gradeCalcRule;
+
+    private Boolean templateLocked;
 
     private Integer status;
 
