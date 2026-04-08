@@ -1,7 +1,8 @@
 package cn.iocoder.yudao.module.subscription.controller.admin.support;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.module.subscription.controller.admin.support.vo.SubscriptionSupportSchoolYearSimpleRespVO;
+import cn.iocoder.yudao.module.subscription.controller.admin.support.vo.SubscriptionSupportStudentSimpleRespVO;
+import cn.iocoder.yudao.module.subscription.controller.admin.support.vo.SubscriptionSupportWindowYearSimpleRespVO;
 import cn.iocoder.yudao.module.subscription.service.support.SubscriptionSupportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,10 +28,17 @@ public class SubscriptionSupportController {
     private SubscriptionSupportService subscriptionSupportService;
 
     @GetMapping("/school-year/simple-list")
-    @Operation(summary = "获得学年精简列表")
+    @Operation(summary = "获得全局学年区间精简列表")
     @PreAuthorize("@ss.hasAnyPermissions('subscription:window:query', 'subscription:window:create', 'subscription:window:update')")
-    public CommonResult<List<SubscriptionSupportSchoolYearSimpleRespVO>> getSchoolYearSimpleList(
-            @RequestParam(value = "schoolId", required = false) Long schoolId) {
-        return success(subscriptionSupportService.getSchoolYearSimpleList(schoolId));
+    public CommonResult<List<SubscriptionSupportWindowYearSimpleRespVO>> getSchoolYearSimpleList() {
+        return success(subscriptionSupportService.getWindowYearSimpleList());
+    }
+
+    @GetMapping("/student/simple-list")
+    @Operation(summary = "获得学生精简列表")
+    @PreAuthorize("@ss.hasAnyPermissions('subscription:preview:query', 'subscription:window:query')")
+    public CommonResult<List<SubscriptionSupportStudentSimpleRespVO>> getStudentSimpleList(
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return success(subscriptionSupportService.getStudentSimpleList(keyword));
     }
 }

@@ -1,26 +1,24 @@
 SET NAMES utf8mb4;
 
-CREATE TABLE `sub_window` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
-  `name` varchar(128) NOT NULL COMMENT '窗口名称',
-  `start_time` datetime NOT NULL COMMENT '开始时间',
-  `end_time` datetime NOT NULL COMMENT '结束时间',
-  `target_year_start` int NOT NULL COMMENT '目标学年开始年份',
-  `target_year_end` int NOT NULL COMMENT '目标学年结束年份',
-  `target_semester` tinyint NOT NULL COMMENT '目标学期',
-  `grade_calc_rule` varchar(32) NOT NULL COMMENT '年级计算规则',
-  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态',
-  `remark` varchar(255) DEFAULT NULL COMMENT '备注',
-  `creator` varchar(64) DEFAULT '' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updater` varchar(64) DEFAULT '' COMMENT '更新者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
-  PRIMARY KEY (`id`),
-  KEY `idx_sub_window_status_time` (`status`,`start_time`,`end_time`)
-) COMMENT='订刊窗口';
+ALTER TABLE `sub_window`
+  ADD COLUMN `target_year_start` int DEFAULT NULL COMMENT '目标学年开始年份' AFTER `end_time`,
+  ADD COLUMN `target_year_end` int DEFAULT NULL COMMENT '目标学年结束年份' AFTER `target_year_start`;
 
-CREATE TABLE `sub_window_spu` (
+UPDATE `sub_window` w
+JOIN `edu_school_year` sy ON sy.id = w.target_school_year_id
+SET w.target_year_start = sy.year_start,
+    w.target_year_end = sy.year_end
+WHERE w.target_year_start IS NULL
+   OR w.target_year_end IS NULL;
+
+ALTER TABLE `sub_window`
+  MODIFY COLUMN `target_year_start` int NOT NULL COMMENT '目标学年开始年份',
+  MODIFY COLUMN `target_year_end` int NOT NULL COMMENT '目标学年结束年份';
+
+ALTER TABLE `sub_window`
+  DROP COLUMN `target_school_year_id`;
+
+CREATE TABLE IF NOT EXISTS `sub_window_spu` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
   `window_id` bigint NOT NULL COMMENT '窗口编号',
   `product_spu_id` bigint NOT NULL COMMENT '刊物商品 SPU 编号',
@@ -37,7 +35,7 @@ CREATE TABLE `sub_window_spu` (
   KEY `idx_sub_window_spu_window` (`window_id`)
 ) COMMENT='订刊窗口刊物 SPU';
 
-CREATE TABLE `sub_window_spu_grade` (
+CREATE TABLE IF NOT EXISTS `sub_window_spu_grade` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
   `window_spu_id` bigint NOT NULL COMMENT '窗口刊物编号',
   `grade_catalog_id` bigint NOT NULL COMMENT '基础可见年级编号',
@@ -51,7 +49,7 @@ CREATE TABLE `sub_window_spu_grade` (
   KEY `idx_sub_window_spu_grade_catalog` (`grade_catalog_id`)
 ) COMMENT='订刊窗口刊物基础可见年级';
 
-CREATE TABLE `sub_window_spu_rule` (
+CREATE TABLE IF NOT EXISTS `sub_window_spu_rule` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
   `window_spu_id` bigint NOT NULL COMMENT '窗口刊物编号',
   `effect_type` varchar(32) NOT NULL COMMENT '规则效果',
@@ -70,7 +68,7 @@ CREATE TABLE `sub_window_spu_rule` (
   KEY `idx_sub_window_spu_rule_scope` (`scope_type`,`school_id`,`grade_catalog_id`)
 ) COMMENT='订刊窗口刊物特殊规则';
 
-CREATE TABLE `sub_window_sku` (
+CREATE TABLE IF NOT EXISTS `sub_window_sku` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
   `window_spu_id` bigint NOT NULL COMMENT '窗口刊物编号',
   `product_sku_id` bigint NOT NULL COMMENT '商品 SKU 编号',

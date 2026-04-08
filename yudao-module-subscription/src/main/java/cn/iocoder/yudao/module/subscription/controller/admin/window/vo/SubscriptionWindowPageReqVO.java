@@ -19,8 +19,11 @@ public class SubscriptionWindowPageReqVO extends PageParam {
     @Schema(description = "窗口名称")
     private String name;
 
-    @Schema(description = "目标学年ID")
-    private Long targetSchoolYearId;
+    @Schema(description = "目标学年开始年份")
+    private Integer targetYearStart;
+
+    @Schema(description = "目标学年结束年份")
+    private Integer targetYearEnd;
 
     @Schema(description = "目标学期")
     @InEnum(value = SubscriptionSemesterEnum.class, message = "目标学期必须是 {value}")

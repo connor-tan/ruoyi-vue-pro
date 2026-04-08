@@ -11,9 +11,11 @@ public class SubscriptionWindowSimpleRespVO {
 
     private String name;
 
-    private Long targetSchoolYearId;
+    private Integer targetYearStart;
 
-    private String targetSchoolYearName;
+    private Integer targetYearEnd;
+
+    private String targetYearName;
 
     private Integer targetSemester;
 
