@@ -46,4 +46,8 @@ public interface ProductPublicationTitleMapper extends BaseMapperX<ProductPublic
         return selectList(new LambdaQueryWrapperX<ProductPublicationTitleDO>()
                 .inIfPresent(ProductPublicationTitleDO::getPublisherId, publisherIds));
     }
+
+    default Long countByPublisherId(Long publisherId) {
+        return selectCount(ProductPublicationTitleDO::getPublisherId, publisherId);
+    }
 }

@@ -24,4 +24,8 @@ public interface ProductSpuPublicationMapper extends BaseMapperX<ProductSpuPubli
         return selectList(new LambdaQueryWrapperX<ProductSpuPublicationDO>()
                 .inIfPresent(ProductSpuPublicationDO::getPublicationTitleId, publicationTitleIds));
     }
+
+    default Long countByPublicationTitleId(Long publicationTitleId) {
+        return selectCount(ProductSpuPublicationDO::getPublicationTitleId, publicationTitleId);
+    }
 }

@@ -26,6 +26,8 @@ public class ProductPublicationTitleService {
     @Resource
     private ProductPublicationTitleIdentifierMapper publicationTitleIdentifierMapper;
     @Resource
+    private ProductSpuPublicationMapper productSpuPublicationMapper;
+    @Resource
     private ProductPublicationTypeService publicationTypeService;
     @Resource
     private ProductPublicationPublisherService publicationPublisherService;
@@ -53,8 +55,12 @@ public class ProductPublicationTitleService {
         saveIdentifier(reqVO.getId(), reqVO);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         validateExists(id);
+        if (productSpuPublicationMapper.countByPublicationTitleId(id) > 0) {
+            throw exception(PUBLICATION_TITLE_HAS_PRODUCTS);
+        }
         publicationTitleIdentifierMapper.deleteById(id);
         publicationTitleMapper.deleteById(id);
     }

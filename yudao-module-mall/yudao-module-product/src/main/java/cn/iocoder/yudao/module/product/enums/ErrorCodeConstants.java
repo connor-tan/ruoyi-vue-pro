@@ -67,11 +67,13 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_PUBLISHER_NOT_EXISTS = new ErrorCode(1_008_010_000, "出版社不存在");
     ErrorCode PUBLICATION_PUBLISHER_NAME_EXISTS = new ErrorCode(1_008_010_001, "出版社名称已存在");
     ErrorCode PUBLICATION_PUBLISHER_CODE_EXISTS = new ErrorCode(1_008_010_002, "出版社编码已存在");
+    ErrorCode PUBLICATION_PUBLISHER_HAS_TITLES = new ErrorCode(1_008_010_003, "出版社下存在刊物主档，无法删除");
 
     // ========== 刊物主档 1-008-011-000 ==========
     ErrorCode PUBLICATION_TITLE_NOT_EXISTS = new ErrorCode(1_008_011_000, "刊物主档不存在");
     ErrorCode PUBLICATION_TITLE_NAME_EXISTS = new ErrorCode(1_008_011_001, "刊物主档名称已存在");
     ErrorCode PUBLICATION_TITLE_CODE_EXISTS = new ErrorCode(1_008_011_002, "刊物主档编码已存在");
+    ErrorCode PUBLICATION_TITLE_HAS_PRODUCTS = new ErrorCode(1_008_011_003, "刊物主档下存在刊物商品，无法删除");
 
     // ========== 刊物商品 1-008-012-000 ==========
     ErrorCode PUBLICATION_PRODUCT_NOT_EXISTS = new ErrorCode(1_008_012_000, "刊物商品不存在");

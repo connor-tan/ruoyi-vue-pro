@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.product.controller.admin.publicationpublisher.vo.*;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationPublisherDO;
+import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationTitleMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationPublisherMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,8 @@ public class ProductPublicationPublisherService {
 
     @Resource
     private ProductPublicationPublisherMapper publicationPublisherMapper;
+    @Resource
+    private ProductPublicationTitleMapper publicationTitleMapper;
 
     public Long create(ProductPublicationPublisherSaveReqVO reqVO) {
         validateCodeUnique(null, reqVO.getCode());
@@ -39,6 +42,9 @@ public class ProductPublicationPublisherService {
 
     public void delete(Long id) {
         validateExists(id);
+        if (publicationTitleMapper.countByPublisherId(id) > 0) {
+            throw exception(PUBLICATION_PUBLISHER_HAS_TITLES);
+        }
         publicationPublisherMapper.deleteById(id);
     }
 

@@ -19,6 +19,7 @@ import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServic
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AREA_NOT_EXISTS;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AREA_NOT_SELECTABLE;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,6 +94,17 @@ public class AreaServiceImplTest extends BaseDbUnitTest {
         assertTrue(areaIds.contains(city.getId()));
         assertTrue(areaIds.contains(district.getId()));
         assertFalse(areaIds.contains(disabledDistrict.getId()));
+    }
+
+    @Test
+    public void testUpdateAreaStatusBatch_rollbackWhenAnyAreaInvalid() {
+        Area district = getSampleDistrictArea();
+        saveAreaConfig(district.getId(), CommonStatusEnum.ENABLE.getStatus());
+
+        assertServiceException(() -> areaService.updateAreaStatusBatch(
+                List.of(district.getId(), Integer.MAX_VALUE), CommonStatusEnum.DISABLE.getStatus()), AREA_NOT_EXISTS);
+        assertEquals(CommonStatusEnum.ENABLE.getStatus(),
+                areaConfigMapper.selectByAreaId(district.getId()).getStatus());
     }
 
     private AreaConfigDO createAreaConfig(Integer areaId, Integer status) {

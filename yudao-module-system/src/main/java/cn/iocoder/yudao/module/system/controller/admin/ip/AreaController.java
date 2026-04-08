@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -69,6 +70,7 @@ public class AreaController {
 
     @PutMapping("/update-status")
     @Operation(summary = "修改地区状态")
+    @PreAuthorize("@ss.hasPermission('system:area:update')")
     public CommonResult<Boolean> updateAreaStatus(@Valid @RequestBody AreaUpdateStatusReqVO reqVO) {
         areaService.updateAreaStatus(reqVO.getId(), reqVO.getStatus());
         return success(true);
@@ -76,6 +78,7 @@ public class AreaController {
 
     @PutMapping("/update-status-batch")
     @Operation(summary = "批量修改地区状态")
+    @PreAuthorize("@ss.hasPermission('system:area:update')")
     public CommonResult<Boolean> updateAreaStatusBatch(@Valid @RequestBody AreaUpdateStatusBatchReqVO reqVO) {
         areaService.updateAreaStatusBatch(reqVO.getIds(), reqVO.getStatus());
         return success(true);

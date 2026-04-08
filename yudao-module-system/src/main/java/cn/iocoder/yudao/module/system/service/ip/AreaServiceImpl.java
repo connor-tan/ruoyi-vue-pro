@@ -10,6 +10,7 @@ import cn.iocoder.yudao.module.system.dal.dataobject.ip.AreaConfigDO;
 import cn.iocoder.yudao.module.system.dal.mysql.ip.AreaConfigMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
@@ -66,8 +67,11 @@ public class AreaServiceImpl implements AreaService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateAreaStatusBatch(List<Integer> ids, Integer status) {
-        ids.stream().distinct().forEach(id -> updateAreaStatus(id, status));
+        List<Integer> distinctIds = ids.stream().distinct().toList();
+        distinctIds.forEach(this::validateAreaExists);
+        distinctIds.forEach(id -> updateAreaStatus(id, status));
     }
 
     @Override
