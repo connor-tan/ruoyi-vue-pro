@@ -29,7 +29,7 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
         List<SubscriptionWindowDO> list = selectList(new LambdaQueryWrapperX<SubscriptionWindowDO>()
                 .eq(SubscriptionWindowDO::getStatus, 0)
                 .le(SubscriptionWindowDO::getStartTime, now)
-                .ge(SubscriptionWindowDO::getEndTime, now)
+                .gt(SubscriptionWindowDO::getEndTime, now)
                 .orderByDesc(SubscriptionWindowDO::getCreateTime, SubscriptionWindowDO::getId));
         return list.isEmpty() ? null : list.get(0);
     }

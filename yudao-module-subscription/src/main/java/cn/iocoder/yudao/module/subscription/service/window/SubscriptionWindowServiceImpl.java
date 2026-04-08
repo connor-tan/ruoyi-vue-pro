@@ -73,10 +73,8 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         }
         SubscriptionWindowDO updateObj = BeanUtils.toBean(updateReqVO, SubscriptionWindowDO.class);
         updateObj.setTemplateId(nextTemplateId);
-        if (nextTemplateId != null) {
-            SubscriptionWindowTemplateDO template = templateChanged || oldWindow.getTemplateId() == null
-                    ? subscriptionWindowTemplateService.getEnabledWindowTemplate(nextTemplateId)
-                    : subscriptionWindowTemplateService.getWindowTemplateDO(nextTemplateId);
+        if (templateChanged && nextTemplateId != null) {
+            SubscriptionWindowTemplateDO template = subscriptionWindowTemplateService.getEnabledWindowTemplate(nextTemplateId);
             applyTemplateSnapshot(updateObj, template);
         } else {
             updateObj.setTemplateNameSnapshot(oldWindow.getTemplateNameSnapshot());
