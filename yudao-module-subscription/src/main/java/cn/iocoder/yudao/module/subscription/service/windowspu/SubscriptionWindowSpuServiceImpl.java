@@ -203,6 +203,7 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
     public void updateWindowSpu(SubscriptionWindowSpuSaveReqVO reqVO) {
         SubscriptionWindowSpuDO windowSpu = getWindowSpuDO(reqVO.getId());
         subscriptionSupportService.validateGradeCatalogIds(reqVO.getGradeCatalogIds());
+        validateSpuGradesMatch(windowSpu.getProductSpuId(), reqVO.getGradeCatalogIds());
         windowSpu.setRecommendFlag(reqVO.getRecommendFlag());
         windowSpu.setSort(reqVO.getSort());
         windowSpu.setRemark(reqVO.getRemark());
@@ -270,6 +271,24 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
                 .stream()
                 .anyMatch(item -> Objects.equals(item.getGradeCatalogId(), gradeCatalogId));
         if (!matched) {
+            throw exception(ErrorCodeConstants.WINDOW_SPU_GRADE_NOT_MATCH);
+        }
+    }
+
+    private void validateSpuGradesMatch(Long productSpuId, Collection<Long> gradeCatalogIds) {
+        if (CollUtil.isEmpty(gradeCatalogIds)) {
+            return;
+        }
+        Set<Long> supportedGradeIds = subscriptionSupportService.getPublicationSpuGradeMap(Collections.singleton(productSpuId))
+                .getOrDefault(productSpuId, Collections.emptyList())
+                .stream()
+                .map(ProductSpuGradeDO::getGradeCatalogId)
+                .collect(Collectors.toSet());
+        boolean invalid = gradeCatalogIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .anyMatch(gradeCatalogId -> !supportedGradeIds.contains(gradeCatalogId));
+        if (invalid) {
             throw exception(ErrorCodeConstants.WINDOW_SPU_GRADE_NOT_MATCH);
         }
     }
