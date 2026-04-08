@@ -9,6 +9,14 @@ public interface ErrorCodeConstants {
     ErrorCode WINDOW_TIME_INVALID = new ErrorCode(1_018_001_003, "订刊窗口结束时间必须晚于开始时间");
     ErrorCode SUPPORT_WINDOW_YEAR_NOT_EXISTS = new ErrorCode(1_018_001_004, "目标学年不存在");
     ErrorCode WINDOW_CURRENT_NOT_EXISTS = new ErrorCode(1_018_001_005, "当前没有开放中的订刊窗口");
+    ErrorCode WINDOW_TEMPLATE_NOT_EXISTS = new ErrorCode(1_018_001_006, "订刊规则模板不存在");
+    ErrorCode WINDOW_TEMPLATE_DISABLED = new ErrorCode(1_018_001_007, "订刊规则模板已停用");
+    ErrorCode WINDOW_TEMPLATE_DELETE_FORBIDDEN = new ErrorCode(1_018_001_008, "内置订刊规则模板不允许删除");
+    ErrorCode WINDOW_TEMPLATE_USED = new ErrorCode(1_018_001_009, "订刊规则模板已被窗口使用，不允许删除");
+    ErrorCode WINDOW_TEMPLATE_BUILT_IN_RULE_IMMUTABLE = new ErrorCode(1_018_001_010, "内置订刊规则模板的目标周期和年级判定不允许修改");
+    ErrorCode WINDOW_TEMPLATE_SWITCH_LOCKED = new ErrorCode(1_018_001_011, "当前窗口已配置刊物或规则，不允许切换规则模板");
+    ErrorCode WINDOW_TEMPLATE_CODE_DUPLICATE = new ErrorCode(1_018_001_012, "订刊规则模板编码已存在");
+    ErrorCode WINDOW_TEMPLATE_NAME_DUPLICATE = new ErrorCode(1_018_001_013, "订刊规则模板名称已存在");
 
     ErrorCode WINDOW_SPU_NOT_EXISTS = new ErrorCode(1_018_002_001, "窗口刊物不存在");
     ErrorCode WINDOW_SPU_GRADE_DUPLICATE = new ErrorCode(1_018_002_002, "该年级已存在于当前窗口刊物");

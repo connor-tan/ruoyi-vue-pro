@@ -36,6 +36,11 @@ public interface SubscriptionWindowSpuMapper extends BaseMapperX<SubscriptionWin
                 .orderByDesc(SubscriptionWindowSpuDO::getId));
     }
 
+    default long countByWindowId(Long windowId) {
+        return selectCount(new LambdaQueryWrapperX<SubscriptionWindowSpuDO>()
+                .eq(SubscriptionWindowSpuDO::getWindowId, windowId));
+    }
+
     default List<SubscriptionWindowSpuDO> selectListByIds(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyList();

@@ -27,10 +27,10 @@ public class SubscriptionSupportController {
     @Resource
     private SubscriptionSupportService subscriptionSupportService;
 
-    @GetMapping("/school-year/simple-list")
+    @GetMapping({"/window-year/simple-list", "/school-year/simple-list"})
     @Operation(summary = "获得全局学年区间精简列表")
     @PreAuthorize("@ss.hasAnyPermissions('subscription:window:query', 'subscription:window:create', 'subscription:window:update')")
-    public CommonResult<List<SubscriptionSupportWindowYearSimpleRespVO>> getSchoolYearSimpleList() {
+    public CommonResult<List<SubscriptionSupportWindowYearSimpleRespVO>> getWindowYearSimpleList() {
         return success(subscriptionSupportService.getWindowYearSimpleList());
     }
 

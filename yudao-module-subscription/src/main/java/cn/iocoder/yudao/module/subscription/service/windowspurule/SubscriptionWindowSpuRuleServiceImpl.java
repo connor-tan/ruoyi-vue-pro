@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.subscription.service.windowspurule;
 
+import com.baomidou.dynamic.datasource.annotation.Master;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
@@ -49,6 +50,7 @@ public class SubscriptionWindowSpuRuleServiceImpl implements SubscriptionWindowS
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public Long createWindowSpuRule(SubscriptionWindowSpuRuleSaveReqVO reqVO) {
         validateWindowSpuExists(reqVO.getWindowSpuId());
@@ -60,6 +62,7 @@ public class SubscriptionWindowSpuRuleServiceImpl implements SubscriptionWindowS
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public void updateWindowSpuRule(SubscriptionWindowSpuRuleSaveReqVO reqVO) {
         SubscriptionWindowSpuRuleDO oldRule = validateRuleExists(reqVO.getId());
@@ -72,6 +75,7 @@ public class SubscriptionWindowSpuRuleServiceImpl implements SubscriptionWindowS
     }
 
     @Override
+    @Master
     public void deleteWindowSpuRule(Long id) {
         validateRuleExists(id);
         subscriptionWindowSpuRuleMapper.deleteById(id);

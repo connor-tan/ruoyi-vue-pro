@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.subscription.service.windowsku;
 
+import com.baomidou.dynamic.datasource.annotation.Master;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductSkuPublicationDO;
@@ -38,6 +39,7 @@ public class SubscriptionWindowSkuServiceImpl implements SubscriptionWindowSkuSe
     private SubscriptionSupportService subscriptionSupportService;
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public List<SubscriptionWindowSkuRespVO> getWindowSkuListByWindowSpuId(Long windowSpuId) {
         SubscriptionWindowSpuDO windowSpu = validateWindowSpuExists(windowSpuId);
@@ -57,6 +59,7 @@ public class SubscriptionWindowSkuServiceImpl implements SubscriptionWindowSkuSe
     }
 
     @Override
+    @Master
     @Transactional(rollbackFor = Exception.class)
     public void batchUpdateWindowSku(SubscriptionWindowSkuBatchUpdateReqVO reqVO) {
         SubscriptionWindowSpuDO windowSpu = validateWindowSpuExists(reqVO.getWindowSpuId());
