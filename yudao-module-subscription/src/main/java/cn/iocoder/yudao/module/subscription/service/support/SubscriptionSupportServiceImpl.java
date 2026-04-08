@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.subscription.service.support;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
@@ -225,12 +226,12 @@ public class SubscriptionSupportServiceImpl implements SubscriptionSupportServic
     }
 
     @Override
-    public List<ProductSpuDO> getPublicationSpuList(String productName, Long categoryId, Long gradeCatalogId,
+    public List<ProductSpuDO> getPublicationSpuList(String productName, Long categoryId, Collection<Long> gradeCatalogIds,
                                                     boolean onlyEnable) {
         Set<Long> matchedSpuIds = null;
-        if (gradeCatalogId != null) {
+        if (CollUtil.isNotEmpty(gradeCatalogIds)) {
             matchedSpuIds = CollectionUtils.convertSet(
-                    productSpuGradeMapper.selectListByGradeCatalogIds(Collections.singleton(gradeCatalogId)),
+                    productSpuGradeMapper.selectListByGradeCatalogIds(gradeCatalogIds),
                     ProductSpuGradeDO::getProductSpuId);
             if (matchedSpuIds.isEmpty()) {
                 return Collections.emptyList();

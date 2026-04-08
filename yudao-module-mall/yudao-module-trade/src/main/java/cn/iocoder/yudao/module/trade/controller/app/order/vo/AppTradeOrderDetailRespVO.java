@@ -5,6 +5,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
 
 @Schema(description = "用户 App - 订单交易的明细 Response VO")
@@ -23,6 +26,7 @@ public class AppTradeOrderDetailRespVO {
     private Integer type;
 
     @Schema(description = "下单时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
     @Schema(description = "用户备注", requiredMode = Schema.RequiredMode.REQUIRED, example = "你猜")
@@ -35,9 +39,11 @@ public class AppTradeOrderDetailRespVO {
     private Integer productCount;
 
     @Schema(description = "订单完成时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime finishTime;
 
     @Schema(description = "订单取消时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime cancelTime;
 
     @Schema(description = "是否评价", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
@@ -52,9 +58,11 @@ public class AppTradeOrderDetailRespVO {
     private Long payOrderId;
 
     @Schema(description = "付款时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime payTime;
 
     @Schema(description = "付款超时时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime payExpireTime;
 
     @Schema(description = "支付渠道", example = "wx_lite_pay")
@@ -92,9 +100,11 @@ public class AppTradeOrderDetailRespVO {
     private String logisticsNo;
 
     @Schema(description = "发货时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime deliveryTime;
 
     @Schema(description = "收货时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime receiveTime;
 
     @Schema(description = "收件人名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "张三")

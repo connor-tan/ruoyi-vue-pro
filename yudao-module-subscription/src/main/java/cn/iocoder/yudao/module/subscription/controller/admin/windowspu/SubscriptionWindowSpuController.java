@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
@@ -48,7 +51,9 @@ public class SubscriptionWindowSpuController {
     @Operation(summary = "获得按年级可加入的窗口刊物分页")
     @PreAuthorize("@ss.hasPermission('subscription:window-spu:query')")
     public CommonResult<PageResult<SubscriptionWindowSpuAvailableRespVO>> getAvailablePage(
-            @Valid SubscriptionWindowSpuAvailablePageReqVO reqVO) {
+            @Valid SubscriptionWindowSpuAvailablePageReqVO reqVO,
+            @RequestParam("baseGradeCatalogIds") @NotEmpty(message = "基础可见年级不能为空") List<Long> baseGradeCatalogIds) {
+        reqVO.setBaseGradeCatalogIds(baseGradeCatalogIds);
         return success(subscriptionWindowSpuService.getAvailablePage(reqVO));
     }
 

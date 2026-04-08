@@ -154,7 +154,7 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
         LocalDateTime now = LocalDateTime.now();
         return CommonStatusEnum.isEnable(window.getStatus())
                 && !now.isBefore(window.getStartTime())
-                && !now.isAfter(window.getEndTime());
+                && now.isBefore(window.getEndTime());
     }
 
     private boolean isSpuEnabled(SubscriptionWindowSpuDO windowSpu, Map<Long, ProductSpuDO> productSpuMap) {

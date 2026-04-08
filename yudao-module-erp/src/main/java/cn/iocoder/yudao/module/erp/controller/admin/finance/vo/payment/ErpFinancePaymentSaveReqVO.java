@@ -5,10 +5,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 @Schema(description = "管理后台 - ERP 付款单新增/修改 Request VO")
 @Data
@@ -19,6 +22,7 @@ public class ErpFinancePaymentSaveReqVO {
 
     @Schema(description = "付款时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "付款时间不能为空")
+    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime paymentTime;
 
     @Schema(description = "财务人员编号", example = "19690")

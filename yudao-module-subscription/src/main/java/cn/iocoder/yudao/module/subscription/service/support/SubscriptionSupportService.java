@@ -49,7 +49,7 @@ public interface SubscriptionSupportService {
 
     ProductSpuDO getPublicationSpu(Long id, boolean onlyEnable);
 
-    List<ProductSpuDO> getPublicationSpuList(String productName, Long categoryId, Long gradeCatalogId, boolean onlyEnable);
+    List<ProductSpuDO> getPublicationSpuList(String productName, Long categoryId, Collection<Long> gradeCatalogIds, boolean onlyEnable);
 
     Map<Long, ProductSpuDO> getPublicationSpuMap(Collection<Long> ids);
 

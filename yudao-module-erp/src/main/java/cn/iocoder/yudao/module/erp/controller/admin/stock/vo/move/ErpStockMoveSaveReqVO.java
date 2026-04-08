@@ -8,10 +8,13 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 @Schema(description = "管理后台 - ERP 库存调拨单新增/修改 Request VO")
 @Data
@@ -25,6 +28,7 @@ public class ErpStockMoveSaveReqVO {
 
     @Schema(description = "调拨时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "调拨时间不能为空")
+    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime moveTime;
 
     @Schema(description = "备注", example = "随便")

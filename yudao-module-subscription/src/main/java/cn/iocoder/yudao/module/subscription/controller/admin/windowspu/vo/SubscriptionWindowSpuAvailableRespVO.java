@@ -2,6 +2,8 @@ package cn.iocoder.yudao.module.subscription.controller.admin.windowspu.vo;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class SubscriptionWindowSpuAvailableRespVO {
 
@@ -30,4 +32,8 @@ public class SubscriptionWindowSpuAvailableRespVO {
     private String publisherName;
 
     private String applicableGradeNames;
+
+    private List<Long> matchedGradeCatalogIds;
+
+    private String matchedGradeNames;
 }

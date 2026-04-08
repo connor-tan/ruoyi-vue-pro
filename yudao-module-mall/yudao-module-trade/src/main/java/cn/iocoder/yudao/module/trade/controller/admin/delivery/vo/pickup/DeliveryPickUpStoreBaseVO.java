@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.common.validation.Mobile;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -45,11 +46,13 @@ public class DeliveryPickUpStoreBaseVO {
     @Schema(description = "营业开始时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "营业开始时间不能为空")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+    @DateTimeFormat(pattern = "HH:mm")
     private LocalTime openingTime;
 
     @Schema(description = "营业结束时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "营业结束时间不能为空")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+    @DateTimeFormat(pattern = "HH:mm")
     private LocalTime closingTime;
 
     @Schema(description = "纬度", requiredMode = Schema.RequiredMode.REQUIRED, example = "5.88")

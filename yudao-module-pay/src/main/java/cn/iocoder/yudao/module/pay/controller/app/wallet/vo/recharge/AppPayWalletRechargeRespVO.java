@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Schema(description = "用户 APP - 钱包充值记录 Resp VO")
 @Data
@@ -34,6 +37,7 @@ public class AppPayWalletRechargeRespVO {
     private String payOrderChannelOrderNo; // 从 PayOrderDO 的 channelOrderNo 字段
 
     @Schema(description = "订单支付时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime payTime;
 
     @Schema(description = "退款状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")

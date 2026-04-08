@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import static cn.iocoder.yudao.module.iot.enums.DictTypeConstants.DEVICE_STATE;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - IoT 设备 Response VO")
 @Data
@@ -65,14 +68,17 @@ public class IotDeviceRespVO {
 
     @Schema(description = "最后上线时间")
     @ExcelProperty("最后上线时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime onlineTime;
 
     @Schema(description = "最后离线时间")
     @ExcelProperty("最后离线时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime offlineTime;
 
     @Schema(description = "设备激活时间")
     @ExcelProperty("设备激活时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime activeTime;
 
     @Schema(description = "设备密钥，用于设备认证")
@@ -90,6 +96,7 @@ public class IotDeviceRespVO {
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @ExcelProperty("创建时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
 }

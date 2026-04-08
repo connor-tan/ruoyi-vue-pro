@@ -3,10 +3,13 @@ package cn.iocoder.yudao.module.erp.controller.admin.sale.vo.order;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 @Schema(description = "管理后台 - ERP 销售订单新增/修改 Request VO")
 @Data
@@ -21,6 +24,7 @@ public class ErpSaleOrderSaveReqVO {
 
     @Schema(description = "下单时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "下单时间不能为空")
+    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime orderTime;
 
     @Schema(description = "销售员编号", example = "1888")
