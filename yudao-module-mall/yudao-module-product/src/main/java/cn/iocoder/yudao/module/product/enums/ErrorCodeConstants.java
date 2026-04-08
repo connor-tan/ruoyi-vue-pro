@@ -16,6 +16,10 @@ public interface ErrorCodeConstants {
     ErrorCode CATEGORY_EXISTS_CHILDREN = new ErrorCode(1_008_001_003, "存在子分类，无法删除");
     ErrorCode CATEGORY_DISABLED = new ErrorCode(1_008_001_004, "商品分类({})已禁用，无法使用");
     ErrorCode CATEGORY_HAVE_BIND_SPU = new ErrorCode(1_008_001_005, "类别下存在商品，无法删除");
+    ErrorCode CATEGORY_PUBLICATION_ROOT_CONFIG_INVALID = new ErrorCode(1_008_001_006, "刊物商品根分类配置不存在或无效");
+    ErrorCode CATEGORY_PUBLICATION_INVALID = new ErrorCode(1_008_001_007, "刊物商品必须选择刊物分类树下的二级分类");
+    ErrorCode CATEGORY_NORMAL_CANNOT_USE_PUBLICATION = new ErrorCode(1_008_001_008, "普通商品不能选择刊物分类");
+    ErrorCode CATEGORY_PUBLICATION_ROOT_DELETE_FORBIDDEN = new ErrorCode(1_008_001_009, "刊物商品根分类不允许删除");
 
     // ========== 商品品牌相关编号 1-008-002-000 ==========
     ErrorCode BRAND_NOT_EXISTS = new ErrorCode(1_008_002_000, "品牌不存在");
@@ -52,5 +56,29 @@ public interface ErrorCodeConstants {
     // ========== 商品 收藏 1-008-008-000 ==========
     ErrorCode FAVORITE_EXISTS = new ErrorCode(1_008_008_000, "该商品已经被收藏");
     ErrorCode FAVORITE_NOT_EXISTS = new ErrorCode(1_008_008_001, "商品收藏不存在");
+
+    // ========== 刊物类型 1-008-009-000 ==========
+    ErrorCode PUBLICATION_TYPE_NOT_EXISTS = new ErrorCode(1_008_009_000, "刊物类型不存在");
+    ErrorCode PUBLICATION_TYPE_NAME_EXISTS = new ErrorCode(1_008_009_001, "刊物类型名称已存在");
+    ErrorCode PUBLICATION_TYPE_CODE_EXISTS = new ErrorCode(1_008_009_002, "刊物类型编码已存在");
+    ErrorCode PUBLICATION_TYPE_HAS_TITLES = new ErrorCode(1_008_009_003, "刊物类型下存在刊物主档，无法删除");
+
+    // ========== 出版社 1-008-010-000 ==========
+    ErrorCode PUBLICATION_PUBLISHER_NOT_EXISTS = new ErrorCode(1_008_010_000, "出版社不存在");
+    ErrorCode PUBLICATION_PUBLISHER_NAME_EXISTS = new ErrorCode(1_008_010_001, "出版社名称已存在");
+    ErrorCode PUBLICATION_PUBLISHER_CODE_EXISTS = new ErrorCode(1_008_010_002, "出版社编码已存在");
+
+    // ========== 刊物主档 1-008-011-000 ==========
+    ErrorCode PUBLICATION_TITLE_NOT_EXISTS = new ErrorCode(1_008_011_000, "刊物主档不存在");
+    ErrorCode PUBLICATION_TITLE_NAME_EXISTS = new ErrorCode(1_008_011_001, "刊物主档名称已存在");
+    ErrorCode PUBLICATION_TITLE_CODE_EXISTS = new ErrorCode(1_008_011_002, "刊物主档编码已存在");
+
+    // ========== 刊物商品 1-008-012-000 ==========
+    ErrorCode PUBLICATION_PRODUCT_NOT_EXISTS = new ErrorCode(1_008_012_000, "刊物商品不存在");
+    ErrorCode PUBLICATION_PRODUCT_TITLE_REQUIRED = new ErrorCode(1_008_012_001, "刊物主档不能为空");
+    ErrorCode PUBLICATION_PRODUCT_GRADE_REQUIRED = new ErrorCode(1_008_012_002, "适用年级不能为空");
+    ErrorCode PUBLICATION_PRODUCT_SKU_REQUIRED = new ErrorCode(1_008_012_003, "刊物商品至少需要一个 SKU");
+    ErrorCode PUBLICATION_PRODUCT_IDENTIFIER_REQUIRED = new ErrorCode(1_008_012_004, "当前刊物类型需要填写期刊标识信息");
+    ErrorCode PUBLICATION_PRODUCT_ISBN_REQUIRED = new ErrorCode(1_008_012_005, "当前 SKU 需要填写 ISBN");
 
 }

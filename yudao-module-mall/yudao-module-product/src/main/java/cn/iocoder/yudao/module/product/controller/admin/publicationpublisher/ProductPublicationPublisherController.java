@@ -1,0 +1,71 @@
+package cn.iocoder.yudao.module.product.controller.admin.publicationpublisher;
+
+import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.product.controller.admin.publicationpublisher.vo.*;
+import cn.iocoder.yudao.module.product.service.publication.ProductPublicationPublisherService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+
+@Tag(name = "管理后台 - 出版社")
+@RestController
+@RequestMapping("/product/publication-publisher")
+@Validated
+public class ProductPublicationPublisherController {
+
+    @Resource
+    private ProductPublicationPublisherService publicationPublisherService;
+
+    @PostMapping("/create")
+    @Operation(summary = "创建出版社")
+    @PreAuthorize("@ss.hasPermission('product:publication-publisher:create')")
+    public CommonResult<Long> create(@Valid @RequestBody ProductPublicationPublisherSaveReqVO reqVO) {
+        return success(publicationPublisherService.create(reqVO));
+    }
+
+    @PutMapping("/update")
+    @Operation(summary = "更新出版社")
+    @PreAuthorize("@ss.hasPermission('product:publication-publisher:update')")
+    public CommonResult<Boolean> update(@Valid @RequestBody ProductPublicationPublisherSaveReqVO reqVO) {
+        publicationPublisherService.update(reqVO);
+        return success(true);
+    }
+
+    @DeleteMapping("/delete")
+    @Operation(summary = "删除出版社")
+    @PreAuthorize("@ss.hasPermission('product:publication-publisher:delete')")
+    public CommonResult<Boolean> delete(@RequestParam("id") Long id) {
+        publicationPublisherService.delete(id);
+        return success(true);
+    }
+
+    @GetMapping("/get")
+    @Operation(summary = "获得出版社")
+    @PreAuthorize("@ss.hasPermission('product:publication-publisher:query')")
+    public CommonResult<ProductPublicationPublisherRespVO> get(@RequestParam("id") Long id) {
+        return success(publicationPublisherService.get(id));
+    }
+
+    @GetMapping("/page")
+    @Operation(summary = "获得出版社分页")
+    @PreAuthorize("@ss.hasPermission('product:publication-publisher:query')")
+    public CommonResult<PageResult<ProductPublicationPublisherRespVO>> getPage(@Valid ProductPublicationPublisherPageReqVO reqVO) {
+        return success(publicationPublisherService.getPage(reqVO));
+    }
+
+    @GetMapping("/simple-list")
+    @Operation(summary = "获得出版社精简列表")
+    @PreAuthorize("@ss.hasPermission('product:publication-publisher:query')")
+    public CommonResult<List<ProductPublicationPublisherSimpleRespVO>> getSimpleList() {
+        return success(publicationPublisherService.getSimpleList());
+    }
+}

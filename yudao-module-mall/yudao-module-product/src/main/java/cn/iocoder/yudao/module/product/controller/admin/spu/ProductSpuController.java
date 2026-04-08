@@ -120,8 +120,8 @@ public class ProductSpuController {
     @GetMapping("/get-count")
     @Operation(summary = "获得商品 SPU 分页 tab count")
     @PreAuthorize("@ss.hasPermission('product:spu:query')")
-    public CommonResult<Map<Integer, Long>> getSpuCount() {
-        return success(productSpuService.getTabsCount());
+    public CommonResult<Map<Integer, Long>> getSpuCount(@RequestParam(value = "domainType", required = false) String domainType) {
+        return success(productSpuService.getTabsCount(domainType));
     }
 
     @GetMapping("/export-excel")

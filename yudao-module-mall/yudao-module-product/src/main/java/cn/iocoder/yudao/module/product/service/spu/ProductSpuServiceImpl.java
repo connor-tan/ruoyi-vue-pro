@@ -6,15 +6,18 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuPageReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuUpdateStatusReqVO;
 import cn.iocoder.yudao.module.product.controller.app.spu.vo.AppProductSpuPageReqVO;
+import cn.iocoder.yudao.module.product.enums.ProductConstants;
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
+import cn.iocoder.yudao.module.product.enums.publication.ProductDomainTypeEnum;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.product.service.brand.ProductBrandService;
 import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
@@ -56,14 +59,22 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createSpu(ProductSpuSaveReqVO createReqVO) {
+        String domainType = createReqVO.getDomainType() == null
+                ? ProductDomainTypeEnum.NORMAL.getCode()
+                : createReqVO.getDomainType();
         // 校验分类、品牌
-        validateCategory(createReqVO.getCategoryId());
-        brandService.validateProductBrand(createReqVO.getBrandId());
+        validateCategory(createReqVO.getCategoryId(), domainType);
+        if (createReqVO.getBrandId() != null) {
+            brandService.validateProductBrand(createReqVO.getBrandId());
+        }
         // 校验 SKU
         List<ProductSkuSaveReqVO> skuSaveReqList = createReqVO.getSkus();
         productSkuService.validateSkuList(skuSaveReqList, createReqVO.getSpecType());
 
         ProductSpuDO spu = BeanUtils.toBean(createReqVO, ProductSpuDO.class);
+        if (spu.getDomainType() == null) {
+            spu.setDomainType(ProductDomainTypeEnum.NORMAL.getCode());
+        }
         // 初始化 SPU 中 SKU 相关属性
         initSpuFromSkus(spu, skuSaveReqList);
         // 插入 SPU
@@ -79,15 +90,24 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     public void updateSpu(ProductSpuSaveReqVO updateReqVO) {
         // 校验 SPU 是否存在
         ProductSpuDO spu = validateSpuExists(updateReqVO.getId());
+        String domainType = updateReqVO.getDomainType() == null
+                ? spu.getDomainType()
+                : updateReqVO.getDomainType();
         // 校验分类、品牌
-        validateCategory(updateReqVO.getCategoryId());
-        brandService.validateProductBrand(updateReqVO.getBrandId());
+        validateCategory(updateReqVO.getCategoryId(), domainType);
+        if (updateReqVO.getBrandId() != null) {
+            brandService.validateProductBrand(updateReqVO.getBrandId());
+        }
         // 校验SKU
         List<ProductSkuSaveReqVO> skuSaveReqList = updateReqVO.getSkus();
         productSkuService.validateSkuList(skuSaveReqList, updateReqVO.getSpecType());
 
         // 更新 SPU
-        ProductSpuDO updateObj = BeanUtils.toBean(updateReqVO, ProductSpuDO.class).setStatus(spu.getStatus());
+        ProductSpuDO updateObj = BeanUtils.toBean(updateReqVO, ProductSpuDO.class);
+        updateObj.setStatus(spu.getStatus());
+        if (updateObj.getDomainType() == null) {
+            updateObj.setDomainType(spu.getDomainType());
+        }
         initSpuFromSkus(updateObj, skuSaveReqList);
         productSpuMapper.updateById(updateObj);
         // 批量更新 SKU
@@ -123,12 +143,8 @@ public class ProductSpuServiceImpl implements ProductSpuService {
      *
      * @param id 商品分类编号
      */
-    private void validateCategory(Long id) {
-        categoryService.validateCategory(id);
-        // 校验层级
-        if (categoryService.getCategoryLevel(id) < CATEGORY_LEVEL) {
-            throw exception(SPU_SAVE_FAIL_CATEGORY_LEVEL_ERROR);
-        }
+    private void validateCategory(Long id, String domainType) {
+        categoryService.validateCategoryForDomain(id, domainType);
     }
 
     @Override
@@ -256,24 +272,42 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     }
 
     @Override
-    public Map<Integer, Long> getTabsCount() {
+    public Map<Integer, Long> getTabsCount(String domainType) {
         Map<Integer, Long> counts = Maps.newLinkedHashMapWithExpectedSize(5);
         // 查询销售中的商品数量
         counts.put(ProductSpuPageReqVO.FOR_SALE,
-                productSpuMapper.selectCount(ProductSpuDO::getStatus, ProductSpuStatusEnum.ENABLE.getStatus()));
+                productSpuMapper.selectCount(new LambdaQueryWrapperX<ProductSpuDO>()
+                        .eq(ProductSpuDO::getStatus, ProductSpuStatusEnum.ENABLE.getStatus())
+                        .eqIfPresent(ProductSpuDO::getDomainType, domainType)));
         // 查询仓库中的商品数量
         counts.put(ProductSpuPageReqVO.IN_WAREHOUSE,
-                productSpuMapper.selectCount(ProductSpuDO::getStatus, ProductSpuStatusEnum.DISABLE.getStatus()));
+                productSpuMapper.selectCount(new LambdaQueryWrapperX<ProductSpuDO>()
+                        .eq(ProductSpuDO::getStatus, ProductSpuStatusEnum.DISABLE.getStatus())
+                        .eqIfPresent(ProductSpuDO::getDomainType, domainType)));
         // 查询售空的商品数量
         counts.put(ProductSpuPageReqVO.SOLD_OUT,
-                productSpuMapper.selectCount(ProductSpuDO::getStock, 0));
+                productSpuMapper.selectCount(new LambdaQueryWrapperX<ProductSpuDO>()
+                        .eq(ProductSpuDO::getStock, 0)
+                        .eqIfPresent(ProductSpuDO::getDomainType, domainType)));
         // 查询触发警戒库存的商品数量
         counts.put(ProductSpuPageReqVO.ALERT_STOCK,
-                productSpuMapper.selectCount());
+                productSpuMapper.selectCount(buildAlertStockQuery(domainType)));
         // 查询回收站中的商品数量
         counts.put(ProductSpuPageReqVO.RECYCLE_BIN,
-                productSpuMapper.selectCount(ProductSpuDO::getStatus, ProductSpuStatusEnum.RECYCLE.getStatus()));
+                productSpuMapper.selectCount(new LambdaQueryWrapperX<ProductSpuDO>()
+                        .eq(ProductSpuDO::getStatus, ProductSpuStatusEnum.RECYCLE.getStatus())
+                        .eqIfPresent(ProductSpuDO::getDomainType, domainType)));
         return counts;
+    }
+
+    private LambdaQueryWrapperX<ProductSpuDO> buildAlertStockQuery(String domainType) {
+        LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<>();
+        queryWrapper.le(ProductSpuDO::getStock, ProductConstants.ALERT_STOCK);
+        queryWrapper.notIn(ProductSpuDO::getStatus, ProductSpuStatusEnum.RECYCLE.getStatus());
+        if (domainType != null) {
+            queryWrapper.eq(ProductSpuDO::getDomainType, domainType);
+        }
+        return queryWrapper;
     }
 
     @Override

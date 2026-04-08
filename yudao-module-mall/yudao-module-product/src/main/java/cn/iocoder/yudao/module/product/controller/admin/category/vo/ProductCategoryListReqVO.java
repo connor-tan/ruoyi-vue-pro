@@ -21,4 +21,7 @@ public class ProductCategoryListReqVO {
     @Schema(description = "父分类编号数组", example = "1,2,3")
     private Collection<Long> parentIds;
 
+    @Schema(description = "业务域类型", example = "PUBLICATION")
+    private String domainType;
+
 }

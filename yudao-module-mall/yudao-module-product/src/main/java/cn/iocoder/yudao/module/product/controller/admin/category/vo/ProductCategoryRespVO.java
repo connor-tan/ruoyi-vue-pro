@@ -27,9 +27,6 @@ public class ProductCategoryRespVO {
     @Schema(description = "开启状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
     private Integer status;
 
-    @Schema(description = "是否参与赠送", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Boolean supportsGift;
-
     @Schema(description = "分类描述", example = "描述")
     private String description;
 

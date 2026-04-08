@@ -94,6 +94,14 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
     private static final String REASON_MANUAL_TARGET_CLASS = "MANUAL_TARGET_CLASS";
     private static final String REASON_MANUAL_REPEAT = "MANUAL_REPEAT";
 
+    private final List<PromotionCandidateRule> promotionCandidateRules = List.of(
+            this::applyMultiCurrentClassRule,
+            this::applyStudentReadingRule,
+            this::applyCurrentGradeSequenceRule,
+            this::applyTargetGradeResolutionRule,
+            this::applyTargetClassResolutionRule
+    );
+
     @Resource
     private StudentMapper studentMapper;
     @Resource
@@ -361,6 +369,9 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                         schoolClass -> buildTargetClassKey(schoolClass.getEntryYear(), schoolClass.getSchoolGradeId(), schoolClass.getClassNo()),
                         Function.identity(), (item1, item2) -> item1, LinkedHashMap::new));
 
+        PromotionCandidateBuildContext context = new PromotionCandidateBuildContext(reqVO, toSchoolYear,
+                schoolGradeMap, gradeCatalogMap, nextGlobalGradeCatalogIdMap, nextSchoolGradeMap, targetClassMap,
+                adjustmentTargetClassMap);
         List<PromotionCandidate> candidates = new ArrayList<>();
         Map<Long, List<StudentClassDO>> studentClassMap = currentStudentClasses.stream()
                 .collect(Collectors.groupingBy(StudentClassDO::getStudentId));
@@ -372,9 +383,9 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
             if (student == null || currentClass == null) {
                 continue;
             }
-            PromotionCandidate candidate = buildPromotionCandidate(reqVO, student, studentClasses, currentStudentClass,
-                    currentClass, schoolGradeMap, gradeCatalogMap, nextGlobalGradeCatalogIdMap, nextSchoolGradeMap,
-                    targetClassMap, toSchoolYear, adjustmentMap.get(student.getId()), adjustmentTargetClassMap);
+            PromotionCandidateSubject subject = new PromotionCandidateSubject(student, studentClasses,
+                    currentStudentClass, currentClass);
+            PromotionCandidate candidate = buildPromotionCandidate(context, subject, adjustmentMap.get(student.getId()));
             candidates.add(candidate);
         }
         candidates.sort(Comparator
@@ -385,98 +396,116 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         return candidates;
     }
 
-    private PromotionCandidate buildPromotionCandidate(StudentPromotionPreviewReqVO reqVO, StudentDO student,
-                                                       List<StudentClassDO> studentClasses, StudentClassDO currentStudentClass,
-                                                       SchoolClassDO currentClass, Map<Long, SchoolGradeDO> schoolGradeMap,
-                                                       Map<Long, GradeCatalogDO> gradeCatalogMap,
-                                                       Map<Long, Long> nextGlobalGradeCatalogIdMap,
-                                                       Map<Long, SchoolGradeDO> nextSchoolGradeMap,
-                                                       Map<String, SchoolClassDO> targetClassMap,
-                                                       SchoolYearDO toSchoolYear,
-                                                       StudentPromotionAdjustmentReqVO adjustment,
-                                                       Map<Long, SchoolClassDO> adjustmentTargetClassMap) {
+    private PromotionCandidate buildPromotionCandidate(PromotionCandidateBuildContext context,
+                                                       PromotionCandidateSubject subject,
+                                                       StudentPromotionAdjustmentReqVO adjustment) {
         PromotionCandidate candidate = new PromotionCandidate();
-        candidate.setStudent(student);
-        candidate.setCurrentStudentClass(currentStudentClass);
-        candidate.setCurrentClass(currentClass);
+        candidate.setStudent(subject.student);
+        candidate.setCurrentStudentClass(subject.currentStudentClass);
+        candidate.setCurrentClass(subject.currentClass);
 
-        SchoolGradeDO currentSchoolGrade = schoolGradeMap.get(currentClass.getSchoolGradeId());
-        GradeCatalogDO currentGradeCatalog = currentSchoolGrade == null ? null : gradeCatalogMap.get(currentSchoolGrade.getGradeCatalogId());
+        SchoolGradeDO currentSchoolGrade = context.schoolGradeMap.get(subject.currentClass.getSchoolGradeId());
+        GradeCatalogDO currentGradeCatalog = currentSchoolGrade == null ? null
+                : context.gradeCatalogMap.get(currentSchoolGrade.getGradeCatalogId());
         candidate.setCurrentSchoolGrade(currentSchoolGrade);
         candidate.setCurrentGradeCatalog(currentGradeCatalog);
 
-        if (studentClasses.size() > 1) {
-            candidate.setAction(ACTION_SKIP);
-            candidate.setReason(REASON_MULTI_CURRENT_CLASS);
-            applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-            return candidate;
-        }
-        if (!Objects.equals(student.getStatus(), STUDENT_STATUS_READING)) {
-            candidate.setAction(ACTION_SKIP);
-            candidate.setReason(REASON_STUDENT_NOT_READING);
-            applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-            return candidate;
-        }
-        if (currentSchoolGrade == null || currentGradeCatalog == null
-                || !nextGlobalGradeCatalogIdMap.containsKey(currentGradeCatalog.getId())) {
-            candidate.setAction(ACTION_SKIP);
-            candidate.setReason(REASON_GRADE_SEQUENCE_GAP);
-            applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-            return candidate;
+        for (PromotionCandidateRule rule : promotionCandidateRules) {
+            if (rule.apply(candidate, context, subject)) {
+                applyAdjustment(candidate, adjustment, context);
+                return candidate;
+            }
         }
 
-        SchoolGradeDO targetSchoolGrade = nextSchoolGradeMap.get(currentSchoolGrade.getId());
+        candidate.setAction(ACTION_PROMOTE);
+        candidate.setReason(REASON_READY);
+        applyAdjustment(candidate, adjustment, context);
+        return candidate;
+    }
+
+    private boolean applyMultiCurrentClassRule(PromotionCandidate candidate, PromotionCandidateBuildContext context,
+                                               PromotionCandidateSubject subject) {
+        if (subject.studentClasses.size() <= 1) {
+            return false;
+        }
+        candidate.setAction(ACTION_SKIP);
+        candidate.setReason(REASON_MULTI_CURRENT_CLASS);
+        return true;
+    }
+
+    private boolean applyStudentReadingRule(PromotionCandidate candidate, PromotionCandidateBuildContext context,
+                                            PromotionCandidateSubject subject) {
+        if (Objects.equals(subject.student.getStatus(), STUDENT_STATUS_READING)) {
+            return false;
+        }
+        candidate.setAction(ACTION_SKIP);
+        candidate.setReason(REASON_STUDENT_NOT_READING);
+        return true;
+    }
+
+    private boolean applyCurrentGradeSequenceRule(PromotionCandidate candidate, PromotionCandidateBuildContext context,
+                                                  PromotionCandidateSubject subject) {
+        if (candidate.getCurrentSchoolGrade() != null && candidate.getCurrentGradeCatalog() != null
+                && context.nextGlobalGradeCatalogIdMap.containsKey(candidate.getCurrentGradeCatalog().getId())) {
+            return false;
+        }
+        candidate.setAction(ACTION_SKIP);
+        candidate.setReason(REASON_GRADE_SEQUENCE_GAP);
+        return true;
+    }
+
+    private boolean applyTargetGradeResolutionRule(PromotionCandidate candidate, PromotionCandidateBuildContext context,
+                                                   PromotionCandidateSubject subject) {
+        SchoolGradeDO targetSchoolGrade = context.nextSchoolGradeMap.get(candidate.getCurrentSchoolGrade().getId());
         if (targetSchoolGrade == null) {
-            if (Boolean.TRUE.equals(reqVO.getGraduateTerminalStudent())) {
+            if (Boolean.TRUE.equals(context.reqVO.getGraduateTerminalStudent())) {
                 candidate.setAction(ACTION_PENDING_ADVANCE);
                 candidate.setReason(REASON_TERMINAL_GRADE_PENDING_ADVANCE);
             } else {
                 candidate.setAction(ACTION_SKIP);
                 candidate.setReason(REASON_TERMINAL_GRADE_SKIP);
             }
-            applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-            return candidate;
+            return true;
         }
 
-        Long expectedNextGradeCatalogId = nextGlobalGradeCatalogIdMap.get(currentGradeCatalog.getId());
+        Long expectedNextGradeCatalogId = context.nextGlobalGradeCatalogIdMap.get(candidate.getCurrentGradeCatalog().getId());
         if (!Objects.equals(targetSchoolGrade.getGradeCatalogId(), expectedNextGradeCatalogId)) {
             candidate.setAction(ACTION_SKIP);
             candidate.setReason(REASON_GRADE_SEQUENCE_GAP);
-            applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-            return candidate;
+            return true;
         }
-        GradeCatalogDO targetGradeCatalog = gradeCatalogMap.get(targetSchoolGrade.getGradeCatalogId());
+        GradeCatalogDO targetGradeCatalog = context.gradeCatalogMap.get(targetSchoolGrade.getGradeCatalogId());
         if (targetGradeCatalog == null) {
             candidate.setAction(ACTION_SKIP);
             candidate.setReason(REASON_GRADE_SEQUENCE_GAP);
-            applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-            return candidate;
+            return true;
         }
         candidate.setTargetSchoolGrade(targetSchoolGrade);
         candidate.setTargetGradeCatalog(targetGradeCatalog);
+        return false;
+    }
 
-        String targetClassKey = buildTargetClassKey(student.getEntryYear(), targetSchoolGrade.getId(), currentClass.getClassNo());
-        SchoolClassDO targetClass = targetClassMap.get(targetClassKey);
+    private boolean applyTargetClassResolutionRule(PromotionCandidate candidate, PromotionCandidateBuildContext context,
+                                                   PromotionCandidateSubject subject) {
+        String targetClassKey = buildTargetClassKey(subject.student.getEntryYear(), candidate.getTargetSchoolGrade().getId(),
+                subject.currentClass.getClassNo());
+        SchoolClassDO targetClass = context.targetClassMap.get(targetClassKey);
         candidate.setTargetClass(targetClass);
-        if (targetClass == null) {
-            candidate.setTargetClassMissing(true);
-            candidate.setPredictedTargetClassName(SchoolClassUtils.buildClassName(student.getEntryYear(),
-                    targetGradeCatalog.getGradeName(), currentClass.getClassNo()));
-            if (Boolean.TRUE.equals(reqVO.getAutoCreateClass())) {
-                candidate.setAction(ACTION_PROMOTE);
-                candidate.setReason(REASON_TARGET_CLASS_AUTO_CREATE);
-            } else {
-                candidate.setAction(ACTION_SKIP);
-                candidate.setReason(REASON_TARGET_CLASS_NOT_FOUND);
-            }
-            applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-            return candidate;
+        if (targetClass != null) {
+            return false;
         }
 
-        candidate.setAction(ACTION_PROMOTE);
-        candidate.setReason(REASON_READY);
-        applyAdjustment(candidate, adjustment, adjustmentTargetClassMap, schoolGradeMap, gradeCatalogMap, toSchoolYear);
-        return candidate;
+        candidate.setTargetClassMissing(true);
+        candidate.setPredictedTargetClassName(SchoolClassUtils.buildClassName(subject.student.getEntryYear(),
+                candidate.getTargetGradeCatalog().getGradeName(), subject.currentClass.getClassNo()));
+        if (Boolean.TRUE.equals(context.reqVO.getAutoCreateClass())) {
+            candidate.setAction(ACTION_PROMOTE);
+            candidate.setReason(REASON_TARGET_CLASS_AUTO_CREATE);
+        } else {
+            candidate.setAction(ACTION_SKIP);
+            candidate.setReason(REASON_TARGET_CLASS_NOT_FOUND);
+        }
+        return true;
     }
 
     private Map<Long, StudentPromotionAdjustmentReqVO> buildAdjustmentMap(List<StudentPromotionAdjustmentReqVO> adjustments) {
@@ -491,10 +520,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
     }
 
     private void applyAdjustment(PromotionCandidate candidate, StudentPromotionAdjustmentReqVO adjustment,
-                                 Map<Long, SchoolClassDO> adjustmentTargetClassMap,
-                                 Map<Long, SchoolGradeDO> schoolGradeMap,
-                                 Map<Long, GradeCatalogDO> gradeCatalogMap,
-                                 SchoolYearDO toSchoolYear) {
+                                 PromotionCandidateBuildContext context) {
         if (adjustment == null || !isAdjustmentApplicable(candidate)) {
             return;
         }
@@ -502,48 +528,62 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         if (!Objects.equals(action, ACTION_PROMOTE) && !Objects.equals(action, ACTION_REPEAT)) {
             throw exception(STUDENT_PROMOTION_ADJUST_ACTION_INVALID);
         }
+        AdjustmentTarget adjustmentTarget = resolveAdjustmentTarget(candidate, adjustment, context);
+        if (Objects.equals(action, ACTION_PROMOTE)) {
+            applyPromoteAdjustment(candidate, adjustmentTarget);
+            return;
+        }
+
+        applyRepeatAdjustment(candidate, adjustmentTarget);
+    }
+
+    private AdjustmentTarget resolveAdjustmentTarget(PromotionCandidate candidate,
+                                                     StudentPromotionAdjustmentReqVO adjustment,
+                                                     PromotionCandidateBuildContext context) {
         if (adjustment.getTargetClassId() == null) {
             throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_REQUIRED);
         }
-        SchoolClassDO targetClass = adjustmentTargetClassMap.get(adjustment.getTargetClassId());
+        SchoolClassDO targetClass = context.adjustmentTargetClassMap.get(adjustment.getTargetClassId());
         if (targetClass == null) {
             throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID);
         }
         if (!Objects.equals(targetClass.getSchoolId(), candidate.getCurrentClass().getSchoolId())) {
             throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID);
         }
-        if (!Objects.equals(targetClass.getSchoolYearId(), toSchoolYear.getId())) {
+        if (!Objects.equals(targetClass.getSchoolYearId(), context.toSchoolYear.getId())) {
             throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_NOT_IN_TARGET_YEAR);
         }
-        SchoolGradeDO targetSchoolGrade = schoolGradeMap.get(targetClass.getSchoolGradeId());
+        SchoolGradeDO targetSchoolGrade = context.schoolGradeMap.get(targetClass.getSchoolGradeId());
         GradeCatalogDO targetGradeCatalog = targetSchoolGrade == null ? null
-                : gradeCatalogMap.get(targetSchoolGrade.getGradeCatalogId());
+                : context.gradeCatalogMap.get(targetSchoolGrade.getGradeCatalogId());
         if (targetSchoolGrade == null || targetGradeCatalog == null) {
             throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID);
         }
+        return new AdjustmentTarget(targetClass, targetSchoolGrade, targetGradeCatalog);
+    }
 
-        if (Objects.equals(action, ACTION_PROMOTE)) {
-            if (candidate.getTargetSchoolGrade() == null
-                    || !Objects.equals(targetClass.getSchoolGradeId(), candidate.getTargetSchoolGrade().getId())) {
-                throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID);
-            }
-            candidate.setAction(ACTION_PROMOTE);
-            candidate.setReason(REASON_MANUAL_TARGET_CLASS);
-            candidate.setTargetClass(targetClass);
-            candidate.setTargetSchoolGrade(targetSchoolGrade);
-            candidate.setTargetGradeCatalog(targetGradeCatalog);
-            candidate.setTargetClassMissing(false);
-            candidate.setPredictedTargetClassName(null);
-            return;
+    private void applyPromoteAdjustment(PromotionCandidate candidate, AdjustmentTarget adjustmentTarget) {
+        if (candidate.getTargetSchoolGrade() == null
+                || !Objects.equals(adjustmentTarget.targetClass.getSchoolGradeId(), candidate.getTargetSchoolGrade().getId())) {
+            throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID);
         }
+        candidate.setAction(ACTION_PROMOTE);
+        candidate.setReason(REASON_MANUAL_TARGET_CLASS);
+        candidate.setTargetClass(adjustmentTarget.targetClass);
+        candidate.setTargetSchoolGrade(adjustmentTarget.targetSchoolGrade);
+        candidate.setTargetGradeCatalog(adjustmentTarget.targetGradeCatalog);
+        candidate.setTargetClassMissing(false);
+        candidate.setPredictedTargetClassName(null);
+    }
 
+    private void applyRepeatAdjustment(PromotionCandidate candidate, AdjustmentTarget adjustmentTarget) {
         if (candidate.getCurrentSchoolGrade() == null
-                || !Objects.equals(targetClass.getSchoolGradeId(), candidate.getCurrentSchoolGrade().getId())) {
+                || !Objects.equals(adjustmentTarget.targetClass.getSchoolGradeId(), candidate.getCurrentSchoolGrade().getId())) {
             throw exception(STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID);
         }
         candidate.setAction(ACTION_REPEAT);
         candidate.setReason(REASON_MANUAL_REPEAT);
-        candidate.setTargetClass(targetClass);
+        candidate.setTargetClass(adjustmentTarget.targetClass);
         candidate.setTargetSchoolGrade(candidate.getCurrentSchoolGrade());
         candidate.setTargetGradeCatalog(candidate.getCurrentGradeCatalog());
         candidate.setTargetClassMissing(false);
@@ -669,6 +709,13 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         }
     }
 
+    @FunctionalInterface
+    private interface PromotionCandidateRule {
+
+        boolean apply(PromotionCandidate candidate, PromotionCandidateBuildContext context,
+                      PromotionCandidateSubject subject);
+    }
+
     private static class PromotionPreviewResult {
 
         private final Long schoolId;
@@ -722,6 +769,65 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
 
         public boolean hasExecutableCandidates() {
             return getPromotedCount() > 0 || getPendingAdvanceCount() > 0 || getRepeatCount() > 0;
+        }
+    }
+
+    private static class PromotionCandidateBuildContext {
+
+        private final StudentPromotionPreviewReqVO reqVO;
+        private final SchoolYearDO toSchoolYear;
+        private final Map<Long, SchoolGradeDO> schoolGradeMap;
+        private final Map<Long, GradeCatalogDO> gradeCatalogMap;
+        private final Map<Long, Long> nextGlobalGradeCatalogIdMap;
+        private final Map<Long, SchoolGradeDO> nextSchoolGradeMap;
+        private final Map<String, SchoolClassDO> targetClassMap;
+        private final Map<Long, SchoolClassDO> adjustmentTargetClassMap;
+
+        private PromotionCandidateBuildContext(StudentPromotionPreviewReqVO reqVO, SchoolYearDO toSchoolYear,
+                                               Map<Long, SchoolGradeDO> schoolGradeMap,
+                                               Map<Long, GradeCatalogDO> gradeCatalogMap,
+                                               Map<Long, Long> nextGlobalGradeCatalogIdMap,
+                                               Map<Long, SchoolGradeDO> nextSchoolGradeMap,
+                                               Map<String, SchoolClassDO> targetClassMap,
+                                               Map<Long, SchoolClassDO> adjustmentTargetClassMap) {
+            this.reqVO = reqVO;
+            this.toSchoolYear = toSchoolYear;
+            this.schoolGradeMap = schoolGradeMap;
+            this.gradeCatalogMap = gradeCatalogMap;
+            this.nextGlobalGradeCatalogIdMap = nextGlobalGradeCatalogIdMap;
+            this.nextSchoolGradeMap = nextSchoolGradeMap;
+            this.targetClassMap = targetClassMap;
+            this.adjustmentTargetClassMap = adjustmentTargetClassMap;
+        }
+    }
+
+    private static class PromotionCandidateSubject {
+
+        private final StudentDO student;
+        private final List<StudentClassDO> studentClasses;
+        private final StudentClassDO currentStudentClass;
+        private final SchoolClassDO currentClass;
+
+        private PromotionCandidateSubject(StudentDO student, List<StudentClassDO> studentClasses,
+                                          StudentClassDO currentStudentClass, SchoolClassDO currentClass) {
+            this.student = student;
+            this.studentClasses = studentClasses;
+            this.currentStudentClass = currentStudentClass;
+            this.currentClass = currentClass;
+        }
+    }
+
+    private static class AdjustmentTarget {
+
+        private final SchoolClassDO targetClass;
+        private final SchoolGradeDO targetSchoolGrade;
+        private final GradeCatalogDO targetGradeCatalog;
+
+        private AdjustmentTarget(SchoolClassDO targetClass, SchoolGradeDO targetSchoolGrade,
+                                 GradeCatalogDO targetGradeCatalog) {
+            this.targetClass = targetClass;
+            this.targetSchoolGrade = targetSchoolGrade;
+            this.targetGradeCatalog = targetGradeCatalog;
         }
     }
 

@@ -2,7 +2,6 @@ package cn.iocoder.yudao.module.edu.service.student;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.baomidou.dynamic.datasource.annotation.Slave;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassRespVO;
@@ -134,7 +133,6 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    @Slave
     public PageResult<StudentRespVO> getStudentPage(StudentPageReqVO pageReqVO) {
         PageResult<StudentDO> pageResult = studentMapper.selectPage(pageReqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {

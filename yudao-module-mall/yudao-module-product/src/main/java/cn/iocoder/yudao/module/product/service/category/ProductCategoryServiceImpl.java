@@ -4,10 +4,12 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.infra.api.config.ConfigApi;
 import cn.iocoder.yudao.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.category.vo.ProductCategorySaveReqVO;
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.mysql.category.ProductCategoryMapper;
+import cn.iocoder.yudao.module.product.enums.publication.ProductDomainTypeEnum;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
@@ -18,6 +20,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO.CATEGORY_LEVEL;
@@ -33,11 +36,15 @@ import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.*;
 @Validated
 public class ProductCategoryServiceImpl implements ProductCategoryService {
 
+    private static final String PUBLICATION_ROOT_CATEGORY_CONFIG_KEY = "product.publication_root_category_id";
+
     @Resource
     private ProductCategoryMapper productCategoryMapper;
     @Resource
     @Lazy // 循环依赖，避免报错
     private ProductSpuService productSpuService;
+    @Resource
+    private ConfigApi configApi;
 
     @Override
     public Long createCategory(ProductCategorySaveReqVO createReqVO) {
@@ -67,6 +74,10 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     public void deleteCategory(Long id) {
         // 校验分类是否存在
         validateProductCategoryExists(id);
+        ProductCategoryDO publicationRootCategory = getPublicationRootCategory();
+        if (Objects.equals(id, publicationRootCategory.getId())) {
+            throw exception(CATEGORY_PUBLICATION_ROOT_DELETE_FORBIDDEN);
+        }
         // 校验是否还有子分类
         if (productCategoryMapper.selectCountByParentId(id) > 0) {
             throw exception(CATEGORY_EXISTS_CHILDREN);
@@ -146,6 +157,28 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     }
 
     @Override
+    public void validateCategoryForDomain(Long id, String domainType) {
+        validateCategory(id);
+        // 商品分类层级校验，必须使用第二级的商品分类
+        if (getCategoryLevel(id) < CATEGORY_LEVEL) {
+            throw exception(SPU_SAVE_FAIL_CATEGORY_LEVEL_ERROR);
+        }
+        ProductCategoryDO category = productCategoryMapper.selectById(id);
+        ProductCategoryDO publicationRootCategory = getPublicationRootCategory();
+        if (ProductDomainTypeEnum.isPublication(domainType)) {
+            if (Objects.equals(category.getId(), publicationRootCategory.getId())
+                    || !Objects.equals(category.getParentId(), publicationRootCategory.getId())) {
+                throw exception(CATEGORY_PUBLICATION_INVALID);
+            }
+            return;
+        }
+        if (Objects.equals(category.getId(), publicationRootCategory.getId())
+                || Objects.equals(category.getParentId(), publicationRootCategory.getId())) {
+            throw exception(CATEGORY_NORMAL_CANNOT_USE_PUBLICATION);
+        }
+    }
+
+    @Override
     public Integer getCategoryLevel(Long id) {
         if (Objects.equals(id, PARENT_ID_NULL)) {
             return 0;
@@ -168,7 +201,20 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
 
     @Override
     public List<ProductCategoryDO> getCategoryList(ProductCategoryListReqVO listReqVO) {
-        return productCategoryMapper.selectList(listReqVO);
+        List<ProductCategoryDO> categories = productCategoryMapper.selectList(listReqVO);
+        if (listReqVO.getDomainType() == null || listReqVO.getDomainType().isBlank()) {
+            return categories;
+        }
+        ProductCategoryDO publicationRootCategory = getPublicationRootCategory();
+        if (ProductDomainTypeEnum.isPublication(listReqVO.getDomainType())) {
+            return categories.stream()
+                    .filter(item -> Objects.equals(item.getParentId(), publicationRootCategory.getId()))
+                    .collect(Collectors.toList());
+        }
+        return categories.stream()
+                .filter(item -> !Objects.equals(item.getId(), publicationRootCategory.getId())
+                        && !Objects.equals(item.getParentId(), publicationRootCategory.getId()))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -179,6 +225,26 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     @Override
     public List<ProductCategoryDO> getEnableCategoryList(List<Long> ids) {
         return productCategoryMapper.selectListByIdAndStatus(ids, CommonStatusEnum.ENABLE.getStatus());
+    }
+
+    private ProductCategoryDO getPublicationRootCategory() {
+        String publicationRootCategoryId = configApi.getConfigValueByKey(PUBLICATION_ROOT_CATEGORY_CONFIG_KEY);
+        if (publicationRootCategoryId == null || publicationRootCategoryId.isBlank()) {
+            throw exception(CATEGORY_PUBLICATION_ROOT_CONFIG_INVALID);
+        }
+        Long rootId;
+        try {
+            rootId = Long.valueOf(publicationRootCategoryId);
+        } catch (NumberFormatException ex) {
+            throw exception(CATEGORY_PUBLICATION_ROOT_CONFIG_INVALID);
+        }
+        ProductCategoryDO category = productCategoryMapper.selectById(rootId);
+        if (category == null
+                || !Objects.equals(category.getParentId(), PARENT_ID_NULL)
+                || !CommonStatusEnum.ENABLE.getStatus().equals(category.getStatus())) {
+            throw exception(CATEGORY_PUBLICATION_ROOT_CONFIG_INVALID);
+        }
+        return category;
     }
 
 }

@@ -53,6 +53,14 @@ public interface ProductCategoryService {
     void validateCategory(Long id);
 
     /**
+     * 按业务域校验商品分类
+     *
+     * @param id 分类编号
+     * @param domainType 业务域类型
+     */
+    void validateCategoryForDomain(Long id, String domainType);
+
+    /**
      * 获得商品分类的层级
      *
      * @param id 编号

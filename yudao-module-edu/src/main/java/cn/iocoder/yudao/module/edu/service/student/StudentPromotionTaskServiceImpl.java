@@ -3,7 +3,6 @@ package cn.iocoder.yudao.module.edu.service.student;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import com.baomidou.dynamic.datasource.annotation.Master;
-import com.baomidou.dynamic.datasource.annotation.Slave;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
@@ -141,7 +140,6 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     private AreaApi areaApi;
 
     @Override
-    @Slave
     public List<StudentPromotionYearOptionRespVO> getPromotionYearOptions() {
         return schoolYearMapper.selectList().stream()
                 .collect(Collectors.toMap(SchoolYearDO::getYearStart, Function.identity(), (item1, item2) -> item1,
@@ -153,7 +151,6 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     @Override
-    @Slave
     public PageResult<StudentPromotionTaskRespVO> getPromotionTaskPage(StudentPromotionTaskPageReqVO reqVO) {
         PageResult<StudentPromotionTaskDO> pageResult = studentPromotionTaskMapper.selectPage(reqVO);
         return new PageResult<>(convertList(pageResult.getList(), task -> {
@@ -165,7 +162,6 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     @Override
-    @Slave
     public List<StudentPromotionBatchRespVO> getPromotionBatchListByTaskId(Long taskId) {
         List<StudentPromotionBatchDO> batches = studentPromotionBatchMapper.selectListByTaskId(taskId);
         if (CollUtil.isEmpty(batches)) {
@@ -181,7 +177,6 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     }
 
     @Override
-    @Slave
     public PageResult<StudentFlowRespVO> getStudentFlowPage(StudentFlowPageReqVO reqVO) {
         List<Long> studentIds = null;
         if (reqVO.getStudentName() != null && !reqVO.getStudentName().isBlank()) {

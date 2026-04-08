@@ -56,6 +56,10 @@ public class ProductSpuRespVO {
     @ExcelProperty("排序字段")
     private Integer sort;
 
+    @Schema(description = "业务域类型", example = "NORMAL")
+    @ExcelProperty("业务域类型")
+    private String domainType;
+
     @Schema(description = "商品状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @ExcelProperty(value = "商品状态", converter = DictConvert.class)
     @DictFormat(DictTypeConstants.PRODUCT_SPU_STATUS)

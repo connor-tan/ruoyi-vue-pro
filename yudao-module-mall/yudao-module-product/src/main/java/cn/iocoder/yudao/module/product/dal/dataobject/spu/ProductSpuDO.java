@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.mybatis.core.type.IntegerListTypeHandler;
 import cn.iocoder.yudao.module.product.dal.dataobject.brand.ProductBrandDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
+import cn.iocoder.yudao.module.product.enums.publication.ProductDomainTypeEnum;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -81,6 +82,12 @@ public class ProductSpuDO extends BaseDO {
      * 排序字段
      */
     private Integer sort;
+    /**
+     * 业务域类型
+     *
+     * 枚举 {@link ProductDomainTypeEnum}
+     */
+    private String domainType;
     /**
      * 商品状态
      *

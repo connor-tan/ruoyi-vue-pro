@@ -122,7 +122,7 @@ public interface ProductSpuService {
      *
      * @return Count 数量
      */
-    Map<Integer, Long> getTabsCount();
+    Map<Integer, Long> getTabsCount(String domainType);
 
     /**
      * 通过分类 categoryId 查询 SPU 个数

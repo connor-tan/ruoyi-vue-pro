@@ -108,16 +108,6 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         subscriptionWindowMapper.updateById(updateObj);
     }
 
-    @Override
-    public SubscriptionWindowDO getWindowDO(Long id) {
-        return validateWindowExists(id);
-    }
-
-    @Override
-    public SubscriptionWindowDO getCurrentOpenWindow() {
-        return subscriptionWindowMapper.selectCurrentEnabledWindow(LocalDateTime.now());
-    }
-
     private SubscriptionWindowDO validateWindowExists(Long id) {
         SubscriptionWindowDO window = subscriptionWindowMapper.selectById(id);
         if (window == null) {
