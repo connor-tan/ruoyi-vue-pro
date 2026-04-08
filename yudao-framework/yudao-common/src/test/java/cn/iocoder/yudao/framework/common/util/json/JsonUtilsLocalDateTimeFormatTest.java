@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JsonUtilsLocalDateTimeFormatTest {
@@ -35,6 +36,13 @@ class JsonUtilsLocalDateTimeFormatTest {
 
         String json = JsonUtils.toJsonString(vo);
         assertTrue(json.matches("\\{\"createTime\":\\d+}"), json);
+    }
+
+    @Test
+    void shouldDeserializeDigitOnlyStringByJsonFormatPatternBeforeEpochMillisFallback() {
+        DigitPatternReqVO vo = JsonUtils.parseObject("{\"createTime\":\"20260409173045\"}", DigitPatternReqVO.class);
+
+        assertEquals(LocalDateTime.of(2026, 4, 9, 17, 30, 45), vo.getCreateTime());
     }
 
     static class DefaultRespVO {
@@ -76,6 +84,19 @@ class JsonUtilsLocalDateTimeFormatTest {
     }
 
     static class ChildRespVO extends ParentRespVO {
+    }
+
+    static class DigitPatternReqVO {
+        @JsonFormat(pattern = "yyyyMMddHHmmss")
+        private LocalDateTime createTime;
+
+        public LocalDateTime getCreateTime() {
+            return createTime;
+        }
+
+        public void setCreateTime(LocalDateTime createTime) {
+            this.createTime = createTime;
+        }
     }
 
 }

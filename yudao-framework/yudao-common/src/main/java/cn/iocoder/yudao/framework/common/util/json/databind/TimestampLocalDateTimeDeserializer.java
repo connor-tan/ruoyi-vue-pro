@@ -51,13 +51,13 @@ public class TimestampLocalDateTimeDeserializer extends JsonDeserializer<LocalDa
         if (StrUtil.isBlank(text)) {
             return null;
         }
-        if (StrUtil.isNumeric(text)) {
-            return LocalDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(text)), ZoneId.systemDefault());
-        }
 
         LocalDateTime parsed = tryParse(text, pattern);
         if (parsed != null) {
             return parsed;
+        }
+        if (StrUtil.isNumeric(text)) {
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(text)), ZoneId.systemDefault());
         }
         parsed = tryParse(text, DEFAULT_PATTERN);
         if (parsed != null) {
