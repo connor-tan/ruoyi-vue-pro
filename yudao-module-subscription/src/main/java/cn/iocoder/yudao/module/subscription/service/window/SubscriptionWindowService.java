@@ -6,6 +6,7 @@ import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.Subscript
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowSaveReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowSimpleRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowUpdateStatusReqVO;
+import cn.iocoder.yudao.module.subscription.dal.dataobject.window.SubscriptionWindowDO;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -23,4 +24,8 @@ public interface SubscriptionWindowService {
     List<SubscriptionWindowSimpleRespVO> getWindowSimpleList();
 
     void updateWindowStatus(@Valid SubscriptionWindowUpdateStatusReqVO reqVO);
+
+    SubscriptionWindowDO getWindowDO(Long id);
+
+    SubscriptionWindowDO getCurrentOpenWindow();
 }

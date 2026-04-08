@@ -37,9 +37,13 @@ public class SubscriptionWindowSaveReqVO {
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime endTime;
 
-    @Schema(description = "目标学年ID", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "目标学年开始年份", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "目标学年不能为空")
-    private Long targetSchoolYearId;
+    private Integer targetYearStart;
+
+    @Schema(description = "目标学年结束年份", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "目标学年不能为空")
+    private Integer targetYearEnd;
 
     @Schema(description = "目标学期", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @NotNull(message = "目标学期不能为空")

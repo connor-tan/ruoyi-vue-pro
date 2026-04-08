@@ -22,9 +22,11 @@ public class SubscriptionWindowRespVO {
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime endTime;
 
-    private Long targetSchoolYearId;
+    private Integer targetYearStart;
 
-    private String targetSchoolYearName;
+    private Integer targetYearEnd;
+
+    private String targetYearName;
 
     private Integer targetSemester;
 

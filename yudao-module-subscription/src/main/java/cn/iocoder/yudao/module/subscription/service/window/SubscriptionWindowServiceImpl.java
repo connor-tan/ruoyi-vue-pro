@@ -3,7 +3,6 @@ package cn.iocoder.yudao.module.subscription.service.window;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowPageReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowSaveReqVO;
@@ -20,7 +19,6 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -37,7 +35,7 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
     @Override
     public Long createWindow(SubscriptionWindowSaveReqVO createReqVO) {
         validateWindowTime(createReqVO.getStartTime(), createReqVO.getEndTime());
-        validateTargetSchoolYear(createReqVO.getTargetSchoolYearId());
+        validateTargetYear(createReqVO.getTargetYearStart(), createReqVO.getTargetYearEnd());
         validateEnableConflict(null, createReqVO.getStatus());
         SubscriptionWindowDO subscriptionWindow = BeanUtils.toBean(createReqVO, SubscriptionWindowDO.class);
         subscriptionWindow.setGradeCalcRule(normalizeGradeCalcRule(createReqVO.getGradeCalcRule()));
@@ -49,7 +47,7 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
     public void updateWindow(SubscriptionWindowSaveReqVO updateReqVO) {
         SubscriptionWindowDO oldWindow = validateWindowExists(updateReqVO.getId());
         validateWindowTime(updateReqVO.getStartTime(), updateReqVO.getEndTime());
-        validateTargetSchoolYear(updateReqVO.getTargetSchoolYearId());
+        validateTargetYear(updateReqVO.getTargetYearStart(), updateReqVO.getTargetYearEnd());
         validateEnableConflict(oldWindow.getId(), updateReqVO.getStatus());
         SubscriptionWindowDO updateObj = BeanUtils.toBean(updateReqVO, SubscriptionWindowDO.class);
         updateObj.setGradeCalcRule(normalizeGradeCalcRule(updateReqVO.getGradeCalcRule()));
@@ -68,32 +66,15 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         if (pageResult.getList().isEmpty()) {
             return PageResult.empty(pageResult.getTotal());
         }
-        Map<Long, SchoolYearDO> schoolYearMap = subscriptionSupportService.getSchoolYearMap(pageResult.getList().stream()
-                .map(SubscriptionWindowDO::getTargetSchoolYearId)
-                .distinct()
-                .toList());
-        return new PageResult<>(pageResult.getList().stream()
-                .map(window -> buildWindowResp(window, schoolYearMap.get(window.getTargetSchoolYearId())))
-                .toList(), pageResult.getTotal());
+        return new PageResult<>(pageResult.getList().stream().map(this::buildWindowResp).toList(), pageResult.getTotal());
     }
 
     @Override
     public List<SubscriptionWindowSimpleRespVO> getWindowSimpleList() {
-        List<SubscriptionWindowDO> windows = subscriptionWindowMapper.selectAllList();
-        if (windows.isEmpty()) {
-            return List.of();
-        }
-        Map<Long, SchoolYearDO> schoolYearMap = subscriptionSupportService.getSchoolYearMap(windows.stream()
-                .map(SubscriptionWindowDO::getTargetSchoolYearId)
-                .distinct()
-                .toList());
-        return windows.stream().map(window -> {
+        return subscriptionWindowMapper.selectAllList().stream().map(window -> {
             SubscriptionWindowSimpleRespVO respVO = BeanUtils.toBean(window, SubscriptionWindowSimpleRespVO.class);
             respVO.setGradeCalcRule(normalizeGradeCalcRule(respVO.getGradeCalcRule()));
-            SchoolYearDO schoolYear = schoolYearMap.get(window.getTargetSchoolYearId());
-            if (schoolYear != null) {
-                respVO.setTargetSchoolYearName(schoolYear.getYearStart() + "-" + schoolYear.getYearEnd() + "学年");
-            }
+            respVO.setTargetYearName(buildTargetYearName(window.getTargetYearStart(), window.getTargetYearEnd()));
             return respVO;
         }).toList();
     }
@@ -106,6 +87,16 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         updateObj.setId(reqVO.getId());
         updateObj.setStatus(reqVO.getStatus());
         subscriptionWindowMapper.updateById(updateObj);
+    }
+
+    @Override
+    public SubscriptionWindowDO getWindowDO(Long id) {
+        return validateWindowExists(id);
+    }
+
+    @Override
+    public SubscriptionWindowDO getCurrentOpenWindow() {
+        return subscriptionWindowMapper.selectCurrentEnabledWindow(LocalDateTime.now());
     }
 
     private SubscriptionWindowDO validateWindowExists(Long id) {
@@ -122,10 +113,8 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         }
     }
 
-    private void validateTargetSchoolYear(Long targetSchoolYearId) {
-        if (subscriptionSupportService.getSchoolYear(targetSchoolYearId) == null) {
-            throw exception(ErrorCodeConstants.SUPPORT_SCHOOL_YEAR_NOT_EXISTS);
-        }
+    private void validateTargetYear(Integer targetYearStart, Integer targetYearEnd) {
+        subscriptionSupportService.validateWindowYear(targetYearStart, targetYearEnd);
     }
 
     private void validateEnableConflict(Long currentId, Integer status) {
@@ -138,15 +127,9 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
     }
 
     private SubscriptionWindowRespVO buildWindowResp(SubscriptionWindowDO window) {
-        return buildWindowResp(window, subscriptionSupportService.getSchoolYear(window.getTargetSchoolYearId()));
-    }
-
-    private SubscriptionWindowRespVO buildWindowResp(SubscriptionWindowDO window, SchoolYearDO schoolYear) {
         SubscriptionWindowRespVO respVO = BeanUtils.toBean(window, SubscriptionWindowRespVO.class);
         respVO.setGradeCalcRule(normalizeGradeCalcRule(respVO.getGradeCalcRule()));
-        if (schoolYear != null) {
-            respVO.setTargetSchoolYearName(schoolYear.getYearStart() + "-" + schoolYear.getYearEnd() + "学年");
-        }
+        respVO.setTargetYearName(buildTargetYearName(window.getTargetYearStart(), window.getTargetYearEnd()));
         return respVO;
     }
 
@@ -155,5 +138,12 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
             return SubscriptionGradeCalcRuleEnum.PROMOTED_GRADE.getRule();
         }
         return SubscriptionGradeCalcRuleEnum.CURRENT_GRADE.getRule();
+    }
+
+    private String buildTargetYearName(Integer targetYearStart, Integer targetYearEnd) {
+        if (targetYearStart == null || targetYearEnd == null) {
+            return null;
+        }
+        return targetYearStart + "-" + targetYearEnd + "学年";
     }
 }

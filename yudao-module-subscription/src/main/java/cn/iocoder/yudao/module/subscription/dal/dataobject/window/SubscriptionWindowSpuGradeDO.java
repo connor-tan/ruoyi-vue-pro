@@ -11,36 +11,20 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
-
-@TableName("sub_window")
-@KeySequence("sub_window_seq")
+@TableName("sub_window_spu_grade")
+@KeySequence("sub_window_spu_grade_seq")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubscriptionWindowDO extends BaseDO {
+public class SubscriptionWindowSpuGradeDO extends BaseDO {
 
     @TableId
     private Long id;
 
-    private String name;
+    private Long windowSpuId;
 
-    private LocalDateTime startTime;
-
-    private LocalDateTime endTime;
-
-    private Integer targetYearStart;
-
-    private Integer targetYearEnd;
-
-    private Integer targetSemester;
-
-    private String gradeCalcRule;
-
-    private Integer status;
-
-    private String remark;
+    private Long gradeCatalogId;
 }

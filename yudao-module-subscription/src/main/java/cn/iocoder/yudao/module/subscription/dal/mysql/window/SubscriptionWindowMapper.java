@@ -1,6 +1,5 @@
 package cn.iocoder.yudao.module.subscription.dal.mysql.window;
 
-import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
@@ -17,7 +16,8 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
     default PageResult<SubscriptionWindowDO> selectPage(SubscriptionWindowPageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<SubscriptionWindowDO>()
                 .likeIfPresent(SubscriptionWindowDO::getName, reqVO.getName())
-                .eqIfPresent(SubscriptionWindowDO::getTargetSchoolYearId, reqVO.getTargetSchoolYearId())
+                .eqIfPresent(SubscriptionWindowDO::getTargetYearStart, reqVO.getTargetYearStart())
+                .eqIfPresent(SubscriptionWindowDO::getTargetYearEnd, reqVO.getTargetYearEnd())
                 .eqIfPresent(SubscriptionWindowDO::getTargetSemester, reqVO.getTargetSemester())
                 .eqIfPresent(SubscriptionWindowDO::getGradeCalcRule, reqVO.getGradeCalcRule())
                 .eqIfPresent(SubscriptionWindowDO::getStatus, reqVO.getStatus())
