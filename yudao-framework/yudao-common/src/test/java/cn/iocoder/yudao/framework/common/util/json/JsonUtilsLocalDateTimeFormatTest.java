@@ -45,6 +45,13 @@ class JsonUtilsLocalDateTimeFormatTest {
         assertEquals(LocalDateTime.of(2026, 4, 9, 17, 30, 45), vo.getCreateTime());
     }
 
+    @Test
+    void shouldDeserializeDigitOnlyNumberTokenByJsonFormatPatternBeforeEpochMillisFallback() {
+        DigitPatternReqVO vo = JsonUtils.parseObject("{\"createTime\":20260409173045}", DigitPatternReqVO.class);
+
+        assertEquals(LocalDateTime.of(2026, 4, 9, 17, 30, 45), vo.getCreateTime());
+    }
+
     static class DefaultRespVO {
         private LocalDateTime createTime;
 

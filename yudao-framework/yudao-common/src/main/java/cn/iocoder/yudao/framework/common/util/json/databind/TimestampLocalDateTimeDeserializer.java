@@ -44,6 +44,10 @@ public class TimestampLocalDateTimeDeserializer extends JsonDeserializer<LocalDa
     public LocalDateTime deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonToken token = p.currentToken();
         if (token == JsonToken.VALUE_NUMBER_INT) {
+            LocalDateTime parsed = tryParse(p.getText(), pattern);
+            if (parsed != null) {
+                return parsed;
+            }
             return LocalDateTime.ofInstant(Instant.ofEpochMilli(p.getLongValue()), ZoneId.systemDefault());
         }
 

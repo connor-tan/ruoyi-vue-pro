@@ -52,7 +52,8 @@ public class SubscriptionWindowSpuController {
     @PreAuthorize("@ss.hasPermission('subscription:window-spu:query')")
     public CommonResult<PageResult<SubscriptionWindowSpuAvailableRespVO>> getAvailablePage(
             @Valid SubscriptionWindowSpuAvailablePageReqVO reqVO,
-            @RequestParam("baseGradeCatalogIds") @NotEmpty(message = "基础可见年级不能为空") List<Long> baseGradeCatalogIds) {
+            @RequestParam("baseGradeCatalogIds") @NotEmpty(message = "基础可见年级不能为空")
+            List<@jakarta.validation.constraints.NotNull(message = "基础可见年级不能为空") Long> baseGradeCatalogIds) {
         reqVO.setBaseGradeCatalogIds(baseGradeCatalogIds);
         return success(subscriptionWindowSpuService.getAvailablePage(reqVO));
     }

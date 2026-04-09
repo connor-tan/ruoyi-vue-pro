@@ -15,8 +15,8 @@ public class SubscriptionWindowSpuBatchCreateReqVO {
     private Long windowId;
 
     @NotEmpty(message = "基础可见年级不能为空")
-    private List<Long> baseGradeCatalogIds;
+    private List<@NotNull(message = "基础可见年级不能为空") Long> baseGradeCatalogIds;
 
     @NotEmpty(message = "刊物商品不能为空")
-    private List<Long> productSpuIds;
+    private List<@NotNull(message = "刊物商品不能为空") Long> productSpuIds;
 }

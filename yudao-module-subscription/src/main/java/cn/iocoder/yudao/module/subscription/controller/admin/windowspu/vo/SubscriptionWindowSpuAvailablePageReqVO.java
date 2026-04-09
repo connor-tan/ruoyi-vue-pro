@@ -20,7 +20,7 @@ public class SubscriptionWindowSpuAvailablePageReqVO extends PageParam {
     private Long windowId;
 
     @Schema(description = "基础可见年级集合", requiredMode = Schema.RequiredMode.REQUIRED)
-    private List<Long> baseGradeCatalogIds;
+    private List<@NotNull(message = "基础可见年级不能为空") Long> baseGradeCatalogIds;
 
     @Schema(description = "刊物名称")
     private String productName;
