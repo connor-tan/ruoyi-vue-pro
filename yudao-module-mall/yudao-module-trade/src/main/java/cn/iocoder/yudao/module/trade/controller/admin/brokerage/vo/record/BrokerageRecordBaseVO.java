@@ -9,6 +9,8 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 /**
  * 佣金记录 Base VO，提供给添加、修改、详细的子 VO 使用
@@ -55,6 +57,7 @@ public class BrokerageRecordBaseVO {
 
     @Schema(description = "解冻时间")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime unfreezeTime;
 
     @Schema(description = "来源用户等级")

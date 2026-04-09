@@ -5,6 +5,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
 
 @Schema(description = "用户 App - 交易售后 Response VO")
@@ -36,9 +39,11 @@ public class AppAfterSaleRespVO {
     private List<String> applyPicUrls;
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
     @Schema(description = "更新时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime updateTime;
 
     // ========== 交易订单相关 ==========
@@ -87,6 +92,7 @@ public class AppAfterSaleRespVO {
     private Integer refundPrice;
 
     @Schema(description = "退款时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime refundTime;
 
     // ========== 退货相关 ==========
@@ -98,9 +104,11 @@ public class AppAfterSaleRespVO {
     private String logisticsNo;
 
     @Schema(description = "退货时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime deliveryTime;
 
     @Schema(description = "收货时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime receiveTime;
 
     @Schema(description = "收货备注")

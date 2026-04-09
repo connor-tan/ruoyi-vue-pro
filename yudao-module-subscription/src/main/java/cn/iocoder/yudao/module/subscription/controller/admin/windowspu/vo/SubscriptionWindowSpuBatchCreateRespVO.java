@@ -7,7 +7,9 @@ import java.util.List;
 @Data
 public class SubscriptionWindowSpuBatchCreateRespVO {
 
-    private Integer createdCount;
+    private Integer createdWindowSpuCount;
+
+    private Integer createdGradeCount;
 
     private Integer skippedCount;
 
@@ -19,6 +21,10 @@ public class SubscriptionWindowSpuBatchCreateRespVO {
         private Long productSpuId;
 
         private String productName;
+
+        private List<Long> skippedGradeCatalogIds;
+
+        private String skippedGradeNames;
 
         private String reason;
     }

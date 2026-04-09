@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 /**
  * 交易订单 Base VO，提供给添加、修改、详细的子 VO 使用
@@ -21,6 +24,7 @@ public class TradeOrderBaseVO {
     private String no;
 
     @Schema(description = "下单时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
     @Schema(description = "订单类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
@@ -45,9 +49,11 @@ public class TradeOrderBaseVO {
     private Integer productCount;
 
     @Schema(description = "订单完成时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime finishTime;
 
     @Schema(description = "订单取消时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime cancelTime;
 
     @Schema(description = "取消类型", example = "10")
@@ -65,6 +71,7 @@ public class TradeOrderBaseVO {
     private Boolean payStatus;
 
     @Schema(description = "付款时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime payTime;
 
     @Schema(description = "支付渠道", requiredMode = Schema.RequiredMode.REQUIRED, example = "wx_lite")
@@ -106,9 +113,11 @@ public class TradeOrderBaseVO {
     private String logisticsNo;
 
     @Schema(description = "发货时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime deliveryTime;
 
     @Schema(description = "收货时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime receiveTime;
 
     @Schema(description = "收件人名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "张三")

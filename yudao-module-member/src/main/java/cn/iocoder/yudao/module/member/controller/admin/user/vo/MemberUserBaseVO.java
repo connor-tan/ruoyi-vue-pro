@@ -1,15 +1,17 @@
 package cn.iocoder.yudao.module.member.controller.admin.user.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 /**
  * 会员用户 Base VO，提供给添加、修改、详细的子 VO 使用
@@ -48,7 +50,8 @@ public class MemberUserBaseVO {
 
     @Schema(description = "出生日期", example = "2023-03-12")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY)
-    private LocalDateTime birthday;
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY, timezone = TIME_ZONE_DEFAULT)
+    private LocalDate birthday;
 
     @Schema(description = "会员备注", example = "我是小备注")
     private String mark;

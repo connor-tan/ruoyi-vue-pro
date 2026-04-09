@@ -4,6 +4,9 @@ import cn.iocoder.yudao.module.pay.enums.refund.PayRefundStatusEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 /**
  * 退款单信息 Response DTO
@@ -49,6 +52,7 @@ public class PayRefundRespDTO {
     /**
      * 退款成功时间
      */
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime successTime;
 
     // ========== 渠道相关字段 ==========

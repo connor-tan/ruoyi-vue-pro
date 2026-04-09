@@ -15,6 +15,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -63,6 +65,14 @@ public interface MemberUserConvert {
             user.setGroupName(groupMap.get(user.getGroupId()));
         });
         return result;
+    }
+
+    default LocalDate map(LocalDateTime value) {
+        return value != null ? value.toLocalDate() : null;
+    }
+
+    default LocalDateTime map(LocalDate value) {
+        return value != null ? value.atStartOfDay() : null;
     }
 
 }

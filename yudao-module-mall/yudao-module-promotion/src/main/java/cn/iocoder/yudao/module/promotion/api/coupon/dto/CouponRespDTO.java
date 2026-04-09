@@ -6,6 +6,9 @@ import cn.iocoder.yudao.module.promotion.enums.coupon.CouponTakeTypeEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
 
 /**
@@ -61,10 +64,12 @@ public class CouponRespDTO {
     /**
      * 生效开始时间
      */
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime validStartTime;
     /**
      * 生效结束时间
      */
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime validEndTime;
     /**
      * 商品范围
@@ -103,6 +108,7 @@ public class CouponRespDTO {
     /**
      * 使用时间
      */
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime useTime;
 
     // ========== 使用情况 END ==========

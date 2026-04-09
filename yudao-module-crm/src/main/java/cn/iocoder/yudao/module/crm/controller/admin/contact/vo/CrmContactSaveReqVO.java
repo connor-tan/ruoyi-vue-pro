@@ -12,7 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 
-import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 @Schema(description = "管理后台 - CRM 联系人创建/更新 Request VO")
 @Data
@@ -32,8 +32,8 @@ public class CrmContactSaveReqVO {
     private Long customerId;
 
     @Schema(description = "下次联系时间")
-    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY)
     @DiffLogField(name = "下次联系时间")
+    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime contactNextTime;
 
     @Schema(description = "负责人用户编号", example = "14334")

@@ -89,20 +89,23 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
     @Override
     public PageResult<SubscriptionWindowSpuAvailableRespVO> getAvailablePage(SubscriptionWindowSpuAvailablePageReqVO reqVO) {
         subscriptionWindowService.getWindowDO(reqVO.getWindowId());
-        subscriptionSupportService.validateGradeCatalogIds(Collections.singleton(reqVO.getBaseGradeCatalogId()));
+        List<Long> selectedGradeCatalogIds = normalizeGradeCatalogIds(reqVO.getBaseGradeCatalogIds());
+        subscriptionSupportService.validateGradeCatalogIds(selectedGradeCatalogIds);
         List<ProductSpuDO> candidates = subscriptionSupportService.getPublicationSpuList(reqVO.getProductName(),
-                reqVO.getCategoryId(), reqVO.getBaseGradeCatalogId(), true);
+                reqVO.getCategoryId(), selectedGradeCatalogIds, true);
         if (candidates.isEmpty()) {
             return PageResult.empty();
         }
         Set<Long> matchedProductSpuIds = resolveMatchedProductSpuIds(reqVO.getProductName(), reqVO.getCategoryId(),
-                reqVO.getBaseGradeCatalogId(), reqVO.getPublicationTypeId(), reqVO.getPublisherId());
+                selectedGradeCatalogIds, reqVO.getPublicationTypeId(), reqVO.getPublisherId());
         if (matchedProductSpuIds != null) {
             candidates = candidates.stream().filter(spu -> matchedProductSpuIds.contains(spu.getId())).toList();
         }
         if (candidates.isEmpty()) {
             return PageResult.empty();
         }
+        List<Long> initialProductSpuIds = CollectionUtils.convertList(candidates, ProductSpuDO::getId);
+        Map<Long, List<ProductSpuGradeDO>> spuGradeMap = subscriptionSupportService.getPublicationSpuGradeMap(initialProductSpuIds);
         Map<Long, SubscriptionWindowSpuDO> existingMap = CollectionUtils.convertMap(
                 subscriptionWindowSpuMapper.selectListByWindowId(reqVO.getWindowId()),
                 SubscriptionWindowSpuDO::getProductSpuId);
@@ -110,12 +113,19 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
                 .map(SubscriptionWindowSpuDO::getId).toList());
         candidates = candidates.stream()
                 .filter(spu -> {
+                    List<Long> matchedGradeCatalogIds = getSupportedSelectedGradeIds(
+                            spuGradeMap.getOrDefault(spu.getId(), Collections.emptyList()), selectedGradeCatalogIds);
+                    if (matchedGradeCatalogIds.isEmpty()) {
+                        return false;
+                    }
                     SubscriptionWindowSpuDO existing = existingMap.get(spu.getId());
                     if (existing == null) {
                         return true;
                     }
-                    return existingGradeMap.getOrDefault(existing.getId(), Collections.emptyList()).stream()
-                            .noneMatch(item -> Objects.equals(item.getGradeCatalogId(), reqVO.getBaseGradeCatalogId()));
+                    Set<Long> existingGradeIds = existingGradeMap.getOrDefault(existing.getId(), Collections.emptyList()).stream()
+                            .map(SubscriptionWindowSpuGradeDO::getGradeCatalogId)
+                            .collect(Collectors.toSet());
+                    return matchedGradeCatalogIds.stream().anyMatch(gradeCatalogId -> !existingGradeIds.contains(gradeCatalogId));
                 })
                 .toList();
         if (candidates.isEmpty()) {
@@ -137,7 +147,6 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
         Map<Long, ProductPublicationPublisherDO> publisherMap = subscriptionSupportService.getPublicationPublisherMap(titleMap.values().stream()
                 .map(ProductPublicationTitleDO::getPublisherId)
                 .collect(Collectors.toSet()));
-        Map<Long, List<ProductSpuGradeDO>> spuGradeMap = subscriptionSupportService.getPublicationSpuGradeMap(productSpuIds);
         Map<Long, GradeCatalogDO> gradeCatalogMap = subscriptionSupportService.getGradeCatalogMap(spuGradeMap.values().stream()
                 .flatMap(List::stream)
                 .map(ProductSpuGradeDO::getGradeCatalogId)
@@ -145,7 +154,8 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
 
         List<SubscriptionWindowSpuAvailableRespVO> records = candidates.stream()
                 .map(spu -> buildAvailableResp(spu, categoryMap.get(spu.getCategoryId()), spuPublicationMap.get(spu.getId()),
-                        titleMap, typeMap, publisherMap, spuGradeMap.getOrDefault(spu.getId(), Collections.emptyList()), gradeCatalogMap))
+                        titleMap, typeMap, publisherMap, spuGradeMap.getOrDefault(spu.getId(), Collections.emptyList()),
+                        gradeCatalogMap, selectedGradeCatalogIds))
                 .toList();
         return paginate(records, reqVO.getPageNo(), reqVO.getPageSize());
     }
@@ -155,46 +165,70 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
     @Transactional(rollbackFor = Exception.class)
     public SubscriptionWindowSpuBatchCreateRespVO batchCreate(SubscriptionWindowSpuBatchCreateReqVO reqVO) {
         subscriptionWindowService.getWindowDO(reqVO.getWindowId());
-        subscriptionSupportService.validateGradeCatalogIds(Collections.singleton(reqVO.getBaseGradeCatalogId()));
+        List<Long> selectedGradeCatalogIds = normalizeGradeCatalogIds(reqVO.getBaseGradeCatalogIds());
+        subscriptionSupportService.validateGradeCatalogIds(selectedGradeCatalogIds);
         SubscriptionWindowSpuBatchCreateRespVO respVO = new SubscriptionWindowSpuBatchCreateRespVO();
         List<SubscriptionWindowSpuBatchCreateRespVO.SkippedItem> skippedItems = new ArrayList<>();
-        int createdCount = 0;
+        int createdWindowSpuCount = 0;
+        int createdGradeCount = 0;
         for (Long productSpuId : reqVO.getProductSpuIds()) {
             ProductSpuDO productSpu = subscriptionSupportService.getPublicationSpu(productSpuId, true);
             if (productSpu == null) {
                 throw exception(ErrorCodeConstants.WINDOW_SPU_NOT_EXISTS);
             }
-            validateSpuGradeMatch(productSpu.getId(), reqVO.getBaseGradeCatalogId());
-            SubscriptionWindowSpuDO exists = subscriptionWindowSpuMapper.selectByWindowIdAndProductSpuId(reqVO.getWindowId(), productSpuId);
-            if (exists != null) {
-                if (subscriptionWindowSpuGradeMapper.selectByWindowSpuIdAndGradeCatalogId(exists.getId(), reqVO.getBaseGradeCatalogId()) != null) {
-                    skippedItems.add(buildSkippedItem(productSpu, ErrorCodeConstants.WINDOW_SPU_GRADE_DUPLICATE.getMsg()));
-                    continue;
-                }
-                subscriptionWindowSpuGradeMapper.insert(SubscriptionWindowSpuGradeDO.builder()
-                        .windowSpuId(exists.getId())
-                        .gradeCatalogId(reqVO.getBaseGradeCatalogId())
-                        .build());
-                createdCount++;
+            List<Long> supportedSelectedGradeIds = getSupportedSelectedGradeIds(productSpu.getId(), selectedGradeCatalogIds);
+            List<Long> unsupportedSelectedGradeIds = selectedGradeCatalogIds.stream()
+                    .filter(gradeCatalogId -> !supportedSelectedGradeIds.contains(gradeCatalogId))
+                    .toList();
+            if (!unsupportedSelectedGradeIds.isEmpty()) {
+                skippedItems.add(buildSkippedItem(productSpu, unsupportedSelectedGradeIds,
+                        ErrorCodeConstants.WINDOW_SPU_GRADE_NOT_MATCH.getMsg()));
+            }
+            if (supportedSelectedGradeIds.isEmpty()) {
                 continue;
             }
-
-            SubscriptionWindowSpuDO windowSpu = SubscriptionWindowSpuDO.builder()
-                    .windowId(reqVO.getWindowId())
-                    .productSpuId(productSpu.getId())
-                    .recommendFlag(Boolean.FALSE)
-                    .sort(productSpu.getSort() == null ? 0 : productSpu.getSort())
-                    .remark(null)
-                    .build();
-            subscriptionWindowSpuMapper.insert(windowSpu);
-            subscriptionWindowSpuGradeMapper.insert(SubscriptionWindowSpuGradeDO.builder()
-                    .windowSpuId(windowSpu.getId())
-                    .gradeCatalogId(reqVO.getBaseGradeCatalogId())
-                    .build());
-            initializeWindowSkus(windowSpu.getId(), productSpu.getId());
-            createdCount++;
+            SubscriptionWindowSpuDO exists = subscriptionWindowSpuMapper.selectByWindowIdAndProductSpuId(reqVO.getWindowId(), productSpuId);
+            Long windowSpuId;
+            Set<Long> existingGradeIds;
+            if (exists != null) {
+                windowSpuId = exists.getId();
+                existingGradeIds = subscriptionWindowSpuGradeMapper.selectListByWindowSpuIds(Collections.singleton(windowSpuId)).stream()
+                        .map(SubscriptionWindowSpuGradeDO::getGradeCatalogId)
+                        .collect(Collectors.toSet());
+            } else {
+                SubscriptionWindowSpuDO windowSpu = SubscriptionWindowSpuDO.builder()
+                        .windowId(reqVO.getWindowId())
+                        .productSpuId(productSpu.getId())
+                        .recommendFlag(Boolean.FALSE)
+                        .sort(productSpu.getSort() == null ? 0 : productSpu.getSort())
+                        .remark(null)
+                        .build();
+                subscriptionWindowSpuMapper.insert(windowSpu);
+                initializeWindowSkus(windowSpu.getId(), productSpu.getId());
+                createdWindowSpuCount++;
+                windowSpuId = windowSpu.getId();
+                existingGradeIds = Collections.emptySet();
+            }
+            List<Long> duplicateGradeIds = supportedSelectedGradeIds.stream()
+                    .filter(existingGradeIds::contains)
+                    .toList();
+            if (!duplicateGradeIds.isEmpty()) {
+                skippedItems.add(buildSkippedItem(productSpu, duplicateGradeIds,
+                        ErrorCodeConstants.WINDOW_SPU_GRADE_DUPLICATE.getMsg()));
+            }
+            List<Long> toCreateGradeIds = supportedSelectedGradeIds.stream()
+                    .filter(gradeCatalogId -> !existingGradeIds.contains(gradeCatalogId))
+                    .toList();
+            for (Long gradeCatalogId : toCreateGradeIds) {
+                subscriptionWindowSpuGradeMapper.insert(SubscriptionWindowSpuGradeDO.builder()
+                        .windowSpuId(windowSpuId)
+                        .gradeCatalogId(gradeCatalogId)
+                        .build());
+            }
+            createdGradeCount += toCreateGradeIds.size();
         }
-        respVO.setCreatedCount(createdCount);
+        respVO.setCreatedWindowSpuCount(createdWindowSpuCount);
+        respVO.setCreatedGradeCount(createdGradeCount);
         respVO.setSkippedCount(skippedItems.size());
         respVO.setSkippedItems(skippedItems);
         return respVO;
@@ -269,16 +303,6 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
         }
     }
 
-    private void validateSpuGradeMatch(Long productSpuId, Long gradeCatalogId) {
-        boolean matched = subscriptionSupportService.getPublicationSpuGradeMap(Collections.singleton(productSpuId))
-                .getOrDefault(productSpuId, Collections.emptyList())
-                .stream()
-                .anyMatch(item -> Objects.equals(item.getGradeCatalogId(), gradeCatalogId));
-        if (!matched) {
-            throw exception(ErrorCodeConstants.WINDOW_SPU_GRADE_NOT_MATCH);
-        }
-    }
-
     private void validateSpuGradesMatch(Long productSpuId, Collection<Long> gradeCatalogIds) {
         if (CollUtil.isEmpty(gradeCatalogIds)) {
             return;
@@ -297,20 +321,25 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
         }
     }
 
-    private SubscriptionWindowSpuBatchCreateRespVO.SkippedItem buildSkippedItem(ProductSpuDO productSpu, String reason) {
+    private SubscriptionWindowSpuBatchCreateRespVO.SkippedItem buildSkippedItem(ProductSpuDO productSpu,
+                                                                                 List<Long> skippedGradeCatalogIds,
+                                                                                 String reason) {
         SubscriptionWindowSpuBatchCreateRespVO.SkippedItem skippedItem = new SubscriptionWindowSpuBatchCreateRespVO.SkippedItem();
         skippedItem.setProductSpuId(productSpu.getId());
         skippedItem.setProductName(productSpu.getName());
+        skippedItem.setSkippedGradeCatalogIds(skippedGradeCatalogIds);
+        skippedItem.setSkippedGradeNames(joinGradeNames(skippedGradeCatalogIds,
+                subscriptionSupportService.getGradeCatalogMap(skippedGradeCatalogIds)));
         skippedItem.setReason(reason);
         return skippedItem;
     }
 
-    private Set<Long> resolveMatchedProductSpuIds(String productName, Long categoryId, Long gradeCatalogId,
+    private Set<Long> resolveMatchedProductSpuIds(String productName, Long categoryId, Collection<Long> gradeCatalogIds,
                                                   Long publicationTypeId, Long publisherId) {
         Set<Long> matchedSpuIds = null;
-        if (productName != null || categoryId != null || gradeCatalogId != null) {
+        if (productName != null || categoryId != null || CollUtil.isNotEmpty(gradeCatalogIds)) {
             matchedSpuIds = CollectionUtils.convertSet(
-                    subscriptionSupportService.getPublicationSpuList(productName, categoryId, gradeCatalogId, false),
+                    subscriptionSupportService.getPublicationSpuList(productName, categoryId, gradeCatalogIds, false),
                     ProductSpuDO::getId);
         }
         if (publicationTypeId != null) {
@@ -438,7 +467,8 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
                                                                     Map<Long, ProductPublicationTypeDO> typeMap,
                                                                     Map<Long, ProductPublicationPublisherDO> publisherMap,
                                                                     List<ProductSpuGradeDO> spuGrades,
-                                                                    Map<Long, GradeCatalogDO> gradeCatalogMap) {
+                                                                    Map<Long, GradeCatalogDO> gradeCatalogMap,
+                                                                    List<Long> selectedGradeCatalogIds) {
         SubscriptionWindowSpuAvailableRespVO respVO = new SubscriptionWindowSpuAvailableRespVO();
         respVO.setProductSpuId(productSpu.getId());
         respVO.setProductName(productSpu.getName());
@@ -464,7 +494,42 @@ public class SubscriptionWindowSpuServiceImpl implements SubscriptionWindowSpuSe
                 .map(ProductSpuGradeDO::getGradeCatalogId)
                 .distinct()
                 .toList(), gradeCatalogMap));
+        List<Long> matchedGradeCatalogIds = getSupportedSelectedGradeIds(spuGrades, selectedGradeCatalogIds);
+        respVO.setMatchedGradeCatalogIds(matchedGradeCatalogIds);
+        respVO.setMatchedGradeNames(joinGradeNames(matchedGradeCatalogIds, gradeCatalogMap));
         return respVO;
+    }
+
+    private List<Long> normalizeGradeCatalogIds(Collection<Long> gradeCatalogIds) {
+        if (CollUtil.isEmpty(gradeCatalogIds)) {
+            return Collections.emptyList();
+        }
+        return gradeCatalogIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private List<Long> getSupportedSelectedGradeIds(Long productSpuId, Collection<Long> selectedGradeCatalogIds) {
+        return getSupportedSelectedGradeIds(
+                subscriptionSupportService.getPublicationSpuGradeMap(Collections.singleton(productSpuId))
+                        .getOrDefault(productSpuId, Collections.emptyList()),
+                selectedGradeCatalogIds
+        );
+    }
+
+    private List<Long> getSupportedSelectedGradeIds(List<ProductSpuGradeDO> spuGrades, Collection<Long> selectedGradeCatalogIds) {
+        if (CollUtil.isEmpty(selectedGradeCatalogIds)) {
+            return Collections.emptyList();
+        }
+        Set<Long> supportedGradeIds = spuGrades.stream()
+                .map(ProductSpuGradeDO::getGradeCatalogId)
+                .collect(Collectors.toSet());
+        return selectedGradeCatalogIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .filter(supportedGradeIds::contains)
+                .toList();
     }
 
     private String joinGradeNames(List<Long> gradeCatalogIds, Map<Long, GradeCatalogDO> gradeCatalogMap) {

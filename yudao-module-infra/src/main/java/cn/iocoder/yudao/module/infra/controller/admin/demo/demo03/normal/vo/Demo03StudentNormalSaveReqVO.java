@@ -6,9 +6,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
 @Schema(description = "管理后台 - 学生新增/修改 Request VO")
 @Data
@@ -27,6 +30,7 @@ public class Demo03StudentNormalSaveReqVO {
 
     @Schema(description = "出生日期", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "出生日期不能为空")
+    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime birthday;
 
     @Schema(description = "简介", requiredMode = Schema.RequiredMode.REQUIRED, example = "随便")

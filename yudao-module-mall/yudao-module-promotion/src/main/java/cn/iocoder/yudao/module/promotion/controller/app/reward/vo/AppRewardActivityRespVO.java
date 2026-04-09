@@ -5,6 +5,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
 
 @Schema(description = "用户 App - 满减送活动 Response VO")
@@ -21,9 +24,11 @@ public class AppRewardActivityRespVO {
     private String name;
 
     @Schema(description = "开始时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime startTime;
 
     @Schema(description = "结束时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime endTime;
 
     @Schema(description = "条件类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")

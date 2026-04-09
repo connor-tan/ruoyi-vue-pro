@@ -7,6 +7,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - 流程实例抄送的分页 Item Response VO")
 @Data
@@ -23,6 +26,7 @@ public class BpmProcessInstanceCopyRespVO {
     @Schema(description = "流程实例的名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "测试")
     private String processInstanceName;
     @Schema(description = "流程实例的发起时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime processInstanceStartTime;
 
     @Schema(description = "流程活动的编号", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -40,6 +44,7 @@ public class BpmProcessInstanceCopyRespVO {
     private UserSimpleBaseVO createUser;
 
     @Schema(description = "抄送时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
     @Schema(description = "流程摘要", example = "[]")

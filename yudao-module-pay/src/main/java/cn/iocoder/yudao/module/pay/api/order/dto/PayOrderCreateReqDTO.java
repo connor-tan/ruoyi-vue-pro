@@ -10,6 +10,8 @@ import org.hibernate.validator.constraints.Length;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import org.springframework.format.annotation.DateTimeFormat;
 
 /**
  * 支付单创建 Request DTO
@@ -73,6 +75,7 @@ public class PayOrderCreateReqDTO implements Serializable {
      * 支付过期时间
      */
     @NotNull(message = "支付过期时间不能为空")
+    @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime expireTime;
 
 }

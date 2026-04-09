@@ -7,6 +7,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - 订刊窗口 Response VO")
 @Data
@@ -42,5 +43,6 @@ public class SubscriptionWindowRespVO {
 
     private String remark;
 
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 }

@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.crm.controller.admin.contract.vo.contract;
 
 import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
 import cn.idev.excel.annotation.ExcelProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,7 +10,11 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - CRM 合同 Response VO")
 @Data
@@ -44,6 +49,7 @@ public class CrmContractRespVO {
 
     @Schema(description = "最后跟进时间")
     @ExcelProperty("最后跟进时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime contactLastTime;
 
     @Schema(description = "负责人的用户编号", example = "25682")
@@ -66,14 +72,17 @@ public class CrmContractRespVO {
 
     @Schema(description = "下单日期", requiredMode = Schema.RequiredMode.REQUIRED)
     @ExcelProperty("下单日期")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime orderDate;
 
     @Schema(description = "开始时间")
     @ExcelProperty("开始时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime startTime;
 
     @Schema(description = "结束时间")
     @ExcelProperty("结束时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime endTime;
 
     @Schema(description = "产品总金额", example = "19510")
@@ -110,6 +119,7 @@ public class CrmContractRespVO {
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @ExcelProperty("创建时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
     @Schema(description = "创建人", example = "25682")
@@ -122,6 +132,7 @@ public class CrmContractRespVO {
 
     @Schema(description = "更新时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @ExcelProperty("更新时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime updateTime;
 
     @Schema(description = "产品列表")

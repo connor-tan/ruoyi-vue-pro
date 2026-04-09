@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
 
 @Schema(description = "用户 App - 优惠劵 Response VO")
@@ -29,9 +32,11 @@ public class AppCouponRespVO {
     private List<Long> productScopeValues;
 
     @Schema(description = "固定日期 - 生效开始时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime validStartTime;
 
     @Schema(description = "固定日期 - 生效结束时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime validEndTime;
 
     @Schema(description = "优惠类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")

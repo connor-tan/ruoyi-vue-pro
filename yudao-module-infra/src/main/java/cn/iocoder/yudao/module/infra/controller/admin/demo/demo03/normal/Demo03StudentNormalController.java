@@ -6,6 +6,8 @@ import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
+import cn.iocoder.yudao.module.infra.controller.admin.demo.demo03.vo.Demo03CourseRespVO;
+import cn.iocoder.yudao.module.infra.controller.admin.demo.demo03.vo.Demo03GradeRespVO;
 import cn.iocoder.yudao.module.infra.controller.admin.demo.demo03.normal.vo.Demo03StudentNormalPageReqVO;
 import cn.iocoder.yudao.module.infra.controller.admin.demo.demo03.normal.vo.Demo03StudentNormalRespVO;
 import cn.iocoder.yudao.module.infra.controller.admin.demo.demo03.normal.vo.Demo03StudentNormalSaveReqVO;
@@ -107,8 +109,9 @@ public class Demo03StudentNormalController {
     @Operation(summary = "获得学生课程列表")
     @Parameter(name = "studentId", description = "学生编号")
     @PreAuthorize("@ss.hasPermission('infra:demo03-student:query')")
-    public CommonResult<List<Demo03CourseDO>> getDemo03CourseListByStudentId(@RequestParam("studentId") Long studentId) {
-        return success(demo03StudentNormalService.getDemo03CourseListByStudentId(studentId));
+    public CommonResult<List<Demo03CourseRespVO>> getDemo03CourseListByStudentId(@RequestParam("studentId") Long studentId) {
+        return success(BeanUtils.toBean(demo03StudentNormalService.getDemo03CourseListByStudentId(studentId),
+                Demo03CourseRespVO.class));
     }
 
     // ==================== 子表（学生班级） ====================
@@ -117,8 +120,9 @@ public class Demo03StudentNormalController {
     @Operation(summary = "获得学生班级")
     @Parameter(name = "studentId", description = "学生编号")
     @PreAuthorize("@ss.hasPermission('infra:demo03-student:query')")
-    public CommonResult<Demo03GradeDO> getDemo03GradeByStudentId(@RequestParam("studentId") Long studentId) {
-        return success(demo03StudentNormalService.getDemo03GradeByStudentId(studentId));
+    public CommonResult<Demo03GradeRespVO> getDemo03GradeByStudentId(@RequestParam("studentId") Long studentId) {
+        return success(BeanUtils.toBean(demo03StudentNormalService.getDemo03GradeByStudentId(studentId),
+                Demo03GradeRespVO.class));
     }
 
 }

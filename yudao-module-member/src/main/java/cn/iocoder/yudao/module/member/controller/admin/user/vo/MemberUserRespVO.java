@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.member.controller.admin.user.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -7,6 +8,9 @@ import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - 会员用户 Response VO")
 @Data
@@ -24,9 +28,11 @@ public class MemberUserRespVO extends MemberUserBaseVO {
     private String loginIp;
 
     @Schema(description = "最后登录时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime loginDate;
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
     // ========== 其它信息 ==========

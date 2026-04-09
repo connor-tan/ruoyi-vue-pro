@@ -3,6 +3,9 @@ package cn.iocoder.yudao.module.promotion.api.discount.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 /**
  * 限时折扣活动商品 Response DTO
@@ -49,10 +52,12 @@ public class DiscountProductRespDTO {
     /**
      * 活动开始时间点
      */
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime activityStartTime;
     /**
      * 活动结束时间点
      */
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime activityEndTime;
 
 }

@@ -6,6 +6,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - 流程定义 Response VO")
 @Data
@@ -45,6 +48,7 @@ public class BpmProcessDefinitionRespVO extends BpmModelMetaInfoVO {
     private Integer suspensionState; // 参见 SuspensionState 枚举
 
     @Schema(description = "部署时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime deploymentTime; // 需要从对应的 Deployment 读取，非必须返回
 
     @Schema(description = "BPMN XML")

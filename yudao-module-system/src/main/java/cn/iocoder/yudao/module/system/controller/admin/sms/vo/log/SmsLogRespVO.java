@@ -11,6 +11,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - 短信日志 Response VO")
 @Data
@@ -74,6 +77,7 @@ public class SmsLogRespVO {
 
     @Schema(description = "发送时间")
     @ExcelProperty("发送时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime sendTime;
 
     @Schema(description = "短信 API 发送结果的编码", example = "SUCCESS")
@@ -99,6 +103,7 @@ public class SmsLogRespVO {
 
     @Schema(description = "接收时间")
     @ExcelProperty("接收时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime receiveTime;
 
     @Schema(description = "API 接收结果的编码", example = "DELIVRD")
@@ -111,6 +116,7 @@ public class SmsLogRespVO {
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @ExcelProperty("创建时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;
 
 }
