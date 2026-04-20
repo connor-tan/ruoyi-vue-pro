@@ -68,7 +68,9 @@ docker compose --env-file .env exec mysql-slave \
 
 ## MySQL 主从重新初始化
 
-开发环境默认 `REPLICA_RESEED_ON_INIT=true`。每次 `mysql-replica-init` 执行时，会先清理从库复制状态和 GTID，再从 master dump 当前数据库到 slave，最后重新建立 GTID 复制。
+开发环境默认 `REPLICA_RESEED_ON_INIT=true`。`mysql-replica-init` 启动后会先检查当前主从是否已经健康；如果 `mysql-slave` 已经正确连接 `mysql-master`，会直接跳过，不会重复 dump 或覆盖从库数据。
+
+只有在从库未配置、复制不健康或你强制重建 `mysql-replica-init` 后检测不通过时，脚本才会清理从库复制状态和 GTID，再从 master dump 当前数据库到 slave，最后重新建立 GTID 复制。
 
 这样可以避免复用旧从库数据卷时出现：
 

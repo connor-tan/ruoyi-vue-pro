@@ -35,6 +35,32 @@ mysql_dump_master() {
     --databases "${MYSQL_DATABASE}"
 }
 
+replica_already_healthy() {
+  local status
+  local retries=15
+  local announced="false"
+  while (( retries > 0 )); do
+    status="$(mysql_exec "${SLAVE_HOST}" "${SLAVE_PORT}" -e "SHOW REPLICA STATUS\\G" 2>/dev/null || true)"
+    if [[ -z "${status}" ]]; then
+      return 1
+    fi
+    if [[ "${status}" != *"Source_Host: ${MASTER_HOST}"* || "${status}" != *"Source_Port: ${MASTER_PORT}"* ]]; then
+      return 1
+    fi
+    if [[ "${status}" == *"Replica_IO_Running: Yes"* && "${status}" == *"Replica_SQL_Running: Yes"* ]]; then
+      echo "Replication is already healthy; skip initialization"
+      return 0
+    fi
+    if [[ "${announced}" == "false" ]]; then
+      echo "Existing replication found but is not healthy yet; waiting before reinitializing"
+      announced="true"
+    fi
+    retries=$(( retries - 1 ))
+    sleep 2
+  done
+  return 1
+}
+
 wait_mysql() {
   local host="$1"
   local port="$2"
@@ -61,11 +87,16 @@ GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '${REPLICATION_USER}'@'%';
 FLUSH PRIVILEGES;
 SQL
 
+if replica_already_healthy; then
+  exit 0
+fi
+
+mysql_exec "${SLAVE_HOST}" "${SLAVE_PORT}" -e "SET GLOBAL super_read_only = OFF; SET GLOBAL read_only = OFF;"
+mysql_exec "${SLAVE_HOST}" "${SLAVE_PORT}" -e "STOP REPLICA;" || true
+mysql_exec "${SLAVE_HOST}" "${SLAVE_PORT}" -e "RESET REPLICA ALL;" || true
 mysql_exec "${SLAVE_HOST}" "${SLAVE_PORT}" <<SQL
 SET GLOBAL super_read_only = OFF;
 SET GLOBAL read_only = OFF;
-STOP REPLICA;
-RESET REPLICA ALL;
 RESET BINARY LOGS AND GTIDS;
 SQL
 
