@@ -133,6 +133,39 @@ docker compose --env-file .env up -d --build admin
 docker compose --env-file .env up -d --build server admin
 ```
 
+后端 Dockerfile 使用 BuildKit cache mount 缓存 Maven 本地仓库：
+
+```text
+/root/.m2/repository
+```
+
+前端 Dockerfile 使用 BuildKit cache mount 缓存 pnpm store：
+
+```text
+/pnpm/store
+```
+
+因此普通代码更新后重新执行 `up -d --build` 会重新编译代码，但不会每次从远端重新下载全部 Maven / npm 依赖。Docker Compose v2 默认启用 BuildKit；如果目标机器关闭了 BuildKit，可以显式加：
+
+```shell
+DOCKER_BUILDKIT=1 docker compose --env-file .env up -d --build server admin
+```
+
+依赖缓存独立于容器和数据卷，执行下面这些命令不会清掉构建缓存：
+
+```shell
+docker compose --env-file .env down
+docker compose --env-file .env down -v
+```
+
+如果你明确要清理 Docker 构建缓存，再执行：
+
+```shell
+docker builder prune
+```
+
+如果 `pom.xml`、`pnpm-lock.yaml` 或依赖版本发生变化，构建仍会检查并补齐新增依赖，但已有依赖会优先复用缓存。
+
 如果只修改 `.env`，通常不需要重新 build，只需要重建容器让环境变量生效：
 
 ```shell
