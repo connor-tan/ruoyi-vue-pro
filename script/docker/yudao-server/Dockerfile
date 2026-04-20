@@ -2,7 +2,8 @@ FROM maven:3.9.9-eclipse-temurin-21 AS builder
 
 WORKDIR /workspace
 COPY . .
-RUN mvn -pl yudao-server -am -DskipTests -Dmaven.test.skip=true package
+ARG MAVEN_BUILD_ARGS=""
+RUN mvn -pl yudao-server -am -DskipTests -Dmaven.test.skip=true ${MAVEN_BUILD_ARGS} package
 
 FROM eclipse-temurin:21-jre
 

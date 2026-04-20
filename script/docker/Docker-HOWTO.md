@@ -12,6 +12,51 @@ docker compose --env-file .env up -d --build
 
 首次启动会构建后端和前端镜像，并初始化 MySQL master 数据库。已有数据卷时，MySQL 官方镜像不会重复执行初始化 SQL。
 
+## 环境切换
+
+后端 jar 只构建一份，`yudao-server/src/main/resources` 下的 `application.yaml`、`application-local.yaml`、`application-dev.yaml`、`application-docker.yaml` 都会被打进包内；运行时通过 `.env` 的 `SPRING_PROFILES_ACTIVE` 决定加载哪个 Spring Profile。
+
+当前 compose 默认使用：
+
+```dotenv
+SPRING_PROFILES_ACTIVE=docker
+```
+
+`docker` profile 是容器部署专用配置，数据库和 Redis 默认走 compose 服务名：
+
+```text
+mysql-master:3306
+mysql-slave:3306
+redis:6379
+```
+
+如果要复用已有 `local` 或 `dev` 配置，可以修改 `.env`：
+
+```dotenv
+SPRING_PROFILES_ACTIVE=local
+# 或
+SPRING_PROFILES_ACTIVE=dev
+```
+
+如果你希望加载 `dev` 的其它配置，但数据库、Redis 仍使用 compose 内置服务，可以把 `docker` 放在最后：
+
+```dotenv
+SPRING_PROFILES_ACTIVE=dev,docker
+```
+
+`docker` profile 会从 `.env` 读取常用运行参数，例如：
+
+```dotenv
+MYSQL_DATABASE=ruoyi-vue-pro
+MYSQL_ROOT_PASSWORD=123456
+REDIS_DATABASE=5
+REDIS_PASSWORD=
+QUARTZ_AUTO_STARTUP=true
+MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info
+```
+
+当前 POM 没有定义 Maven 多环境 profile，因此不需要通过 `mvn -Pdev/-Pprod` 生成不同 jar。Dockerfile 预留了 `MAVEN_BUILD_ARGS`，以后如果 POM 增加构建 profile，可在 `.env` 中补充，例如 `MAVEN_BUILD_ARGS=-Pprod`。
+
 ## 文件说明
 
 ```text
@@ -65,6 +110,42 @@ curl http://localhost:48080/actuator/health
 docker compose --env-file .env exec mysql-slave \
   mysql -uroot -p123456 -e "SHOW REPLICA STATUS\\G"
 ```
+
+## 代码更新后的部署
+
+后端代码更新后，重新构建并替换 `server` 容器：
+
+```shell
+cd /Users/connor/workspace/king/ruoyi-vue-pro/script/docker
+docker compose --env-file .env up -d --build server
+```
+
+前端管理后台代码更新后，重新构建并替换 `admin` 容器：
+
+```shell
+cd /Users/connor/workspace/king/ruoyi-vue-pro/script/docker
+docker compose --env-file .env up -d --build admin
+```
+
+如果同时改了后端、前端、Dockerfile、Nginx 或 compose 配置，直接重建相关服务：
+
+```shell
+docker compose --env-file .env up -d --build server admin
+```
+
+如果只修改 `.env`，通常不需要重新 build，只需要重建容器让环境变量生效：
+
+```shell
+docker compose --env-file .env up -d --force-recreate server admin
+```
+
+如果只想重启，不涉及镜像或环境变量变化：
+
+```shell
+docker compose --env-file .env restart server admin
+```
+
+注意：`mysql-replication/master/init/ruoyi-vue-pro.sql` 只会在 MySQL master 数据卷首次创建时执行。已有数据卷时，更新 init SQL 不会自动改库；需要用迁移 SQL 直接落库，或在开发环境明确执行 `docker compose --env-file .env down -v` 后重建数据卷。
 
 ## MySQL 主从重新初始化
 
