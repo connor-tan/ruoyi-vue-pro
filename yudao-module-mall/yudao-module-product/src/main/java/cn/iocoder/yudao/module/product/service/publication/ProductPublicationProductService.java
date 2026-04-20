@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.GradeCatalogSimpleRespVO;
 import cn.iocoder.yudao.module.edu.service.school.SchoolService;
@@ -21,6 +22,8 @@ import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.*;
 import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
 import cn.iocoder.yudao.module.product.enums.publication.ProductDomainTypeEnum;
+import cn.iocoder.yudao.module.product.enums.publication.ProductPublicationTypeIdentifierRuleEnum;
+import cn.iocoder.yudao.module.publication.enums.PublicationTargetPeriodEnum;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
@@ -182,13 +185,13 @@ public class ProductPublicationProductService {
         saveReqVO.setVirtualSalesCount(reqVO.getVirtualSalesCount());
         saveReqVO.setSalesCount(oldSpu == null ? reqVO.getSalesCount() : oldSpu.getSalesCount());
         saveReqVO.setBrowseCount(oldSpu == null ? reqVO.getBrowseCount() : oldSpu.getBrowseCount());
-        saveReqVO.setSkus(CollectionUtils.convertList(reqVO.getSkus(), this::buildSkuSaveReq));
+        saveReqVO.setSkus(CollectionUtils.convertList(reqVO.getSkus(), sku -> buildSkuSaveReq(reqVO.getName(), sku)));
         return saveReqVO;
     }
 
-    private ProductSkuSaveReqVO buildSkuSaveReq(ProductPublicationProductSkuSaveReqVO sku) {
+    private ProductSkuSaveReqVO buildSkuSaveReq(String spuName, ProductPublicationProductSkuSaveReqVO sku) {
         ProductSkuSaveReqVO saveReqVO = new ProductSkuSaveReqVO();
-        saveReqVO.setName(sku.getName());
+        saveReqVO.setName(resolveSkuName(spuName, sku.getName(), sku.getProperties()));
         saveReqVO.setPrice(sku.getPrice());
         saveReqVO.setMarketPrice(sku.getMarketPrice());
         saveReqVO.setCostPrice(sku.getCostPrice());
@@ -230,12 +233,15 @@ public class ProductPublicationProductService {
                     .productSkuId(skuDO.getId())
                     .volumeLabel(skuReqVO.getVolumeLabel())
                     .editionLabel(skuReqVO.getEditionLabel())
+                    .targetPeriod(PublicationTargetPeriodEnum.normalize(skuReqVO.getTargetPeriod()))
                     .isbn(skuReqVO.getIsbn())
                     .remark(skuReqVO.getRemark())
                     .build());
         }
         if (!skuPublications.isEmpty()) {
-            productSkuPublicationMapper.insertBatch(skuPublications);
+            productSkuPublicationMapper.deleteByProductSkuIds(CollectionUtils.convertList(skuPublications,
+                    ProductSkuPublicationDO::getProductSkuId));
+            skuPublications.forEach(productSkuPublicationMapper::insert);
         }
     }
 
@@ -251,14 +257,14 @@ public class ProductPublicationProductService {
             throw exception(PUBLICATION_PRODUCT_SKU_REQUIRED);
         }
         ProductPublicationTitleDO title = publicationTitleService.validateExists(reqVO.getPublicationTitleId());
-        if (publicationTitleService.requiresPeriodicalIdentifier(title.getTypeId())) {
+        ProductPublicationTypeDO type = publicationTypeService.validateExists(title.getTypeId());
+        if (ProductPublicationTypeIdentifierRuleEnum.requiresTitleIdentifier(type.getIdentifierRule())) {
             ProductPublicationTitleRespVO titleResp = publicationTitleService.get(title.getId());
             if (isAllBlank(titleResp.getIssn(), titleResp.getCnCode(), titleResp.getPostDistributionCode())) {
                 throw exception(PUBLICATION_PRODUCT_IDENTIFIER_REQUIRED);
             }
         }
-        ProductPublicationTypeDO type = publicationTypeService.validateExists(title.getTypeId());
-        if ("BOOK".equalsIgnoreCase(type.getCode())) {
+        if (ProductPublicationTypeIdentifierRuleEnum.requiresSkuIsbn(type.getIdentifierRule())) {
             boolean missingIsbn = reqVO.getSkus().stream().anyMatch(item -> item.getIsbn() == null || item.getIsbn().isBlank());
             if (missingIsbn) {
                 throw exception(PUBLICATION_PRODUCT_ISBN_REQUIRED);
@@ -322,12 +328,16 @@ public class ProductPublicationProductService {
         respVO.setSkus(CollectionUtils.convertList(skus, sku -> {
             ProductPublicationProductSkuRespVO skuRespVO = BeanUtils.toBean(sku, ProductPublicationProductSkuRespVO.class);
             skuRespVO.setSkuId(sku.getId());
+            skuRespVO.setName(resolveSkuName(spu.getName(), skuRespVO.getName(), sku.getProperties()));
             ProductSkuPublicationDO skuPublication = skuPublicationMap.get(sku.getId());
             if (skuPublication != null) {
                 skuRespVO.setVolumeLabel(skuPublication.getVolumeLabel());
                 skuRespVO.setEditionLabel(skuPublication.getEditionLabel());
+                skuRespVO.setTargetPeriod(PublicationTargetPeriodEnum.normalize(skuPublication.getTargetPeriod()));
                 skuRespVO.setIsbn(skuPublication.getIsbn());
                 skuRespVO.setRemark(skuPublication.getRemark());
+            } else {
+                skuRespVO.setTargetPeriod(PublicationTargetPeriodEnum.defaultPeriod());
             }
             return skuRespVO;
         }));
@@ -354,7 +364,9 @@ public class ProductPublicationProductService {
         Map<Long, ProductPublicationTitleDO> titleMap = publicationTitleService.getTitleMap(titleIds);
         Map<Long, ProductPublicationTitleIdentifierDO> identifierMap = publicationTitleService.getIdentifierMap(titleIds);
         Map<Long, ProductPublicationTypeDO> typeMap = publicationTypeService.getSimpleList().stream()
-                .map(item -> ProductPublicationTypeDO.builder().id(item.getId()).code(item.getCode()).name(item.getName()).build())
+                .map(item -> ProductPublicationTypeDO.builder()
+                        .id(item.getId()).code(item.getCode()).name(item.getName())
+                        .identifierRule(item.getIdentifierRule()).build())
                 .collect(Collectors.toMap(ProductPublicationTypeDO::getId, Function.identity(), (item1, item2) -> item1));
         Map<Long, ProductPublicationPublisherDO> publisherMap = publicationPublisherService.getSimpleList().stream()
                 .map(item -> ProductPublicationPublisherDO.builder().id(item.getId()).code(item.getCode()).name(item.getName()).build())
@@ -376,6 +388,7 @@ public class ProductPublicationProductService {
         if (titleContext.type() != null) {
             respVO.setPublicationTypeCode(titleContext.type().getCode());
             respVO.setPublicationTypeName(titleContext.type().getName());
+            respVO.setPublicationTypeIdentifierRule(ProductPublicationTypeIdentifierRuleEnum.normalize(titleContext.type().getIdentifierRule()));
         }
         respVO.setPublisherId(title.getPublisherId());
         if (titleContext.publisher() != null) {
@@ -395,6 +408,30 @@ public class ProductPublicationProductService {
         }
         return CollectionUtils.convertSet(productSpuPublicationMapper.selectListByPublicationTitleIds(titleIds),
                 ProductSpuPublicationDO::getProductSpuId);
+    }
+
+    private String resolveSkuName(String spuName, String skuName, List<?> properties) {
+        if (StrUtil.isNotBlank(skuName)) {
+            return skuName;
+        }
+        if (CollUtil.isEmpty(properties)) {
+            return spuName;
+        }
+        String propertyPart = properties.stream()
+                .map(this::extractSkuPropertyValueName)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.joining(" / "));
+        return StrUtil.isBlank(propertyPart) ? spuName : spuName + " " + propertyPart;
+    }
+
+    private String extractSkuPropertyValueName(Object property) {
+        if (property instanceof ProductSkuDO.Property skuProperty) {
+            return skuProperty.getValueName();
+        }
+        if (property instanceof ProductSkuSaveReqVO.Property skuSaveProperty) {
+            return skuSaveProperty.getValueName();
+        }
+        return null;
     }
 
     private Set<Long> intersect(Set<Long> current, Set<Long> next) {

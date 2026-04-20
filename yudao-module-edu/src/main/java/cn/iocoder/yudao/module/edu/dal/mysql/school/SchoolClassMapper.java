@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.edu.dal.mysql.school;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
@@ -8,6 +9,8 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -39,6 +42,19 @@ public interface SchoolClassMapper extends BaseMapperX<SchoolClassDO> {
                 .orderByDesc(SchoolClassDO::getEntryYear)
                 .orderByAsc(SchoolClassDO::getClassNo)
                 .orderByDesc(SchoolClassDO::getId));
+    }
+
+    default List<SchoolClassDO> selectListBySchoolYearIds(Collection<Long> schoolYearIds) {
+        if (CollUtil.isEmpty(schoolYearIds)) {
+            return Collections.emptyList();
+        }
+        return selectList(new LambdaQueryWrapperX<SchoolClassDO>()
+                .in(SchoolClassDO::getSchoolYearId, schoolYearIds)
+                .orderByAsc(SchoolClassDO::getSchoolId)
+                .orderByAsc(SchoolClassDO::getSchoolYearId)
+                .orderByAsc(SchoolClassDO::getSchoolGradeId)
+                .orderByAsc(SchoolClassDO::getClassNo)
+                .orderByAsc(SchoolClassDO::getId));
     }
 
     default SchoolClassDO selectByUniqueKey(Long schoolId, Integer entryYear, Long schoolYearId,

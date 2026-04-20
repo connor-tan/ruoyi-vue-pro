@@ -4,6 +4,7 @@ import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
 import cn.idev.excel.annotation.ExcelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
@@ -37,6 +38,13 @@ public class SchoolRespVO {
     @Schema(description = "学校代码")
     @ExcelProperty("学校代码")
     private String code;
+
+    @Schema(description = "办学学段编码列表", requiredMode = Schema.RequiredMode.REQUIRED, example = "[\"primary\",\"middle\"]")
+    private List<String> stageCodes;
+
+    @Schema(description = "办学学段名称", example = "小学、初中")
+    @ExcelProperty("办学学段")
+    private String stageNames;
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @ExcelProperty("创建时间")

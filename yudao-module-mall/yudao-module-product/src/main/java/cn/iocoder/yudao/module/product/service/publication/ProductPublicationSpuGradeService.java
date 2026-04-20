@@ -54,13 +54,32 @@ public class ProductPublicationSpuGradeService {
 
     @Transactional(rollbackFor = Exception.class)
     public void replaceGrades(Long productSpuId, List<Long> gradeCatalogIds) {
-        productSpuGradeMapper.deleteByProductSpuId(productSpuId);
+        List<ProductSpuGradeDO> existingRelations = productSpuGradeMapper.selectListByProductSpuId(productSpuId);
         if (gradeCatalogIds == null || gradeCatalogIds.isEmpty()) {
+            if (!existingRelations.isEmpty()) {
+                productSpuGradeMapper.deleteBatchIds(CollectionUtils.convertList(existingRelations, ProductSpuGradeDO::getId));
+            }
             return;
         }
-        List<ProductSpuGradeDO> relations = CollectionUtils.convertList(gradeCatalogIds,
+
+        List<Long> normalizedGradeCatalogIds = gradeCatalogIds.stream().distinct().toList();
+        Map<Long, ProductSpuGradeDO> existingRelationMap = CollectionUtils.convertMap(existingRelations,
+                ProductSpuGradeDO::getGradeCatalogId);
+
+        List<Long> deleteIds = CollectionUtils.convertList(existingRelations,
+                relation -> normalizedGradeCatalogIds.contains(relation.getGradeCatalogId()) ? null : relation.getId())
+                .stream()
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (!deleteIds.isEmpty()) {
+            productSpuGradeMapper.deleteBatchIds(deleteIds);
+        }
+
+        List<ProductSpuGradeDO> relations = CollectionUtils.convertList(normalizedGradeCatalogIds,
                 gradeCatalogId -> ProductSpuGradeDO.builder().productSpuId(productSpuId).gradeCatalogId(gradeCatalogId).build());
-        productSpuGradeMapper.insertBatch(relations);
+        relations.stream()
+                .filter(relation -> !existingRelationMap.containsKey(relation.getGradeCatalogId()))
+                .forEach(productSpuGradeMapper::insert);
     }
 
     public List<Long> getGradeCatalogIds(Long productSpuId) {

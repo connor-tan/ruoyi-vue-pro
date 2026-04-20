@@ -17,7 +17,7 @@ services:
     volumes:
       - mysql-master-data:/var/lib/mysql
       - ./master/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf:ro
-      - ../../../sql/mysql/ruoyi-vue-pro.sql:/docker-entrypoint-initdb.d/10-ruoyi-vue-pro.sql:ro
+      - ./master/init/ruoyi-vue-pro.sql:/docker-entrypoint-initdb.d/10-ruoyi-vue-pro.sql:ro
     healthcheck:
       test: mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD --silent
       interval: 5s
@@ -63,8 +63,10 @@ services:
       MASTER_PORT: 3306
       SLAVE_HOST: mysql-slave
       SLAVE_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
       REPLICATION_USER: ${REPLICATION_USER:-repl}
       REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-repl123456}
+      REPLICA_RESEED_ON_INIT: ${REPLICA_RESEED_ON_INIT:-true}
     volumes:
       - ./scripts/setup-replica.sh:/scripts/setup-replica.sh:ro
     entrypoint:

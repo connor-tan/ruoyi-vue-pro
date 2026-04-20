@@ -20,6 +20,11 @@ public interface ErrorCodeConstants {
     ErrorCode SCHOOL_GRADE_IN_USE_UPDATE = new ErrorCode(1_016_001_014, "学校年级已被班级引用，无法修改");
     ErrorCode SCHOOL_IN_USE_BY_STUDENT = new ErrorCode(1_016_001_015, "学校已被学生引用，无法删除");
     ErrorCode SCHOOL_CLASS_IN_USE_BY_STUDENT = new ErrorCode(1_016_001_016, "班级已被学生引用，无法删除");
+    ErrorCode SCHOOL_STAGE_REQUIRED = new ErrorCode(1_016_001_017, "办学学段不能为空");
+    ErrorCode SCHOOL_STAGE_INVALID = new ErrorCode(1_016_001_018, "办学学段 {} 不存在或已停用");
+    ErrorCode SCHOOL_STAGE_IN_USE = new ErrorCode(1_016_001_019, "学校已有 {} 年级定义，不能移除对应办学学段");
+    ErrorCode SCHOOL_GRADE_STAGE_NOT_ALLOWED = new ErrorCode(1_016_001_020, "学校办学学段不包含 {}，不能添加 {}");
+    ErrorCode SCHOOL_STAGE_NOT_CONFIGURED = new ErrorCode(1_016_001_021, "请先维护学校办学学段，再添加学校年级");
 
     ErrorCode STUDENT_NOT_EXISTS = new ErrorCode(1_017_001_001, "学生不存在");
     ErrorCode STUDENT_PARENT_NOT_EXISTS = new ErrorCode(1_017_001_002, "家长会员不存在");

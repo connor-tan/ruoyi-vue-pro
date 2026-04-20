@@ -5,6 +5,9 @@ import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
 import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
 import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
+import cn.iocoder.yudao.module.product.enums.publication.ProductDomainTypeEnum;
+import cn.iocoder.yudao.module.subscription.api.order.SubscriptionOrderEligibilityApi;
+import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
 import cn.iocoder.yudao.module.trade.controller.app.cart.vo.*;
 import cn.iocoder.yudao.module.trade.convert.cart.TradeCartConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
@@ -20,7 +23,7 @@ import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionU
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_STOCK_NOT_ENOUGH;
-import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.CARD_ITEM_NOT_FOUND;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.*;
 import static java.util.Collections.emptyList;
 
 /**
@@ -41,14 +44,19 @@ public class CartServiceImpl implements CartService {
     private ProductSpuApi productSpuApi;
     @Resource
     private ProductSkuApi productSkuApi;
+    @Resource
+    private SubscriptionOrderEligibilityApi subscriptionOrderEligibilityApi;
 
     @Override
     public Long addCart(Long userId, AppCartAddReqVO addReqVO) {
-        // 查询 TradeCartDO
-        CartDO cart = cartMapper.selectByUserIdAndSkuId(userId, addReqVO.getSkuId());
         // 校验 SKU
         Integer count = addReqVO.getCount();
         ProductSkuRespDTO sku = checkProductSku(addReqVO.getSkuId(), count);
+        ProductSpuRespDTO spu = productSpuApi.getSpu(sku.getSpuId());
+        validateSubscriptionContext(userId, addReqVO, sku, spu);
+        // 查询 TradeCartDO。同一 SKU 若订刊学生或窗口 SKU 不同，必须拆成不同购物车行。
+        CartDO cart = cartMapper.selectByUserIdAndSkuIdAndSubscriptionContext(userId, addReqVO.getSkuId(),
+                addReqVO.getStudentId(), addReqVO.getWindowSkuId());
 
         // 情况一：存在，则进行数量更新
         if (cart != null) {
@@ -58,7 +66,9 @@ public class CartServiceImpl implements CartService {
         // 情况二：不存在，则进行插入
         } else {
             cart = new CartDO().setUserId(userId).setSelected(true)
-                    .setSpuId(sku.getSpuId()).setSkuId(sku.getId()).setCount(count);
+                    .setSpuId(sku.getSpuId()).setSkuId(sku.getId()).setCount(count)
+                    .setSubscriptionStudentId(addReqVO.getStudentId())
+                    .setSubscriptionWindowSkuId(addReqVO.getWindowSkuId());
             cartMapper.insert(cart);
         }
         return cart.getId();
@@ -96,13 +106,16 @@ public class CartServiceImpl implements CartService {
         cartMapper.deleteById(oldCart.getId());
 
         // 第二步：添加新的购物项
-        CartDO newCart = cartMapper.selectByUserIdAndSkuId(userId, resetReqVO.getSkuId());
+        CartDO newCart = cartMapper.selectByUserIdAndSkuIdAndSubscriptionContext(userId, resetReqVO.getSkuId(),
+                oldCart.getSubscriptionStudentId(), oldCart.getSubscriptionWindowSkuId());
         if (newCart != null) {
             updateCartCount(userId, new AppCartUpdateCountReqVO()
                     .setId(newCart.getId()).setCount(resetReqVO.getCount()));
         } else {
             addCart(userId, new AppCartAddReqVO().setSkuId(resetReqVO.getSkuId())
-                    .setCount(resetReqVO.getCount()));
+                    .setCount(resetReqVO.getCount())
+                    .setStudentId(oldCart.getSubscriptionStudentId())
+                    .setWindowSkuId(oldCart.getSubscriptionWindowSkuId()));
         }
     }
 
@@ -191,6 +204,30 @@ public class CartServiceImpl implements CartService {
             throw exception(SKU_STOCK_NOT_ENOUGH);
         }
         return sku;
+    }
+
+    private void validateSubscriptionContext(Long userId, AppCartAddReqVO addReqVO, ProductSkuRespDTO sku,
+                                             ProductSpuRespDTO spu) {
+        boolean hasSubscriptionContext = addReqVO.getStudentId() != null || addReqVO.getWindowSkuId() != null;
+        boolean publication = spu != null && ProductDomainTypeEnum.isPublication(spu.getDomainType());
+        if (publication) {
+            if (addReqVO.getStudentId() == null || addReqVO.getWindowSkuId() == null) {
+                throw exception(ORDER_PUBLICATION_SUBSCRIPTION_CONTEXT_REQUIRED);
+            }
+            SubscriptionOrderEligibilityReqDTO reqDTO = new SubscriptionOrderEligibilityReqDTO()
+                    .setUserId(userId)
+                    .setItems(List.of(new SubscriptionOrderEligibilityReqDTO.Item()
+                            .setRequestIndex(0)
+                            .setStudentId(addReqVO.getStudentId())
+                            .setWindowSkuId(addReqVO.getWindowSkuId())
+                            .setSkuId(sku.getId())
+                            .setCount(addReqVO.getCount())));
+            subscriptionOrderEligibilityApi.validateOrderItems(reqDTO);
+            return;
+        }
+        if (hasSubscriptionContext) {
+            throw exception(ORDER_SUBSCRIPTION_CONTEXT_NOT_ALLOWED);
+        }
     }
 
 }

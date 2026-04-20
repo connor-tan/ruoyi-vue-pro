@@ -34,6 +34,12 @@ public class AppCartListRespVO {
         @Schema(description = "是否选中", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
         private Boolean selected;
 
+        @Schema(description = "订刊学生编号", example = "2048")
+        private Long subscriptionStudentId;
+
+        @Schema(description = "订刊窗口 SKU 编号", example = "4096")
+        private Long subscriptionWindowSkuId;
+
         /**
          * 商品 SPU
          */

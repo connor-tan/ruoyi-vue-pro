@@ -26,6 +26,9 @@ public class SchoolPageReqVO extends PageParam {
     @Schema(description = "学校代码")
     private String code;
 
+    @Schema(description = "办学学段编码", example = "primary")
+    private String stageCode;
+
     @Schema(description = "创建时间")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime[] createTime;

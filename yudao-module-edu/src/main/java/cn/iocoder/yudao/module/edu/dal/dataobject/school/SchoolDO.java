@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.edu.dal.dataobject.school;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+
+import java.util.List;
 
 /**
  * 学校信息 DO
@@ -48,5 +51,10 @@ public class SchoolDO extends BaseDO {
      */
     private String code;
 
+    /**
+     * 办学学段编码列表，对齐 edu_grade_catalog.stage / edu_stage 字典
+     */
+    @TableField(exist = false)
+    private List<String> stageCodes;
 
 }

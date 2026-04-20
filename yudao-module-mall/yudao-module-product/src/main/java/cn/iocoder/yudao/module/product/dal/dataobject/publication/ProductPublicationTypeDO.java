@@ -24,6 +24,8 @@ public class ProductPublicationTypeDO extends BaseDO {
 
     private String name;
 
+    private String identifierRule;
+
     private Integer sort;
 
     /**

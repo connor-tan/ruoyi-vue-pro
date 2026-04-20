@@ -173,6 +173,61 @@ public class TradeOrderItemDO extends BaseDO {
      */
     private Integer afterSaleStatus;
 
+    // ========== 订刊快照 ==========
+
+    /**
+     * 订刊学生编号
+     */
+    private Long subscriptionStudentId;
+    /**
+     * 订刊学校编号
+     */
+    private Long subscriptionSchoolId;
+    /**
+     * 订刊解析年级编号
+     */
+    private Long subscriptionGradeCatalogId;
+    /**
+     * 订刊窗口编号
+     */
+    private Long subscriptionWindowId;
+    /**
+     * 订刊窗口名称快照
+     */
+    private String subscriptionWindowNameSnapshot;
+    /**
+     * 订刊目标学年开始年份
+     */
+    private Integer subscriptionTargetYearStart;
+    /**
+     * 订刊目标学年结束年份
+     */
+    private Integer subscriptionTargetYearEnd;
+    /**
+     * 订刊目标周期
+     */
+    private String subscriptionTargetPeriod;
+    /**
+     * 订刊窗口刊物编号
+     */
+    private Long subscriptionWindowSpuId;
+    /**
+     * 订刊窗口 SKU 编号
+     */
+    private Long subscriptionWindowSkuId;
+    /**
+     * 订刊可见原因
+     */
+    private String subscriptionVisibilityReason;
+    /**
+     * 订刊命中特殊规则编号
+     */
+    private Long subscriptionMatchedRuleId;
+    /**
+     * 是否突破刊物商品适用年级
+     */
+    private Boolean subscriptionGradeApplicabilityOverride;
+
     /**
      * 商品属性
      */
@@ -208,4 +263,3 @@ public class TradeOrderItemDO extends BaseDO {
     }
 
 }
-

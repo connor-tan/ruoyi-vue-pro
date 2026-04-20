@@ -74,13 +74,14 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_TITLE_NAME_EXISTS = new ErrorCode(1_008_011_001, "刊物主档名称已存在");
     ErrorCode PUBLICATION_TITLE_CODE_EXISTS = new ErrorCode(1_008_011_002, "刊物主档编码已存在");
     ErrorCode PUBLICATION_TITLE_HAS_PRODUCTS = new ErrorCode(1_008_011_003, "刊物主档下存在刊物商品，无法删除");
+    ErrorCode PUBLICATION_TITLE_IDENTIFIER_REQUIRED = new ErrorCode(1_008_011_004, "当前刊物类型启用前需至少填写 ISSN、CN 刊号或邮发代号");
 
     // ========== 刊物商品 1-008-012-000 ==========
     ErrorCode PUBLICATION_PRODUCT_NOT_EXISTS = new ErrorCode(1_008_012_000, "刊物商品不存在");
     ErrorCode PUBLICATION_PRODUCT_TITLE_REQUIRED = new ErrorCode(1_008_012_001, "刊物主档不能为空");
     ErrorCode PUBLICATION_PRODUCT_GRADE_REQUIRED = new ErrorCode(1_008_012_002, "适用年级不能为空");
     ErrorCode PUBLICATION_PRODUCT_SKU_REQUIRED = new ErrorCode(1_008_012_003, "刊物商品至少需要一个 SKU");
-    ErrorCode PUBLICATION_PRODUCT_IDENTIFIER_REQUIRED = new ErrorCode(1_008_012_004, "当前刊物类型需要填写期刊标识信息");
+    ErrorCode PUBLICATION_PRODUCT_IDENTIFIER_REQUIRED = new ErrorCode(1_008_012_004, "当前刊物主档缺少 ISSN、CN 刊号或邮发代号，请先完善主档信息");
     ErrorCode PUBLICATION_PRODUCT_ISBN_REQUIRED = new ErrorCode(1_008_012_005, "当前 SKU 需要填写 ISBN");
 
 }

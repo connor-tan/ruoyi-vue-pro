@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.edu.dal.mysql.school;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
@@ -8,6 +9,7 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -39,9 +41,12 @@ public interface SchoolYearMapper extends BaseMapperX<SchoolYearDO> {
 
     default List<SchoolYearDO> selectListBySchoolIdsAndYearStarts(Collection<Long> schoolIds,
                                                                   Collection<Integer> yearStarts) {
+        if (CollUtil.isEmpty(schoolIds) || CollUtil.isEmpty(yearStarts)) {
+            return Collections.emptyList();
+        }
         return selectList(new LambdaQueryWrapperX<SchoolYearDO>()
-                .inIfPresent(SchoolYearDO::getSchoolId, schoolIds)
-                .inIfPresent(SchoolYearDO::getYearStart, yearStarts));
+                .in(SchoolYearDO::getSchoolId, schoolIds)
+                .in(SchoolYearDO::getYearStart, yearStarts));
     }
 
     default int deleteBySchoolId(Long schoolId) {

@@ -18,4 +18,10 @@ public class AppCartAddReqVO {
     @Min(value = 1, message = "商品数量必须大于等于 1")
     private Integer count;
 
+    @Schema(description = "订刊学生编号", example = "2048")
+    private Long studentId;
+
+    @Schema(description = "订刊窗口 SKU 编号", example = "4096")
+    private Long windowSkuId;
+
 }

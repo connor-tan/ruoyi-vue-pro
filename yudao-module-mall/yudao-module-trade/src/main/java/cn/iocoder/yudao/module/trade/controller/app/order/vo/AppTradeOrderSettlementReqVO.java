@@ -93,6 +93,12 @@ public class AppTradeOrderSettlementReqVO {
         @Schema(description = "购物车项的编号", example = "1024")
         private Long cartId;
 
+        @Schema(description = "订刊学生编号", example = "2048")
+        private Long studentId;
+
+        @Schema(description = "订刊窗口 SKU 编号", example = "4096")
+        private Long windowSkuId;
+
         @AssertTrue(message = "商品不正确")
         @JsonIgnore
         public boolean isValid() {

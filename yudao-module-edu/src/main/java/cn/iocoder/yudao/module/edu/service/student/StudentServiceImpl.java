@@ -191,6 +191,7 @@ public class StudentServiceImpl implements StudentService {
             return;
         }
 
+        LocalDate today = LocalDate.now();
         Set<LocalDate> startDates = new HashSet<>();
         long currentClassCount = 0L;
         Set<Long> classIds = convertSet(studentClasses, StudentClassSaveReqVO::getClassId);
@@ -202,9 +203,10 @@ public class StudentServiceImpl implements StudentService {
             if (!startDates.add(studentClass.getStartDate())) {
                 throw exception(STUDENT_CLASS_DUPLICATE_START_DATE);
             }
-            if (studentClass.getEndDate() == null) {
+            if (isCurrentStudentClass(studentClass, today)) {
                 currentClassCount++;
-            } else if (studentClass.getEndDate().isBefore(studentClass.getStartDate())) {
+            } else if (studentClass.getEndDate() != null
+                    && studentClass.getEndDate().isBefore(studentClass.getStartDate())) {
                 throw exception(STUDENT_CLASS_END_DATE_INVALID);
             }
 
@@ -223,14 +225,22 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private void validateStudentStatusMatchesStudentClassList(Integer status, List<StudentClassSaveReqVO> studentClasses) {
+        LocalDate today = LocalDate.now();
         long currentClassCount = studentClasses == null ? 0L
-                : studentClasses.stream().filter(item -> item.getEndDate() == null).count();
+                : studentClasses.stream().filter(item -> isCurrentStudentClass(item, today)).count();
         if (Objects.equals(status, STUDENT_STATUS_READING) && currentClassCount == 0) {
             throw exception(STUDENT_STATUS_READING_CURRENT_CLASS_REQUIRED);
         }
         if (!Objects.equals(status, STUDENT_STATUS_READING) && currentClassCount > 0) {
             throw exception(STUDENT_STATUS_CURRENT_CLASS_FORBIDDEN);
         }
+    }
+
+    private boolean isCurrentStudentClass(StudentClassSaveReqVO studentClass, LocalDate today) {
+        if (studentClass.getStartDate() == null || studentClass.getStartDate().isAfter(today)) {
+            return false;
+        }
+        return studentClass.getEndDate() == null || !studentClass.getEndDate().isBefore(today);
     }
 
     private void validateStudentClassDateRange(List<StudentClassSaveReqVO> studentClasses) {

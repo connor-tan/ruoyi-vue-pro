@@ -54,4 +54,14 @@ public class CartDO extends BaseDO {
      */
     private Boolean selected;
 
+    /**
+     * 订刊学生编号
+     */
+    private Long subscriptionStudentId;
+
+    /**
+     * 订刊窗口 SKU 编号
+     */
+    private Long subscriptionWindowSkuId;
+
 }

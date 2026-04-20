@@ -7,6 +7,8 @@ import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.Student
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.StudentPromotionExecuteReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.StudentPromotionTaskPageReqVO;
 import cn.iocoder.yudao.module.edu.service.school.SchoolServiceImpl;
+import cn.iocoder.yudao.module.edu.service.school.SchoolYearClassGenerateServiceImpl;
+import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateReqBO;
 import cn.iocoder.yudao.module.edu.service.student.StudentPromotionServiceImpl;
 import cn.iocoder.yudao.module.edu.service.student.StudentPromotionTaskServiceImpl;
 import cn.iocoder.yudao.module.edu.service.student.StudentServiceImpl;
@@ -48,6 +50,8 @@ class EduDataSourceRoutingContractTest {
                 "executeGlobalStudentPromotion", StudentGlobalPromotionExecuteReqVO.class);
         assertMethodHasAnnotation(StudentPromotionTaskServiceImpl.class, Master.class,
                 "rollbackGlobalStudentPromotion", StudentGlobalPromotionRollbackReqVO.class);
+        assertMethodHasAnnotation(SchoolYearClassGenerateServiceImpl.class, Master.class,
+                "generate", SchoolYearClassGenerateReqBO.class);
     }
 
     private static void assertMethodDoesNotHaveAnnotation(Class<?> targetClass,

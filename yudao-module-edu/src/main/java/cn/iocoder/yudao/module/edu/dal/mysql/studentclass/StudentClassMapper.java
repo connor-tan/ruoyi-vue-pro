@@ -6,8 +6,10 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -31,28 +33,133 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
         if (classIds == null || classIds.isEmpty()) {
             return Collections.emptyList();
         }
+        LocalDate today = LocalDate.now();
         return selectList(new LambdaQueryWrapperX<StudentClassDO>()
                 .in(StudentClassDO::getClassId, classIds)
-                .isNull(StudentClassDO::getEndDate)
+                .le(StudentClassDO::getStartDate, today)
+                .and(wrapper -> wrapper.isNull(StudentClassDO::getEndDate)
+                        .or()
+                        .ge(StudentClassDO::getEndDate, today))
+                .orderByAsc(StudentClassDO::getStartDate)
+                .orderByAsc(StudentClassDO::getId));
+    }
+
+    default List<StudentClassDO> selectCurrentListByStudentIds(Collection<Long> studentIds) {
+        if (studentIds == null || studentIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        LocalDate today = LocalDate.now();
+        return selectList(new LambdaQueryWrapperX<StudentClassDO>()
+                .in(StudentClassDO::getStudentId, studentIds)
+                .le(StudentClassDO::getStartDate, today)
+                .and(wrapper -> wrapper.isNull(StudentClassDO::getEndDate)
+                        .or()
+                        .ge(StudentClassDO::getEndDate, today))
+                .orderByAsc(StudentClassDO::getStartDate)
+                .orderByAsc(StudentClassDO::getId));
+    }
+
+    default List<StudentClassDO> selectCurrentListByStudentIdRange(Long startExclusiveStudentId,
+                                                                   Long endInclusiveStudentId) {
+        if (endInclusiveStudentId == null) {
+            return Collections.emptyList();
+        }
+        LocalDate today = LocalDate.now();
+        return selectList(new LambdaQueryWrapperX<StudentClassDO>()
+                .gtIfPresent(StudentClassDO::getStudentId, startExclusiveStudentId)
+                .le(StudentClassDO::getStudentId, endInclusiveStudentId)
+                .le(StudentClassDO::getStartDate, today)
+                .and(wrapper -> wrapper.isNull(StudentClassDO::getEndDate)
+                        .or()
+                        .ge(StudentClassDO::getEndDate, today))
+                .orderByAsc(StudentClassDO::getStudentId)
                 .orderByAsc(StudentClassDO::getStartDate)
                 .orderByAsc(StudentClassDO::getId));
     }
 
     default List<StudentClassDO> selectCurrentListByStudentId(Long studentId) {
+        LocalDate today = LocalDate.now();
         return selectList(new LambdaQueryWrapperX<StudentClassDO>()
                 .eq(StudentClassDO::getStudentId, studentId)
-                .isNull(StudentClassDO::getEndDate)
+                .le(StudentClassDO::getStartDate, today)
+                .and(wrapper -> wrapper.isNull(StudentClassDO::getEndDate)
+                        .or()
+                        .ge(StudentClassDO::getEndDate, today))
                 .orderByAsc(StudentClassDO::getStartDate)
                 .orderByAsc(StudentClassDO::getId));
     }
 
+    default List<StudentClassDO> selectListByStudentIdsAndTargetYear(Collection<Long> studentIds,
+                                                                     Integer yearStart,
+                                                                     Integer yearEnd) {
+        if (studentIds == null || studentIds.isEmpty() || yearStart == null || yearEnd == null) {
+            return Collections.emptyList();
+        }
+        return selectListByStudentIdsAndTargetYearInternal(studentIds, yearStart, yearEnd);
+    }
+
+    default List<StudentClassDO> selectListByStudentIdRangeAndTargetYear(Long startExclusiveStudentId,
+                                                                         Long endInclusiveStudentId,
+                                                                         Integer yearStart,
+                                                                         Integer yearEnd) {
+        if (endInclusiveStudentId == null || yearStart == null || yearEnd == null) {
+            return Collections.emptyList();
+        }
+        return selectListByStudentIdRangeAndTargetYearInternal(startExclusiveStudentId, endInclusiveStudentId,
+                yearStart, yearEnd);
+    }
+
+    @Select({
+            "<script>",
+            "SELECT sc.*",
+            "FROM edu_student_class sc",
+            "INNER JOIN edu_school_class c ON c.id = sc.class_id AND c.deleted = b'0'",
+            "INNER JOIN edu_school_year y ON y.id = c.school_year_id AND y.deleted = b'0'",
+            "WHERE sc.deleted = b'0'",
+            "  AND sc.student_id IN",
+            "  <foreach collection='studentIds' item='studentId' open='(' separator=',' close=')'>",
+            "    #{studentId}",
+            "  </foreach>",
+            "  AND y.year_start = #{yearStart}",
+            "  AND y.year_end = #{yearEnd}",
+            "ORDER BY sc.student_id ASC, sc.start_date ASC, sc.id ASC",
+            "</script>"
+    })
+    List<StudentClassDO> selectListByStudentIdsAndTargetYearInternal(@Param("studentIds") Collection<Long> studentIds,
+                                                                     @Param("yearStart") Integer yearStart,
+                                                                     @Param("yearEnd") Integer yearEnd);
+
+    @Select({
+            "<script>",
+            "SELECT sc.*",
+            "FROM edu_student_class sc",
+            "INNER JOIN edu_school_class c ON c.id = sc.class_id AND c.deleted = b'0'",
+            "INNER JOIN edu_school_year y ON y.id = c.school_year_id AND y.deleted = b'0'",
+            "WHERE sc.deleted = b'0'",
+            "  AND sc.student_id &gt; #{startExclusiveStudentId}",
+            "  AND sc.student_id &lt;= #{endInclusiveStudentId}",
+            "  AND y.year_start = #{yearStart}",
+            "  AND y.year_end = #{yearEnd}",
+            "ORDER BY sc.student_id ASC, sc.start_date ASC, sc.id ASC",
+            "</script>"
+    })
+    List<StudentClassDO> selectListByStudentIdRangeAndTargetYearInternal(
+            @Param("startExclusiveStudentId") Long startExclusiveStudentId,
+            @Param("endInclusiveStudentId") Long endInclusiveStudentId,
+            @Param("yearStart") Integer yearStart,
+            @Param("yearEnd") Integer yearEnd);
+
     default StudentClassDO selectCurrentByStudentIdAndClassIdAndStartDate(Long studentId, Long classId,
                                                                            java.time.LocalDate startDate) {
+        LocalDate today = LocalDate.now();
         return selectOne(new LambdaQueryWrapperX<StudentClassDO>()
                 .eq(StudentClassDO::getStudentId, studentId)
                 .eq(StudentClassDO::getClassId, classId)
                 .eq(StudentClassDO::getStartDate, startDate)
-                .isNull(StudentClassDO::getEndDate)
+                .le(StudentClassDO::getStartDate, today)
+                .and(wrapper -> wrapper.isNull(StudentClassDO::getEndDate)
+                        .or()
+                        .ge(StudentClassDO::getEndDate, today))
                 .last("LIMIT 1"));
     }
 

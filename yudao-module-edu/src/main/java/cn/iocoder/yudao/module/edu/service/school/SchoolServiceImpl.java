@@ -24,11 +24,13 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolStageDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolStageMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
@@ -38,11 +40,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -59,8 +64,15 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.*;
 @Validated
 public class SchoolServiceImpl implements SchoolService {
 
+    private static final Map<String, String> STAGE_NAME_MAP = Map.of(
+            "kindergarten", "幼儿园",
+            "primary", "小学",
+            "middle", "初中");
+
     @Resource
     private SchoolMapper schoolMapper;
+    @Resource
+    private SchoolStageMapper schoolStageMapper;
     @Resource
     private GradeCatalogMapper gradeCatalogMapper;
     @Resource
@@ -77,26 +89,33 @@ public class SchoolServiceImpl implements SchoolService {
     private AreaApi areaApi;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long createSchool(SchoolSaveReqVO createReqVO) {
         validateAreaSelectable(createReqVO.getAreaId());
+        List<String> stageCodes = normalizeStageCodes(createReqVO.getStageCodes());
         // 插入
         SchoolDO school = BeanUtils.toBean(createReqVO, SchoolDO.class);
         schoolMapper.insert(school);
+        saveSchoolStages(school.getId(), stageCodes);
 
         // 返回
         return school.getId();
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateSchool(SchoolSaveReqVO updateReqVO) {
         // 校验存在
         SchoolDO school = validateSchoolExists(updateReqVO.getId());
+        List<String> stageCodes = normalizeStageCodes(updateReqVO.getStageCodes());
+        validateSchoolStageChangeable(updateReqVO.getId(), stageCodes);
         if (!Objects.equals(school.getAreaId(), updateReqVO.getAreaId())) {
             validateAreaSelectable(updateReqVO.getAreaId());
         }
         // 更新
         SchoolDO updateObj = BeanUtils.toBean(updateReqVO, SchoolDO.class);
         schoolMapper.updateById(updateObj);
+        saveSchoolStages(updateReqVO.getId(), stageCodes);
     }
 
     @Override
@@ -109,6 +128,7 @@ public class SchoolServiceImpl implements SchoolService {
         schoolMapper.deleteById(id);
 
         // 删除子表
+        schoolStageMapper.deleteBySchoolId(id);
         deleteSchoolClassBySchoolId(id);
         deleteSchoolGradeBySchoolId(id);
         deleteSchoolYearBySchoolId(id);
@@ -129,6 +149,7 @@ public class SchoolServiceImpl implements SchoolService {
         schoolMapper.deleteByIds(existedSchoolIds);
 
         // 删除子表
+        schoolStageMapper.deleteBySchoolIds(existedSchoolIds);
         deleteSchoolClassBySchoolIds(existedSchoolIds);
         deleteSchoolGradeBySchoolIds(existedSchoolIds);
         deleteSchoolYearBySchoolIds(existedSchoolIds);
@@ -149,21 +170,31 @@ public class SchoolServiceImpl implements SchoolService {
 
     @Override
     public SchoolDO getSchool(Long id) {
-        return schoolMapper.selectById(id);
+        SchoolDO school = schoolMapper.selectById(id);
+        fillSchoolStages(school);
+        return school;
     }
 
     @Override
     public PageResult<SchoolDO> getSchoolPage(SchoolPageReqVO pageReqVO) {
         List<Long> areaIds = pageReqVO.getAreaId() == null ? null
                 : convertList(areaApi.getSelectableAreaIds(Math.toIntExact(pageReqVO.getAreaId())), Long::valueOf);
-        return schoolMapper.selectPage(pageReqVO, areaIds);
+        List<Long> stageSchoolIds = StrUtil.isBlank(pageReqVO.getStageCode()) ? null
+                : schoolStageMapper.selectSchoolIdsByStage(pageReqVO.getStageCode());
+        if (StrUtil.isNotBlank(pageReqVO.getStageCode()) && CollUtil.isEmpty(stageSchoolIds)) {
+            return PageResult.empty();
+        }
+        PageResult<SchoolDO> pageResult = schoolMapper.selectPage(pageReqVO, areaIds, stageSchoolIds);
+        fillSchoolStages(pageResult.getList());
+        return pageResult;
     }
 
     @Override
     public List<SchoolSimpleRespVO> getSchoolSimpleList() {
-        return schoolMapper.selectList(new LambdaQueryWrapperX<SchoolDO>()
-                        .orderByAsc(SchoolDO::getId))
-                .stream()
+        List<SchoolDO> schools = schoolMapper.selectList(new LambdaQueryWrapperX<SchoolDO>()
+                .orderByAsc(SchoolDO::getId));
+        fillSchoolStages(schools);
+        return schools.stream()
                 .map(this::buildSchoolSimpleResp)
                 .collect(Collectors.toList());
     }
@@ -185,7 +216,8 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     public Long createSchoolGrade(SchoolGradeSaveReqVO schoolGrade) {
         validateSchoolExists(schoolGrade.getSchoolId());
-        validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        GradeCatalogDO gradeCatalog = validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        validateSchoolGradeStageAllowed(schoolGrade.getSchoolId(), gradeCatalog);
         validateSchoolGradeUnique(null, schoolGrade.getSchoolId(), schoolGrade.getGradeCatalogId());
 
         SchoolGradeDO schoolGradeDO = BeanUtils.toBean(schoolGrade, SchoolGradeDO.class);
@@ -197,7 +229,8 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     public void updateSchoolGrade(SchoolGradeSaveReqVO schoolGrade) {
         validateSchoolExists(schoolGrade.getSchoolId());
-        validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        GradeCatalogDO gradeCatalog = validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        validateSchoolGradeStageAllowed(schoolGrade.getSchoolId(), gradeCatalog);
         SchoolGradeDO oldSchoolGrade = validateSchoolGradeExists(schoolGrade.getId());
         validateSchoolGradeChangeable(oldSchoolGrade, schoolGrade.getGradeCatalogId());
         validateSchoolGradeUnique(schoolGrade.getId(), schoolGrade.getSchoolId(), schoolGrade.getGradeCatalogId());
@@ -497,6 +530,103 @@ public class SchoolServiceImpl implements SchoolService {
         }
     }
 
+    private List<String> normalizeStageCodes(List<String> stageCodes) {
+        if (CollUtil.isEmpty(stageCodes)) {
+            throw exception(SCHOOL_STAGE_REQUIRED);
+        }
+        List<String> normalizedStageCodes = stageCodes.stream()
+                .filter(StrUtil::isNotBlank)
+                .map(StrUtil::trim)
+                .collect(Collectors.collectingAndThen(Collectors.toCollection(LinkedHashSet::new), ArrayList::new));
+        if (CollUtil.isEmpty(normalizedStageCodes)) {
+            throw exception(SCHOOL_STAGE_REQUIRED);
+        }
+        Set<String> enabledStageCodes = getEnabledStageCodes();
+        normalizedStageCodes.forEach(stageCode -> {
+            if (!enabledStageCodes.contains(stageCode)) {
+                throw exception(SCHOOL_STAGE_INVALID, stageCode);
+            }
+        });
+        return normalizedStageCodes;
+    }
+
+    private Set<String> getEnabledStageCodes() {
+        return gradeCatalogMapper.selectListByStatus(CommonStatusEnum.ENABLE.getStatus()).stream()
+                .map(GradeCatalogDO::getStage)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private void validateSchoolStageChangeable(Long schoolId, Collection<String> targetStageCodes) {
+        List<SchoolGradeDO> schoolGrades = schoolGradeMapper.selectListBySchoolId(schoolId);
+        if (CollUtil.isEmpty(schoolGrades)) {
+            return;
+        }
+        Set<String> targetStageSet = new LinkedHashSet<>(targetStageCodes);
+        Set<String> usedStages = getGradeCatalogMap(convertList(schoolGrades, SchoolGradeDO::getGradeCatalogId)).values().stream()
+                .map(GradeCatalogDO::getStage)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        usedStages.removeAll(targetStageSet);
+        if (CollUtil.isNotEmpty(usedStages)) {
+            throw exception(SCHOOL_STAGE_IN_USE, buildStageNames(usedStages));
+        }
+    }
+
+    private void validateSchoolGradeStageAllowed(Long schoolId, GradeCatalogDO gradeCatalog) {
+        List<String> schoolStageCodes = getSchoolStageCodes(schoolId);
+        if (CollUtil.isEmpty(schoolStageCodes)) {
+            throw exception(SCHOOL_STAGE_NOT_CONFIGURED);
+        }
+        if (!schoolStageCodes.contains(gradeCatalog.getStage())) {
+            throw exception(SCHOOL_GRADE_STAGE_NOT_ALLOWED, getStageName(gradeCatalog.getStage()), gradeCatalog.getGradeName());
+        }
+    }
+
+    private void saveSchoolStages(Long schoolId, List<String> stageCodes) {
+        schoolStageMapper.deleteBySchoolId(schoolId);
+        List<SchoolStageDO> schoolStages = stageCodes.stream().map(stageCode -> {
+            SchoolStageDO schoolStage = SchoolStageDO.builder()
+                    .schoolId(schoolId)
+                    .stage(stageCode)
+                    .build();
+            schoolStage.clean();
+            return schoolStage;
+        }).collect(Collectors.toList());
+        schoolStageMapper.insertBatch(schoolStages);
+    }
+
+    private List<String> getSchoolStageCodes(Long schoolId) {
+        return schoolStageMapper.selectListBySchoolId(schoolId).stream()
+                .map(SchoolStageDO::getStage)
+                .collect(Collectors.toList());
+    }
+
+    private void fillSchoolStages(SchoolDO school) {
+        if (school == null) {
+            return;
+        }
+        school.setStageCodes(getSchoolStageCodes(school.getId()));
+    }
+
+    private void fillSchoolStages(List<SchoolDO> schools) {
+        if (CollUtil.isEmpty(schools)) {
+            return;
+        }
+        Map<Long, List<String>> stageCodeMap = schoolStageMapper.selectListBySchoolIds(convertList(schools, SchoolDO::getId)).stream()
+                .collect(Collectors.groupingBy(SchoolStageDO::getSchoolId,
+                        Collectors.mapping(SchoolStageDO::getStage, Collectors.toList())));
+        schools.forEach(school -> school.setStageCodes(stageCodeMap.getOrDefault(school.getId(), Collections.emptyList())));
+    }
+
+    private String buildStageNames(Collection<String> stageCodes) {
+        return stageCodes.stream().map(this::getStageName).collect(Collectors.joining("、"));
+    }
+
+    private String getStageName(String stageCode) {
+        return STAGE_NAME_MAP.getOrDefault(stageCode, stageCode);
+    }
+
     private void deleteSchoolClassBySchoolId(Long schoolId) {
         schoolClassMapper.deleteBySchoolId(schoolId);
     }
@@ -542,6 +672,7 @@ public class SchoolServiceImpl implements SchoolService {
         SchoolSimpleRespVO respVO = new SchoolSimpleRespVO();
         respVO.setId(school.getId());
         respVO.setSchoolName(school.getSchoolName());
+        respVO.setStageCodes(school.getStageCodes());
         return respVO;
     }
 

@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.product.controller.admin.publicationtype.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import cn.iocoder.yudao.framework.common.validation.InEnum;
+import cn.iocoder.yudao.module.product.enums.publication.ProductPublicationTypeIdentifierRuleEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -19,6 +21,10 @@ public class ProductPublicationTypeSaveReqVO {
     @Schema(description = "名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "书本")
     @NotBlank(message = "刊物类型名称不能为空")
     private String name;
+
+    @Schema(description = "标识规则", example = "NONE")
+    @InEnum(value = ProductPublicationTypeIdentifierRuleEnum.class, message = "标识规则必须是 {value}")
+    private String identifierRule;
 
     @Schema(description = "排序", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @NotNull(message = "刊物类型排序不能为空")

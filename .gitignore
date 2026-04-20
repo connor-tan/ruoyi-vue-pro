@@ -49,6 +49,8 @@ nbdist/
 rebel.xml
 
 application-my.yaml
+script/docker/.env
+script/docker/yudao-server/*.jar
 
 /yudao-ui-app/unpackage/
 **/.DS_Store

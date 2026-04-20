@@ -8,6 +8,7 @@ import cn.iocoder.yudao.module.product.controller.admin.publicationtype.vo.*;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationTypeDO;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationTitleMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationTypeMapper;
+import cn.iocoder.yudao.module.product.enums.publication.ProductPublicationTypeIdentifierRuleEnum;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -27,6 +28,7 @@ public class ProductPublicationTypeService {
     private ProductPublicationTitleMapper publicationTitleMapper;
 
     public Long create(ProductPublicationTypeSaveReqVO reqVO) {
+        normalizeIdentifierRule(reqVO, null);
         validateCodeUnique(null, reqVO.getCode());
         validateNameUnique(null, reqVO.getName());
         ProductPublicationTypeDO type = BeanUtils.toBean(reqVO, ProductPublicationTypeDO.class);
@@ -35,7 +37,8 @@ public class ProductPublicationTypeService {
     }
 
     public void update(ProductPublicationTypeSaveReqVO reqVO) {
-        validateExists(reqVO.getId());
+        ProductPublicationTypeDO oldType = validateExists(reqVO.getId());
+        normalizeIdentifierRule(reqVO, oldType);
         validateCodeUnique(reqVO.getId(), reqVO.getCode());
         validateNameUnique(reqVO.getId(), reqVO.getName());
         publicationTypeMapper.updateById(BeanUtils.toBean(reqVO, ProductPublicationTypeDO.class));
@@ -89,5 +92,15 @@ public class ProductPublicationTypeService {
         if (id == null || !type.getId().equals(id)) {
             throw exception(PUBLICATION_TYPE_NAME_EXISTS);
         }
+    }
+
+    private void normalizeIdentifierRule(ProductPublicationTypeSaveReqVO reqVO, ProductPublicationTypeDO oldType) {
+        if (reqVO.getIdentifierRule() != null && !reqVO.getIdentifierRule().isBlank()) {
+            reqVO.setIdentifierRule(ProductPublicationTypeIdentifierRuleEnum.normalize(reqVO.getIdentifierRule()));
+            return;
+        }
+        reqVO.setIdentifierRule(oldType == null
+                ? ProductPublicationTypeIdentifierRuleEnum.defaultRule()
+                : ProductPublicationTypeIdentifierRuleEnum.normalize(oldType.getIdentifierRule()));
     }
 }

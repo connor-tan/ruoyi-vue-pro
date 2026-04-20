@@ -270,6 +270,32 @@ public class TradePriceCalculateRespBO {
          */
         private Integer givePoint;
 
+        private Long subscriptionStudentId;
+
+        private Long subscriptionSchoolId;
+
+        private Long subscriptionGradeCatalogId;
+
+        private Long subscriptionWindowId;
+
+        private String subscriptionWindowNameSnapshot;
+
+        private Integer subscriptionTargetYearStart;
+
+        private Integer subscriptionTargetYearEnd;
+
+        private String subscriptionTargetPeriod;
+
+        private Long subscriptionWindowSpuId;
+
+        private Long subscriptionWindowSkuId;
+
+        private String subscriptionVisibilityReason;
+
+        private Long subscriptionMatchedRuleId;
+
+        private Boolean subscriptionGradeApplicabilityOverride;
+
     }
 
     /**

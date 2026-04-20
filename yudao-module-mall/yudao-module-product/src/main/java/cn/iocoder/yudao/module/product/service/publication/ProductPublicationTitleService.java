@@ -7,6 +7,7 @@ import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.product.controller.admin.publicationtitle.vo.*;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.*;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.*;
+import cn.iocoder.yudao.module.product.enums.publication.ProductPublicationTypeIdentifierRuleEnum;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,10 +35,11 @@ public class ProductPublicationTitleService {
 
     @Transactional(rollbackFor = Exception.class)
     public Long create(ProductPublicationTitleSaveReqVO reqVO) {
-        publicationTypeService.validateExists(reqVO.getTypeId());
+        ProductPublicationTypeDO type = publicationTypeService.validateExists(reqVO.getTypeId());
         publicationPublisherService.validateExists(reqVO.getPublisherId());
         validateCodeUnique(null, reqVO.getCode());
         validateNameUnique(null, reqVO.getName());
+        validateEnabledTitleIdentifier(reqVO, type);
         ProductPublicationTitleDO title = BeanUtils.toBean(reqVO, ProductPublicationTitleDO.class);
         publicationTitleMapper.insert(title);
         saveIdentifier(title.getId(), reqVO);
@@ -47,10 +49,11 @@ public class ProductPublicationTitleService {
     @Transactional(rollbackFor = Exception.class)
     public void update(ProductPublicationTitleSaveReqVO reqVO) {
         validateExists(reqVO.getId());
-        publicationTypeService.validateExists(reqVO.getTypeId());
+        ProductPublicationTypeDO type = publicationTypeService.validateExists(reqVO.getTypeId());
         publicationPublisherService.validateExists(reqVO.getPublisherId());
         validateCodeUnique(reqVO.getId(), reqVO.getCode());
         validateNameUnique(reqVO.getId(), reqVO.getName());
+        validateEnabledTitleIdentifier(reqVO, type);
         publicationTitleMapper.updateById(BeanUtils.toBean(reqVO, ProductPublicationTitleDO.class));
         saveIdentifier(reqVO.getId(), reqVO);
     }
@@ -139,8 +142,12 @@ public class ProductPublicationTitleService {
     }
 
     public boolean requiresPeriodicalIdentifier(Long typeId) {
-        String typeCode = publicationTypeService.validateExists(typeId).getCode();
-        return "PERIODICAL".equalsIgnoreCase(typeCode) || "NEWSPAPER".equalsIgnoreCase(typeCode);
+        return requiresTitleIdentifier(typeId);
+    }
+
+    public boolean requiresTitleIdentifier(Long typeId) {
+        return ProductPublicationTypeIdentifierRuleEnum.requiresTitleIdentifier(
+                publicationTypeService.validateExists(typeId).getIdentifierRule());
     }
 
     private void saveIdentifier(Long titleId, ProductPublicationTitleSaveReqVO reqVO) {
@@ -166,7 +173,9 @@ public class ProductPublicationTitleService {
 
     private Map<Long, ProductPublicationTypeDO> buildTypeMap(Collection<ProductPublicationTitleDO> titles) {
         return CollectionUtils.convertMap(publicationTypeService.getSimpleList().stream()
-                .map(type -> ProductPublicationTypeDO.builder().id(type.getId()).code(type.getCode()).name(type.getName()).build())
+                .map(type -> ProductPublicationTypeDO.builder()
+                        .id(type.getId()).code(type.getCode()).name(type.getName())
+                        .identifierRule(type.getIdentifierRule()).build())
                 .toList(), ProductPublicationTypeDO::getId);
     }
 
@@ -195,6 +204,7 @@ public class ProductPublicationTitleService {
         if (type != null) {
             respVO.setTypeCode(type.getCode());
             respVO.setTypeName(type.getName());
+            respVO.setTypeIdentifierRule(ProductPublicationTypeIdentifierRuleEnum.normalize(type.getIdentifierRule()));
         }
         if (publisher != null) {
             respVO.setPublisherName(publisher.getName());
@@ -220,5 +230,26 @@ public class ProductPublicationTitleService {
         if (id == null || !Objects.equals(id, title.getId())) {
             throw exception(PUBLICATION_TITLE_NAME_EXISTS);
         }
+    }
+
+    private void validateEnabledTitleIdentifier(ProductPublicationTitleSaveReqVO reqVO, ProductPublicationTypeDO type) {
+        if (!Objects.equals(CommonStatusEnum.ENABLE.getStatus(), reqVO.getStatus())) {
+            return;
+        }
+        if (!ProductPublicationTypeIdentifierRuleEnum.requiresTitleIdentifier(type.getIdentifierRule())) {
+            return;
+        }
+        if (isAllBlank(reqVO.getIssn(), reqVO.getCnCode(), reqVO.getPostDistributionCode())) {
+            throw exception(PUBLICATION_TITLE_IDENTIFIER_REQUIRED);
+        }
+    }
+
+    private boolean isAllBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

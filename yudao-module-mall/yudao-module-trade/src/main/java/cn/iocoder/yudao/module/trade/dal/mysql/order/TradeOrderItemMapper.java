@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.Collection;
 import java.util.List;
@@ -52,5 +53,18 @@ public interface TradeOrderItemMapper extends BaseMapperX<TradeOrderItemDO> {
         // 获得数量
         return CollUtil.getFirst(result) != null ? MapUtil.getInt(result.get(0), "sumCount") : 0;
     }
+
+    @Select("""
+            SELECT COALESCE(SUM(oi.count), 0)
+            FROM trade_order_item oi
+            INNER JOIN trade_order o ON o.id = oi.order_id AND o.deleted = b'0'
+            WHERE oi.deleted = b'0'
+              AND oi.subscription_student_id = #{studentId}
+              AND oi.subscription_window_sku_id = #{windowSkuId}
+              AND o.status <> #{canceledStatus}
+            """)
+    int selectSubscriptionBoughtCount(@Param("studentId") Long studentId,
+                                      @Param("windowSkuId") Long windowSkuId,
+                                      @Param("canceledStatus") Integer canceledStatus);
 
 }

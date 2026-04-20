@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.product.controller.admin.publicationpublisher.vo.ProductPublicationPublisherPageReqVO;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationPublisherDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
@@ -24,6 +25,9 @@ public interface ProductPublicationPublisherMapper extends BaseMapperX<ProductPu
     default ProductPublicationPublisherDO selectByCode(String code) {
         return selectOne(ProductPublicationPublisherDO::getCode, code);
     }
+
+    @Select("SELECT * FROM product_publication_publisher WHERE code = #{code} LIMIT 1")
+    ProductPublicationPublisherDO selectByCodeIncludeDeleted(String code);
 
     default ProductPublicationPublisherDO selectByName(String name) {
         return selectOne(ProductPublicationPublisherDO::getName, name);
