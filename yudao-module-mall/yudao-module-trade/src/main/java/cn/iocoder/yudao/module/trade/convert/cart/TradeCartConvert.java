@@ -32,6 +32,8 @@ public interface TradeCartConvert {
         carts.forEach(cart -> {
             AppCartListRespVO.Cart cartVO = new AppCartListRespVO.Cart();
             cartVO.setId(cart.getId()).setCount(cart.getCount()).setSelected(cart.getSelected());
+            cartVO.setSubscriptionStudentId(cart.getSubscriptionStudentId());
+            cartVO.setSubscriptionWindowSkuId(cart.getSubscriptionWindowSkuId());
             ProductSpuRespDTO spu = spuMap.get(cart.getSpuId());
             ProductSkuRespDTO sku = skuMap.get(cart.getSkuId());
             cartVO.setSpu(BeanUtils.toBean(spu, AppProductSpuBaseRespVO.class))

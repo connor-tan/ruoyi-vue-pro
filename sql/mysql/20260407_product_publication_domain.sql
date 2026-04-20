@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS `product_publication_type` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '刊物类型编号',
     `code` varchar(64) NOT NULL COMMENT '类型编码',
     `name` varchar(64) NOT NULL COMMENT '类型名称',
+    `identifier_rule` varchar(64) NOT NULL DEFAULT 'NONE' COMMENT '标识规则：NONE/TITLE_PERIODICAL_IDENTIFIER_REQUIRED/SKU_ISBN_REQUIRED',
     `sort` int NOT NULL DEFAULT 0 COMMENT '排序',
     `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态',
     `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '备注',
@@ -162,6 +163,7 @@ CREATE TABLE IF NOT EXISTS `product_sku_publication` (
     `product_sku_id` bigint NOT NULL COMMENT '商品 SKU 编号',
     `volume_label` varchar(64) NOT NULL DEFAULT '' COMMENT '册别',
     `edition_label` varchar(64) NOT NULL DEFAULT '' COMMENT '版本',
+    `target_period` varchar(32) NOT NULL DEFAULT 'FULL_YEAR' COMMENT '适用周期：FIRST_TERM/SECOND_TERM/FULL_YEAR',
     `isbn` varchar(64) NOT NULL DEFAULT '' COMMENT 'ISBN',
     `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '备注',
     `creator` varchar(64) DEFAULT '' COMMENT '创建者',
@@ -174,14 +176,15 @@ CREATE TABLE IF NOT EXISTS `product_sku_publication` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品 SKU 刊物扩展';
 
 INSERT INTO `product_publication_type`
-(`id`, `code`, `name`, `sort`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`, `tenant_id`)
+(`id`, `code`, `name`, `identifier_rule`, `sort`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`, `tenant_id`)
 VALUES
-(1, 'BOOK', '书本', 10, 0, '', '', NOW(), '', NOW(), b'0', 0),
-(2, 'PERIODICAL', '期刊', 20, 0, '', '', NOW(), '', NOW(), b'0', 0),
-(3, 'NEWSPAPER', '报纸', 30, 0, '', '', NOW(), '', NOW(), b'0', 0),
-(4, 'PACKAGE', '套装', 40, 0, '', '', NOW(), '', NOW(), b'0', 0)
+(1, 'BOOK', '书本', 'SKU_ISBN_REQUIRED', 10, 0, '', '', NOW(), '', NOW(), b'0', 0),
+(2, 'PERIODICAL', '期刊', 'TITLE_PERIODICAL_IDENTIFIER_REQUIRED', 20, 0, '', '', NOW(), '', NOW(), b'0', 0),
+(3, 'NEWSPAPER', '报纸', 'TITLE_PERIODICAL_IDENTIFIER_REQUIRED', 30, 0, '', '', NOW(), '', NOW(), b'0', 0),
+(4, 'PACKAGE', '套装', 'NONE', 40, 0, '', '', NOW(), '', NOW(), b'0', 0)
 ON DUPLICATE KEY UPDATE
 `name` = VALUES(`name`),
+`identifier_rule` = VALUES(`identifier_rule`),
 `sort` = VALUES(`sort`),
 `status` = VALUES(`status`),
 `remark` = VALUES(`remark`),

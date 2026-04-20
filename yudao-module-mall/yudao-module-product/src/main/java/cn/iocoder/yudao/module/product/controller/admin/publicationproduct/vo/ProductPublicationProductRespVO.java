@@ -69,6 +69,8 @@ public class ProductPublicationProductRespVO {
 
     private String publicationTypeName;
 
+    private String publicationTypeIdentifierRule;
+
     private Long publisherId;
 
     private String publisherName;

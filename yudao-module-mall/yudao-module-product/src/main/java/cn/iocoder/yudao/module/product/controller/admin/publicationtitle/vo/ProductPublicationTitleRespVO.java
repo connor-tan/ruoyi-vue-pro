@@ -22,6 +22,8 @@ public class ProductPublicationTitleRespVO {
 
     private String typeCode;
 
+    private String typeIdentifierRule;
+
     private Long publisherId;
 
     private String publisherName;

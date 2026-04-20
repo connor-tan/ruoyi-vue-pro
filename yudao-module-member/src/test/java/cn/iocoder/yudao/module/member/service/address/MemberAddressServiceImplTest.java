@@ -5,8 +5,10 @@ import cn.iocoder.yudao.module.member.controller.app.address.vo.AppAddressCreate
 import cn.iocoder.yudao.module.member.controller.app.address.vo.AppAddressUpdateReqVO;
 import cn.iocoder.yudao.module.member.dal.dataobject.address.MemberAddressDO;
 import cn.iocoder.yudao.module.member.dal.mysql.address.MemberAddressMapper;
+import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import jakarta.annotation.Resource;
 
@@ -32,10 +34,13 @@ public class MemberAddressServiceImplTest extends BaseDbUnitTest {
     @Resource
     private MemberAddressMapper addressMapper;
 
+    @MockitoBean
+    private AreaApi areaApi;
+
     @Test
     public void testCreateAddress_success() {
         // 准备参数
-        AppAddressCreateReqVO reqVO = randomPojo(AppAddressCreateReqVO.class);
+        AppAddressCreateReqVO reqVO = randomPojo(AppAddressCreateReqVO.class, o -> o.setAreaId(320200L));
 
         // 调用
         Long addressId = addressService.createAddress(randomLongId(), reqVO);
@@ -54,6 +59,7 @@ public class MemberAddressServiceImplTest extends BaseDbUnitTest {
         // 准备参数
         AppAddressUpdateReqVO reqVO = randomPojo(AppAddressUpdateReqVO.class, o -> {
             o.setId(dbAddress.getId()); // 设置更新的 ID
+            o.setAreaId(320200L);
         });
 
         // 调用

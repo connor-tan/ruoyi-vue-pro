@@ -18,6 +18,8 @@ public class ProductPublicationTypeRespVO {
 
     private String name;
 
+    private String identifierRule;
+
     private Integer sort;
 
     private Integer status;

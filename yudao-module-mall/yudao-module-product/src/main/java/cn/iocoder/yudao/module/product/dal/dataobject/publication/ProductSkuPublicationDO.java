@@ -23,6 +23,8 @@ public class ProductSkuPublicationDO extends BaseDO {
 
     private String editionLabel;
 
+    private String targetPeriod;
+
     private String isbn;
 
     private String remark;

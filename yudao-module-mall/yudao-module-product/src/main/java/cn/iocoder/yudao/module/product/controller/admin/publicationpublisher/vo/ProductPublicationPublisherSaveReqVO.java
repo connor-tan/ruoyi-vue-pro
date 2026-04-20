@@ -11,9 +11,6 @@ public class ProductPublicationPublisherSaveReqVO {
 
     private Long id;
 
-    @NotBlank(message = "出版社编码不能为空")
-    private String code;
-
     @NotBlank(message = "出版社名称不能为空")
     private String name;
 

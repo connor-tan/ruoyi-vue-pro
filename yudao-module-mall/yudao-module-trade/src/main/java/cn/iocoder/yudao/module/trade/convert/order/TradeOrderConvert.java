@@ -229,7 +229,9 @@ public interface TradeOrderConvert {
             // 情况一：skuId + count
             if (item.getSkuId() != null) {
                 reqBO.getItems().add(new TradePriceCalculateReqBO.Item().setSkuId(item.getSkuId()).setCount(item.getCount())
-                        .setSelected(true)); // true 的原因，下单一定选中
+                        .setCartId(item.getCartId()).setSelected(true)
+                        .setSubscriptionStudentId(item.getStudentId())
+                        .setSubscriptionWindowSkuId(item.getWindowSkuId())); // true 的原因，下单一定选中
                 continue;
             }
             // 情况二：cartId
@@ -238,7 +240,9 @@ public interface TradeOrderConvert {
                 continue;
             }
             reqBO.getItems().add(new TradePriceCalculateReqBO.Item().setSkuId(cart.getSkuId()).setCount(cart.getCount())
-                    .setCartId(item.getCartId()).setSelected(true)); // true 的原因，下单一定选中
+                    .setCartId(item.getCartId()).setSelected(true)
+                    .setSubscriptionStudentId(cart.getSubscriptionStudentId())
+                    .setSubscriptionWindowSkuId(cart.getSubscriptionWindowSkuId())); // true 的原因，下单一定选中
         }
         return reqBO;
     }

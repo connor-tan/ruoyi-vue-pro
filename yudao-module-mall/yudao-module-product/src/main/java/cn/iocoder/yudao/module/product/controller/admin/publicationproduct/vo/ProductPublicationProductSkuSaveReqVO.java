@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.product.controller.admin.publicationproduct.vo;
 
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
+import cn.iocoder.yudao.framework.common.validation.InEnum;
+import cn.iocoder.yudao.module.publication.enums.PublicationTargetPeriodEnum;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -41,6 +43,9 @@ public class ProductPublicationProductSkuSaveReqVO {
     private String volumeLabel;
 
     private String editionLabel;
+
+    @InEnum(value = PublicationTargetPeriodEnum.class, message = "SKU 适用周期必须是 {value}")
+    private String targetPeriod;
 
     private String isbn;
 

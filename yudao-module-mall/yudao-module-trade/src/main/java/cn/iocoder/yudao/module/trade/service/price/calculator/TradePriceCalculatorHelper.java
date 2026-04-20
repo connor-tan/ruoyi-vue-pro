@@ -52,6 +52,19 @@ public class TradePriceCalculatorHelper {
             result.getItems().add(orderItem);
             orderItem.setSpuId(sku.getSpuId()).setSkuId(sku.getId())
                     .setCount(item.getCount()).setCartId(item.getCartId()).setSelected(item.getSelected());
+            orderItem.setSubscriptionStudentId(item.getSubscriptionStudentId());
+            orderItem.setSubscriptionSchoolId(item.getSubscriptionSchoolId());
+            orderItem.setSubscriptionGradeCatalogId(item.getSubscriptionGradeCatalogId());
+            orderItem.setSubscriptionWindowId(item.getSubscriptionWindowId());
+            orderItem.setSubscriptionWindowNameSnapshot(item.getSubscriptionWindowNameSnapshot());
+            orderItem.setSubscriptionTargetYearStart(item.getSubscriptionTargetYearStart());
+            orderItem.setSubscriptionTargetYearEnd(item.getSubscriptionTargetYearEnd());
+            orderItem.setSubscriptionTargetPeriod(item.getSubscriptionTargetPeriod());
+            orderItem.setSubscriptionWindowSpuId(item.getSubscriptionWindowSpuId());
+            orderItem.setSubscriptionWindowSkuId(item.getSubscriptionWindowSkuId());
+            orderItem.setSubscriptionVisibilityReason(item.getSubscriptionVisibilityReason());
+            orderItem.setSubscriptionMatchedRuleId(item.getSubscriptionMatchedRuleId());
+            orderItem.setSubscriptionGradeApplicabilityOverride(item.getSubscriptionGradeApplicabilityOverride());
             // sku 价格
             orderItem.setPrice(sku.getPrice()).setPayPrice(sku.getPrice() * item.getCount())
                     .setDiscountPrice(0).setDeliveryPrice(0).setCouponPrice(0).setPointPrice(0).setVipPrice(0);

@@ -12,4 +12,6 @@ public class ProductPublicationTypeSimpleRespVO {
     private String code;
 
     private String name;
+
+    private String identifierRule;
 }

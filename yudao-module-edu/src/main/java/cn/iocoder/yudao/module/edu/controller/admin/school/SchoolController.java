@@ -42,6 +42,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
@@ -51,6 +53,11 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 @RequestMapping("/edu/school")
 @Validated
 public class SchoolController {
+
+    private static final Map<String, String> STAGE_NAME_MAP = Map.of(
+            "kindergarten", "幼儿园",
+            "primary", "小学",
+            "middle", "初中");
 
     @Resource
     private SchoolService schoolService;
@@ -122,10 +129,11 @@ public class SchoolController {
     }
 
     private List<SchoolRespVO> buildSchoolRespList(List<SchoolDO> schools) {
-        return BeanUtils.toBean(schools, SchoolRespVO.class, school -> {
-            if (school.getAreaId() != null) {
-                school.setAreaName(AreaUtils.format(school.getAreaId().intValue()));
+        return BeanUtils.toBean(schools, SchoolRespVO.class, respVO -> {
+            if (respVO.getAreaId() != null) {
+                respVO.setAreaName(AreaUtils.format(respVO.getAreaId().intValue()));
             }
+            respVO.setStageNames(buildStageNames(respVO.getStageCodes()));
         });
     }
 
@@ -137,7 +145,17 @@ public class SchoolController {
         if (respVO.getAreaId() != null) {
             respVO.setAreaName(AreaUtils.format(respVO.getAreaId().intValue()));
         }
+        respVO.setStageNames(buildStageNames(respVO.getStageCodes()));
         return respVO;
+    }
+
+    private String buildStageNames(List<String> stageCodes) {
+        if (stageCodes == null) {
+            return null;
+        }
+        return stageCodes.stream()
+                .map(stageCode -> STAGE_NAME_MAP.getOrDefault(stageCode, stageCode))
+                .collect(Collectors.joining("、"));
     }
 
     // ==================== 子表（年级定义） ====================

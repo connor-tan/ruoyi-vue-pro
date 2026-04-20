@@ -25,9 +25,17 @@ import cn.iocoder.yudao.module.pay.enums.order.PayOrderStatusEnum;
 import cn.iocoder.yudao.module.pay.enums.refund.PayRefundStatusEnum;
 import cn.iocoder.yudao.module.product.api.comment.ProductCommentApi;
 import cn.iocoder.yudao.module.product.api.comment.dto.ProductCommentCreateReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
+import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
+import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
+import cn.iocoder.yudao.module.product.enums.publication.ProductDomainTypeEnum;
 import cn.iocoder.yudao.module.promotion.api.combination.CombinationRecordApi;
 import cn.iocoder.yudao.module.promotion.api.combination.dto.CombinationRecordRespDTO;
 import cn.iocoder.yudao.module.promotion.enums.combination.CombinationRecordStatusEnum;
+import cn.iocoder.yudao.module.subscription.api.order.SubscriptionOrderEligibilityApi;
+import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
+import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityRespDTO;
 import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderDeliveryReqVO;
@@ -71,9 +79,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
@@ -120,6 +131,12 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     private MemberAddressApi addressApi;
     @Resource
     private ProductCommentApi productCommentApi;
+    @Resource
+    private ProductSkuApi productSkuApi;
+    @Resource
+    private ProductSpuApi productSpuApi;
+    @Resource
+    private SubscriptionOrderEligibilityApi subscriptionOrderEligibilityApi;
     @Resource
     public SocialClientApi socialClientApi;
     @Resource
@@ -177,7 +194,101 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         TradePriceCalculateReqBO calculateReqBO = TradeOrderConvert.INSTANCE.convert(userId, settlementReqVO, cartList);
         calculateReqBO.getItems().forEach(item -> Assert.isTrue(item.getSelected(), // 防御性编程，保证都是选中的
                 "商品({}) 未设置为选中", item.getSkuId()));
+        validateSubscriptionItems(userId, calculateReqBO);
         return tradePriceService.calculateOrderPrice(calculateReqBO);
+    }
+
+    private void validateSubscriptionItems(Long userId, TradePriceCalculateReqBO calculateReqBO) {
+        if (CollUtil.isEmpty(calculateReqBO.getItems())) {
+            return;
+        }
+        List<SubscriptionOrderEligibilityReqDTO.Item> subscriptionItems = buildSubscriptionEligibilityItems(calculateReqBO);
+        if (CollUtil.isEmpty(subscriptionItems)) {
+            return;
+        }
+        SubscriptionOrderEligibilityReqDTO reqDTO = new SubscriptionOrderEligibilityReqDTO()
+                .setUserId(userId).setItems(subscriptionItems);
+        List<SubscriptionOrderEligibilityRespDTO> eligibilityList =
+                subscriptionOrderEligibilityApi.validateOrderItems(reqDTO);
+        applySubscriptionEligibility(calculateReqBO, eligibilityList);
+        validateSubscriptionPurchaseLimit(calculateReqBO, eligibilityList);
+    }
+
+    private List<SubscriptionOrderEligibilityReqDTO.Item> buildSubscriptionEligibilityItems(
+            TradePriceCalculateReqBO calculateReqBO) {
+        Map<Long, ProductSkuRespDTO> skuMap = productSkuApi.getSkuMap(
+                convertSet(calculateReqBO.getItems(), TradePriceCalculateReqBO.Item::getSkuId));
+        Map<Long, ProductSpuRespDTO> spuMap = productSpuApi.getSpuMap(
+                convertSet(skuMap.values(), ProductSkuRespDTO::getSpuId));
+        List<SubscriptionOrderEligibilityReqDTO.Item> subscriptionItems = new ArrayList<>();
+        for (int i = 0; i < calculateReqBO.getItems().size(); i++) {
+            TradePriceCalculateReqBO.Item item = calculateReqBO.getItems().get(i);
+            boolean hasSubscriptionContext = item.getSubscriptionStudentId() != null
+                    || item.getSubscriptionWindowSkuId() != null;
+            ProductSkuRespDTO sku = skuMap.get(item.getSkuId());
+            ProductSpuRespDTO spu = sku == null ? null : spuMap.get(sku.getSpuId());
+            boolean publication = spu != null && ProductDomainTypeEnum.isPublication(spu.getDomainType());
+            if (publication) {
+                if (item.getSubscriptionStudentId() == null || item.getSubscriptionWindowSkuId() == null) {
+                    throw exception(ORDER_PUBLICATION_SUBSCRIPTION_CONTEXT_REQUIRED);
+                }
+                subscriptionItems.add(new SubscriptionOrderEligibilityReqDTO.Item()
+                        .setRequestIndex(i)
+                        .setStudentId(item.getSubscriptionStudentId())
+                        .setWindowSkuId(item.getSubscriptionWindowSkuId())
+                        .setSkuId(item.getSkuId())
+                        .setCount(item.getCount()));
+                continue;
+            }
+            if (hasSubscriptionContext) {
+                throw exception(ORDER_SUBSCRIPTION_CONTEXT_NOT_ALLOWED);
+            }
+        }
+        return subscriptionItems;
+    }
+
+    private void applySubscriptionEligibility(TradePriceCalculateReqBO calculateReqBO,
+                                              List<SubscriptionOrderEligibilityRespDTO> eligibilityList) {
+        Map<Integer, SubscriptionOrderEligibilityRespDTO> eligibilityMap = eligibilityList.stream()
+                .collect(Collectors.toMap(SubscriptionOrderEligibilityRespDTO::getRequestIndex, item -> item));
+        eligibilityMap.forEach((index, eligibility) -> {
+            TradePriceCalculateReqBO.Item item = calculateReqBO.getItems().get(index);
+            item.setSubscriptionStudentId(eligibility.getStudentId());
+            item.setSubscriptionSchoolId(eligibility.getSchoolId());
+            item.setSubscriptionGradeCatalogId(eligibility.getGradeCatalogId());
+            item.setSubscriptionWindowId(eligibility.getWindowId());
+            item.setSubscriptionWindowNameSnapshot(eligibility.getWindowNameSnapshot());
+            item.setSubscriptionTargetYearStart(eligibility.getTargetYearStart());
+            item.setSubscriptionTargetYearEnd(eligibility.getTargetYearEnd());
+            item.setSubscriptionTargetPeriod(eligibility.getTargetPeriod());
+            item.setSubscriptionWindowSpuId(eligibility.getWindowSpuId());
+            item.setSubscriptionWindowSkuId(eligibility.getWindowSkuId());
+            item.setSubscriptionVisibilityReason(eligibility.getVisibilityReason());
+            item.setSubscriptionMatchedRuleId(eligibility.getMatchedRuleId());
+            item.setSubscriptionGradeApplicabilityOverride(eligibility.getGradeApplicabilityOverride());
+        });
+    }
+
+    private void validateSubscriptionPurchaseLimit(TradePriceCalculateReqBO calculateReqBO,
+                                                   List<SubscriptionOrderEligibilityRespDTO> eligibilityList) {
+        Map<SubscriptionLimitKey, Integer> requestCountMap = new HashMap<>();
+        Map<SubscriptionLimitKey, Integer> limitMap = new HashMap<>();
+        for (SubscriptionOrderEligibilityRespDTO eligibility : eligibilityList) {
+            TradePriceCalculateReqBO.Item item = calculateReqBO.getItems().get(eligibility.getRequestIndex());
+            SubscriptionLimitKey key = new SubscriptionLimitKey(eligibility.getStudentId(), eligibility.getWindowSkuId());
+            requestCountMap.merge(key, item.getCount(), Integer::sum);
+            limitMap.put(key, eligibility.getMaxQuantityPerStudent() == null ? 1 : eligibility.getMaxQuantityPerStudent());
+        }
+        requestCountMap.forEach((key, requestCount) -> {
+            int boughtCount = tradeOrderItemMapper.selectSubscriptionBoughtCount(key.studentId(), key.windowSkuId(),
+                    TradeOrderStatusEnum.CANCELED.getStatus());
+            if (boughtCount + requestCount > limitMap.get(key)) {
+                throw exception(ORDER_SUBSCRIPTION_LIMIT_EXCEEDED);
+            }
+        });
+    }
+
+    private record SubscriptionLimitKey(Long studentId, Long windowSkuId) {
     }
 
     @Override

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 @Schema(description = "管理后台 - 学校信息新增/修改 Request VO")
 @Data
 public class SchoolSaveReqVO {
@@ -26,5 +28,9 @@ public class SchoolSaveReqVO {
 
     @Schema(description = "学校代码")
     private String code;
+
+    @Schema(description = "办学学段编码列表", requiredMode = Schema.RequiredMode.REQUIRED, example = "[\"primary\",\"middle\"]")
+    @NotEmpty(message = "办学学段不能为空")
+    private List<String> stageCodes;
 
 }

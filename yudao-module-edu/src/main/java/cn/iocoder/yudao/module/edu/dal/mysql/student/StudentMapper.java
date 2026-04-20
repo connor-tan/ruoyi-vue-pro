@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentPageReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.util.Collection;
@@ -48,6 +49,61 @@ public interface StudentMapper extends BaseMapperX<StudentDO> {
         return selectList(new LambdaQueryWrapperX<StudentDO>()
                 .likeIfPresent(StudentDO::getStudentName, studentName));
     }
+
+    default List<StudentDO> selectSimpleListByStudentName(String studentName) {
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .likeIfPresent(StudentDO::getStudentName, studentName)
+                .orderByAsc(StudentDO::getId)
+                .last("LIMIT 50"));
+    }
+
+    default List<StudentDO> selectSimpleListByExactStudentName(String studentName) {
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .eqIfPresent(StudentDO::getStudentName, studentName)
+                .orderByAsc(StudentDO::getId)
+                .last("LIMIT 500"));
+    }
+
+    default List<StudentDO> selectSimpleListByStudentNameAndSchoolId(String studentName, Long schoolId) {
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .likeIfPresent(StudentDO::getStudentName, studentName)
+                .eqIfPresent(StudentDO::getCurrentSchoolId, schoolId)
+                .orderByAsc(StudentDO::getId)
+                .last("LIMIT 50"));
+    }
+
+    default List<StudentDO> selectSimpleListByExactStudentNameAndSchoolId(String studentName, Long schoolId) {
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .eqIfPresent(StudentDO::getStudentName, studentName)
+                .eqIfPresent(StudentDO::getCurrentSchoolId, schoolId)
+                .orderByAsc(StudentDO::getId)
+                .last("LIMIT 500"));
+    }
+
+    default List<StudentDO> selectListByCurrentSchoolId(Long schoolId) {
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .eq(StudentDO::getCurrentSchoolId, schoolId)
+                .orderByAsc(StudentDO::getId));
+    }
+
+    default List<StudentDO> selectListByIdGreaterThan(Long lastId, Integer limit) {
+        if (limit == null || limit <= 0) {
+            return List.of();
+        }
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .gtIfPresent(StudentDO::getId, lastId)
+                .orderByAsc(StudentDO::getId)
+                .last("LIMIT " + limit));
+    }
+
+    @Select("""
+            SELECT DISTINCT current_school_id
+            FROM edu_student
+            WHERE deleted = b'0'
+              AND current_school_id IS NOT NULL
+            ORDER BY current_school_id ASC
+            """)
+    List<Long> selectDistinctCurrentSchoolIds();
 
     @Update("UPDATE edu_student SET status = #{status}, update_time = NOW() WHERE id = #{id} AND deleted = b'0'")
     int updateStatusById(@Param("id") Long id, @Param("status") Integer status);
