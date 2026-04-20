@@ -57,9 +57,9 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-connor-890820}
       MASTER_HOST: mysql-master
-      MASTER_PORT: ${MYSQL_MASTER_HOST_PORT}
+      MASTER_PORT: 3306
       SLAVE_HOST: mysql-slave
-      SLAVE_PORT: ${MYSQL_SLAVE_HOST_PORT}
+      SLAVE_PORT: 3306
       MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
       REPLICATION_USER: ${REPLICATION_USER:-repl}
       REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replconnor-890820}
@@ -112,7 +112,7 @@ services:
         --spring.datasource.dynamic.datasource.slave.username=root
         --spring.datasource.dynamic.datasource.slave.password=${MYSQL_ROOT_PASSWORD:-connor-890820}
         --spring.data.redis.host=redis
-        --spring.data.redis.port=${REDIS_HOST_PORT}
+        --spring.data.redis.port=6379
         --spring.data.redis.database=${REDIS_DATABASE:-0}
         --spring.data.redis.password=${REDIS_PASSWORD:-}
     depends_on:
