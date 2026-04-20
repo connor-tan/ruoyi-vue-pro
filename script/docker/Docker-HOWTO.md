@@ -66,6 +66,22 @@ docker compose --env-file .env exec mysql-slave \
   mysql -uroot -p123456 -e "SHOW REPLICA STATUS\\G"
 ```
 
+## MySQL 主从重新初始化
+
+开发环境默认 `REPLICA_RESEED_ON_INIT=true`。每次 `mysql-replica-init` 执行时，会先清理从库复制状态和 GTID，再从 master dump 当前数据库到 slave，最后重新建立 GTID 复制。
+
+这样可以避免复用旧从库数据卷时出现：
+
+```text
+Cannot replicate because the source purged required binary logs
+```
+
+如果你只想重置复制配置、不想覆盖从库数据库，可以在 `.env` 中设置：
+
+```dotenv
+REPLICA_RESEED_ON_INIT=false
+```
+
 ## 重置开发数据
 
 ```shell

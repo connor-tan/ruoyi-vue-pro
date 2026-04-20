@@ -63,8 +63,10 @@ services:
       MASTER_PORT: 3306
       SLAVE_HOST: mysql-slave
       SLAVE_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
       REPLICATION_USER: ${REPLICATION_USER:-repl}
       REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-repl123456}
+      REPLICA_RESEED_ON_INIT: ${REPLICA_RESEED_ON_INIT:-true}
     volumes:
       - ./scripts/setup-replica.sh:/scripts/setup-replica.sh:ro
     entrypoint:

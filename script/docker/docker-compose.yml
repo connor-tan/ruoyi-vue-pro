@@ -7,7 +7,7 @@ services:
     ports:
       - "${MYSQL_MASTER_HOST_PORT:-3307}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-connor-890820}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
     command:
       - --default-time-zone=+08:00
@@ -30,7 +30,7 @@ services:
     ports:
       - "${MYSQL_SLAVE_HOST_PORT:-3308}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-connor-890820}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
     command:
       - --default-time-zone=+08:00
@@ -55,13 +55,15 @@ services:
       mysql-slave:
         condition: service_healthy
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-connor-890820}
       MASTER_HOST: mysql-master
-      MASTER_PORT: 3306
+      MASTER_PORT: ${MYSQL_MASTER_HOST_PORT}
       SLAVE_HOST: mysql-slave
-      SLAVE_PORT: 3306
+      SLAVE_PORT: ${MYSQL_SLAVE_HOST_PORT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
       REPLICATION_USER: ${REPLICATION_USER:-repl}
-      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-repl123456}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replconnor-890820}
+      REPLICA_RESEED_ON_INIT: ${REPLICA_RESEED_ON_INIT:-true}
     volumes:
       - ./mysql-replication/scripts/setup-replica.sh:/scripts/setup-replica.sh:ro
     entrypoint:
@@ -105,13 +107,13 @@ services:
       ARGS: >-
         --spring.datasource.dynamic.datasource.master.url=jdbc:mysql://mysql-master:3306/${MYSQL_DATABASE:-ruoyi-vue-pro}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
         --spring.datasource.dynamic.datasource.master.username=root
-        --spring.datasource.dynamic.datasource.master.password=${MYSQL_ROOT_PASSWORD:-123456}
+        --spring.datasource.dynamic.datasource.master.password=${MYSQL_ROOT_PASSWORD:-connor-890820}
         --spring.datasource.dynamic.datasource.slave.url=jdbc:mysql://mysql-slave:3306/${MYSQL_DATABASE:-ruoyi-vue-pro}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
         --spring.datasource.dynamic.datasource.slave.username=root
-        --spring.datasource.dynamic.datasource.slave.password=${MYSQL_ROOT_PASSWORD:-123456}
+        --spring.datasource.dynamic.datasource.slave.password=${MYSQL_ROOT_PASSWORD:-connor-890820}
         --spring.data.redis.host=redis
-        --spring.data.redis.port=6379
-        --spring.data.redis.database=${REDIS_DATABASE:-5}
+        --spring.data.redis.port=${REDIS_HOST_PORT}
+        --spring.data.redis.database=${REDIS_DATABASE:-0}
         --spring.data.redis.password=${REDIS_PASSWORD:-}
     depends_on:
       mysql-replica-init:

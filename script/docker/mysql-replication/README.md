@@ -34,6 +34,16 @@ docker compose exec mysql-slave mysql -uroot -p123456 -e "SHOW REPLICA STATUS\\G
 - `Replica_IO_Running`
 - `Replica_SQL_Running`
 
+## 从库重新初始化
+
+默认 `REPLICA_RESEED_ON_INIT=true`。初始化容器会先清理从库复制状态和 GTID，再从 master dump 当前数据库到 slave，最后重新建立 GTID 复制。
+
+这用于避免复用旧从库数据卷时出现 `Cannot replicate because the source purged required binary logs`。如果只想重建复制关系、不想覆盖从库数据，可设置：
+
+```bash
+REPLICA_RESEED_ON_INIT=false docker compose up mysql-replica-init
+```
+
 ## 重新初始化
 
 开发环境如果需要重置主从：
