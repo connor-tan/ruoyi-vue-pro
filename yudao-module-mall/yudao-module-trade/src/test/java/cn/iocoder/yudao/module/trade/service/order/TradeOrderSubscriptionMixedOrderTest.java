@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.trade.service.order;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
+import cn.iocoder.yudao.module.edu.api.station.EduStationApi;
+import cn.iocoder.yudao.module.edu.api.station.dto.EduSchoolStationRespDTO;
 import cn.iocoder.yudao.module.member.api.address.MemberAddressApi;
 import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
@@ -8,10 +10,12 @@ import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
 import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
 import cn.iocoder.yudao.module.product.enums.publication.ProductDomainTypeEnum;
 import cn.iocoder.yudao.module.subscription.api.order.SubscriptionOrderEligibilityApi;
-import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
 import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityRespDTO;
+import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderDeliveryRespVO;
+import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementRespVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementReqVO;
 import cn.iocoder.yudao.module.trade.convert.order.TradeOrderConvert;
+import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderItemMapper;
@@ -29,10 +33,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_SUBSCRIPTION_CONTEXT_REQUIRED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_SUBSCRIPTION_LIMIT_EXCEEDED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,6 +61,7 @@ class TradeOrderSubscriptionMixedOrderTest {
     private SubscriptionOrderEligibilityApi subscriptionOrderEligibilityApi;
     private TradeOrderItemMapper tradeOrderItemMapper;
     private MemberAddressApi addressApi;
+    private EduStationApi eduStationApi;
 
     @BeforeEach
     void setUp() {
@@ -66,6 +73,7 @@ class TradeOrderSubscriptionMixedOrderTest {
         subscriptionOrderEligibilityApi = mock(SubscriptionOrderEligibilityApi.class);
         tradeOrderItemMapper = mock(TradeOrderItemMapper.class);
         addressApi = mock(MemberAddressApi.class);
+        eduStationApi = mock(EduStationApi.class);
         ReflectionTestUtils.setField(service, "cartService", cartService);
         ReflectionTestUtils.setField(service, "tradePriceService", tradePriceService);
         ReflectionTestUtils.setField(service, "productSkuApi", productSkuApi);
@@ -73,6 +81,7 @@ class TradeOrderSubscriptionMixedOrderTest {
         ReflectionTestUtils.setField(service, "subscriptionOrderEligibilityApi", subscriptionOrderEligibilityApi);
         ReflectionTestUtils.setField(service, "tradeOrderItemMapper", tradeOrderItemMapper);
         ReflectionTestUtils.setField(service, "addressApi", addressApi);
+        ReflectionTestUtils.setField(service, "eduStationApi", eduStationApi);
     }
 
     @Test
@@ -80,16 +89,18 @@ class TradeOrderSubscriptionMixedOrderTest {
         mockProductDomainData();
         when(cartService.getCartList(eq(100L), any())).thenReturn(Collections.emptyList());
         when(subscriptionOrderEligibilityApi.validateOrderItems(any())).thenReturn(List.of(eligibility(1, 2)));
+        when(eduStationApi.getSchoolStationMap(anyCollection()))
+                .thenReturn(Map.of(2L, schoolStation(2L, "未来小学", 9L, "站点 A")));
         when(tradeOrderItemMapper.selectSubscriptionBoughtCount(1L, 40L,
                 TradeOrderStatusEnum.CANCELED.getStatus())).thenReturn(0);
         when(tradePriceService.calculateOrderPrice(any())).thenAnswer(invocation ->
-                TradePriceCalculatorHelper.buildCalculateResp(invocation.getArgument(0),
-                        List.of(normalSpu(), publicationSpu()), List.of(normalSku(), publicationSku())));
+                buildCalculateRespWithDeliveryTypes(invocation.getArgument(0),
+                        DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.STATION.getType()));
         AppTradeOrderSettlementReqVO reqVO = settlementReq(
                 normalItem(),
                 publicationItem(1, 1L, 40L));
 
-        service.settlementOrder(100L, reqVO);
+        AppTradeOrderSettlementRespVO respVO = service.settlementOrder(100L, reqVO);
 
         verify(subscriptionOrderEligibilityApi).validateOrderItems(argThat(req ->
                 req.getUserId().equals(100L)
@@ -105,8 +116,13 @@ class TradeOrderSubscriptionMixedOrderTest {
         assertNull(calculateReqBO.getItems().get(0).getSubscriptionStudentId());
         TradePriceCalculateReqBO.Item subscriptionItem = calculateReqBO.getItems().get(1);
         assertEquals(1L, subscriptionItem.getSubscriptionStudentId());
+        assertEquals("学生 1", subscriptionItem.getSubscriptionStudentNameSnapshot());
         assertEquals(2L, subscriptionItem.getSubscriptionSchoolId());
+        assertEquals("未来小学", subscriptionItem.getSubscriptionSchoolNameSnapshot());
+        assertEquals(4L, subscriptionItem.getSubscriptionClassId());
+        assertEquals("2026级三年级1班", subscriptionItem.getSubscriptionClassNameSnapshot());
         assertEquals(3L, subscriptionItem.getSubscriptionGradeCatalogId());
+        assertEquals("三年级", subscriptionItem.getSubscriptionGradeNameSnapshot());
         assertEquals(10L, subscriptionItem.getSubscriptionWindowId());
         assertEquals("春季订刊", subscriptionItem.getSubscriptionWindowNameSnapshot());
         assertEquals(2026, subscriptionItem.getSubscriptionTargetYearStart());
@@ -117,6 +133,74 @@ class TradeOrderSubscriptionMixedOrderTest {
         assertEquals("INCLUDE_RULE_MATCH", subscriptionItem.getSubscriptionVisibilityReason());
         assertEquals(300L, subscriptionItem.getSubscriptionMatchedRuleId());
         assertEquals(true, subscriptionItem.getSubscriptionGradeApplicabilityOverride());
+
+        assertNotNull(respVO.getDeliveries());
+        assertEquals(2, respVO.getDeliveries().size());
+        AppTradeOrderDeliveryRespVO expressDelivery = respVO.getDeliveries().get(0);
+        assertEquals(DeliveryTypeEnum.EXPRESS.getType(), expressDelivery.getDeliveryType());
+        assertEquals(-1L, expressDelivery.getId());
+        assertEquals(1, expressDelivery.getProductCount());
+        AppTradeOrderDeliveryRespVO stationDelivery = respVO.getDeliveries().get(1);
+        assertEquals(DeliveryTypeEnum.STATION.getType(), stationDelivery.getDeliveryType());
+        assertEquals(-2L, stationDelivery.getId());
+        assertEquals(1, stationDelivery.getProductCount());
+        assertEquals(2L, stationDelivery.getSchoolId());
+        assertEquals("未来小学", stationDelivery.getSchoolNameSnapshot());
+        assertEquals(9L, stationDelivery.getStationId());
+        assertEquals("站点 A", stationDelivery.getStationNameSnapshot());
+        assertEquals(-2L, respVO.getItems().get(1).getDeliveryId());
+    }
+
+    @Test
+    void settlementShouldMergeSameSchoolSubscriptionItemsIntoOneStationDelivery() {
+        mockProductDomainData();
+        when(cartService.getCartList(eq(100L), any())).thenReturn(Collections.emptyList());
+        when(subscriptionOrderEligibilityApi.validateOrderItems(any())).thenReturn(List.of(
+                eligibility(0, 5),
+                eligibility(1, 5).setStudentId(2L).setStudentName("学生 2").setWindowSkuId(41L)));
+        when(eduStationApi.getSchoolStationMap(anyCollection()))
+                .thenReturn(Map.of(2L, schoolStation(2L, "未来小学", 9L, "站点 A")));
+        when(tradeOrderItemMapper.selectSubscriptionBoughtCount(any(), any(), any())).thenReturn(0);
+        when(tradePriceService.calculateOrderPrice(any())).thenAnswer(invocation ->
+                buildCalculateRespWithDeliveryTypes(invocation.getArgument(0),
+                        DeliveryTypeEnum.STATION.getType(), DeliveryTypeEnum.STATION.getType()));
+
+        AppTradeOrderSettlementRespVO respVO = service.settlementOrder(100L, settlementReq(
+                publicationItem(1, 1L, 40L),
+                publicationItem(1, 2L, 41L)));
+
+        assertNotNull(respVO.getDeliveries());
+        assertEquals(1, respVO.getDeliveries().size());
+        AppTradeOrderDeliveryRespVO stationDelivery = respVO.getDeliveries().get(0);
+        assertEquals(DeliveryTypeEnum.STATION.getType(), stationDelivery.getDeliveryType());
+        assertEquals(2L, stationDelivery.getSchoolId());
+        assertEquals(2, stationDelivery.getProductCount());
+    }
+
+    @Test
+    void settlementShouldSplitSubscriptionItemsBySchool() {
+        mockProductDomainData();
+        when(cartService.getCartList(eq(100L), any())).thenReturn(Collections.emptyList());
+        when(subscriptionOrderEligibilityApi.validateOrderItems(any())).thenReturn(List.of(
+                eligibility(0, 5),
+                eligibility(1, 5).setStudentId(2L).setStudentName("学生 2").setSchoolId(8L)
+                        .setSchoolName("希望中学").setWindowSkuId(41L)));
+        when(eduStationApi.getSchoolStationMap(anyCollection())).thenReturn(Map.of(
+                2L, schoolStation(2L, "未来小学", 9L, "站点 A"),
+                8L, schoolStation(8L, "希望中学", 10L, "站点 B")));
+        when(tradeOrderItemMapper.selectSubscriptionBoughtCount(any(), any(), any())).thenReturn(0);
+        when(tradePriceService.calculateOrderPrice(any())).thenAnswer(invocation ->
+                buildCalculateRespWithDeliveryTypes(invocation.getArgument(0),
+                        DeliveryTypeEnum.STATION.getType(), DeliveryTypeEnum.STATION.getType()));
+
+        AppTradeOrderSettlementRespVO respVO = service.settlementOrder(100L, settlementReq(
+                publicationItem(1, 1L, 40L),
+                publicationItem(1, 2L, 41L)));
+
+        assertNotNull(respVO.getDeliveries());
+        assertEquals(2, respVO.getDeliveries().size());
+        assertEquals(2L, respVO.getDeliveries().get(0).getSchoolId());
+        assertEquals(8L, respVO.getDeliveries().get(1).getSchoolId());
     }
 
     @Test
@@ -130,6 +214,36 @@ class TradeOrderSubscriptionMixedOrderTest {
         assertEquals(ORDER_PUBLICATION_SUBSCRIPTION_CONTEXT_REQUIRED.getCode(), exception.getCode());
         verify(subscriptionOrderEligibilityApi, never()).validateOrderItems(any());
         verify(tradePriceService, never()).calculateOrderPrice(any());
+    }
+
+    @Test
+    void settlementShouldReuseCartSubscriptionContextWhenItemContainsSkuIdAndCartId() {
+        mockProductDomainData();
+        when(cartService.getCartList(eq(100L), any())).thenReturn(List.of(new CartDO()
+                .setId(10L)
+                .setSkuId(200L)
+                .setCount(1)
+                .setSubscriptionStudentId(1L)
+                .setSubscriptionWindowSkuId(40L)));
+        when(subscriptionOrderEligibilityApi.validateOrderItems(any())).thenReturn(List.of(eligibility(0, 2)));
+        when(eduStationApi.getSchoolStationMap(anyCollection()))
+                .thenReturn(Map.of(2L, schoolStation(2L, "未来小学", 9L, "站点 A")));
+        when(tradeOrderItemMapper.selectSubscriptionBoughtCount(1L, 40L,
+                TradeOrderStatusEnum.CANCELED.getStatus())).thenReturn(0);
+        when(tradePriceService.calculateOrderPrice(any())).thenAnswer(invocation ->
+                buildCalculateRespWithDeliveryTypes(invocation.getArgument(0), DeliveryTypeEnum.STATION.getType()));
+
+        AppTradeOrderSettlementReqVO reqVO = settlementReq(new AppTradeOrderSettlementReqVO.Item()
+                .setSkuId(200L)
+                .setCount(1)
+                .setCartId(10L));
+
+        service.settlementOrder(100L, reqVO);
+
+        verify(subscriptionOrderEligibilityApi).validateOrderItems(argThat(req ->
+                req.getItems().size() == 1
+                        && req.getItems().get(0).getStudentId().equals(1L)
+                        && req.getItems().get(0).getWindowSkuId().equals(40L)));
     }
 
     @Test
@@ -157,9 +271,15 @@ class TradeOrderSubscriptionMixedOrderTest {
                 .setPrice(200)
                 .setDiscountPrice(0)
                 .setPayPrice(200)
+                .setDeliveryId(800L)
                 .setSubscriptionStudentId(1L)
+                .setSubscriptionStudentNameSnapshot("学生 1")
                 .setSubscriptionSchoolId(2L)
+                .setSubscriptionSchoolNameSnapshot("未来小学")
+                .setSubscriptionClassId(4L)
+                .setSubscriptionClassNameSnapshot("2026级三年级1班")
                 .setSubscriptionGradeCatalogId(3L)
+                .setSubscriptionGradeNameSnapshot("三年级")
                 .setSubscriptionWindowId(10L)
                 .setSubscriptionWindowNameSnapshot("春季订刊")
                 .setSubscriptionTargetYearStart(2026)
@@ -179,9 +299,15 @@ class TradeOrderSubscriptionMixedOrderTest {
         TradeOrderItemDO result = orderItems.get(0);
         assertEquals(900L, result.getOrderId());
         assertEquals(100L, result.getUserId());
+        assertEquals(800L, result.getDeliveryId());
         assertEquals(1L, result.getSubscriptionStudentId());
+        assertEquals("学生 1", result.getSubscriptionStudentNameSnapshot());
         assertEquals(2L, result.getSubscriptionSchoolId());
+        assertEquals("未来小学", result.getSubscriptionSchoolNameSnapshot());
+        assertEquals(4L, result.getSubscriptionClassId());
+        assertEquals("2026级三年级1班", result.getSubscriptionClassNameSnapshot());
         assertEquals(3L, result.getSubscriptionGradeCatalogId());
+        assertEquals("三年级", result.getSubscriptionGradeNameSnapshot());
         assertEquals(10L, result.getSubscriptionWindowId());
         assertEquals("春季订刊", result.getSubscriptionWindowNameSnapshot());
         assertEquals(2026, result.getSubscriptionTargetYearStart());
@@ -224,8 +350,13 @@ class TradeOrderSubscriptionMixedOrderTest {
         return new SubscriptionOrderEligibilityRespDTO()
                 .setRequestIndex(requestIndex)
                 .setStudentId(1L)
+                .setStudentName("学生 1")
                 .setSchoolId(2L)
+                .setSchoolName("未来小学")
+                .setClassId(4L)
+                .setClassName("2026级三年级1班")
                 .setGradeCatalogId(3L)
+                .setGradeName("三年级")
                 .setWindowId(10L)
                 .setWindowNameSnapshot("春季订刊")
                 .setTargetYearStart(2026)
@@ -237,6 +368,28 @@ class TradeOrderSubscriptionMixedOrderTest {
                 .setMatchedRuleId(300L)
                 .setGradeApplicabilityOverride(true)
                 .setMaxQuantityPerStudent(maxQuantityPerStudent);
+    }
+
+    private EduSchoolStationRespDTO schoolStation(Long schoolId, String schoolName, Long stationId, String stationName) {
+        EduSchoolStationRespDTO dto = new EduSchoolStationRespDTO();
+        dto.setSchoolId(schoolId);
+        dto.setSchoolName(schoolName);
+        dto.setStationId(stationId);
+        dto.setStationName(stationName);
+        dto.setStationAddress("示例路 1 号");
+        dto.setContactName("张老师");
+        dto.setContactMobile("13800000000");
+        return dto;
+    }
+
+    private TradePriceCalculateRespBO buildCalculateRespWithDeliveryTypes(TradePriceCalculateReqBO reqBO,
+                                                                          Integer... deliveryTypes) {
+        TradePriceCalculateRespBO respBO = TradePriceCalculatorHelper.buildCalculateResp(reqBO,
+                List.of(normalSpu(), publicationSpu()), List.of(normalSku(), publicationSku()));
+        for (int i = 0; i < deliveryTypes.length; i++) {
+            respBO.getItems().get(i).setResolvedDeliveryType(deliveryTypes[i]);
+        }
+        return respBO;
     }
 
     private ProductSkuRespDTO normalSku() {

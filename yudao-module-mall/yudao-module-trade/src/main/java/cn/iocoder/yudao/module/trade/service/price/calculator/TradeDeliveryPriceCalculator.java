@@ -53,18 +53,38 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
 
     @Override
     public void calculate(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result) {
-        if (param.getDeliveryType() == null) {
+        List<OrderItem> selectedItems = filterList(result.getItems(), OrderItem::getSelected);
+        if (CollUtil.isEmpty(selectedItems)) {
             return;
         }
-        // 校验是不是存在商品不能门店自提，或者不能快递发货的情况。就是说，配送方式不匹配哈
-        if (CollectionUtils.anyMatch(result.getItems(), item -> !item.getDeliveryTypes().contains(param.getDeliveryType()))) {
+        boolean hasStationItems = CollectionUtils.anyMatch(selectedItems, item -> item.getSubscriptionSchoolId() != null);
+        boolean hasNormalItems = CollectionUtils.anyMatch(selectedItems, item -> item.getSubscriptionSchoolId() == null);
+        if (hasStationItems && DeliveryTypeEnum.PICK_UP.getType().equals(param.getDeliveryType())) {
+            throw exception(ORDER_SUBSCRIPTION_PICK_UP_NOT_SUPPORTED);
+        }
+        if (hasNormalItems && param.getDeliveryType() == null) {
+            throw exception(ORDER_DELIVERY_TYPE_REQUIRED_FOR_NORMAL_ITEM);
+        }
+        for (OrderItem item : selectedItems) {
+            item.setResolvedDeliveryType(item.getSubscriptionSchoolId() != null
+                    ? DeliveryTypeEnum.STATION.getType()
+                    : param.getDeliveryType());
+        }
+        // 校验普通商品的配送方式
+        if (CollectionUtils.anyMatch(selectedItems, item -> item.getSubscriptionSchoolId() == null
+                && !item.getDeliveryTypes().contains(item.getResolvedDeliveryType()))) {
             throw exception(PRICE_CALCULATE_DELIVERY_PRICE_TYPE_ILLEGAL);
+        }
+        if (!hasNormalItems) {
+            TradePriceCalculatorHelper.recountAllPrice(result);
+            return;
         }
 
         if (DeliveryTypeEnum.PICK_UP.getType().equals(param.getDeliveryType())) {
             calculateByPickUp(param);
         } else if (DeliveryTypeEnum.EXPRESS.getType().equals(param.getDeliveryType())) {
-            calculateExpress(param, result);
+            calculateExpress(param, result, filterList(selectedItems,
+                    item -> DeliveryTypeEnum.EXPRESS.getType().equals(item.getResolvedDeliveryType())));
         }
     }
 
@@ -81,7 +101,12 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
 
     // ========= 快递发货 ==========
 
-    private void calculateExpress(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result) {
+    private void calculateExpress(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result,
+                                  List<OrderItem> expressItems) {
+        if (CollUtil.isEmpty(expressItems)) {
+            TradePriceCalculatorHelper.recountAllPrice(result);
+            return;
+        }
         // 0. 得到收件地址区域
         if (param.getAddressId() == null) {
             // 价格计算时，如果为空就不算~最终下单，会校验该字段不允许空
@@ -102,8 +127,7 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
 
         // 情况三：快递模版
         // 2.1 过滤出已选中的商品 SKU
-        List<OrderItem> selectedItem = filterList(result.getItems(), OrderItem::getSelected);
-        Set<Long> deliveryTemplateIds = convertSet(selectedItem, OrderItem::getDeliveryTemplateId);
+        Set<Long> deliveryTemplateIds = convertSet(expressItems, OrderItem::getDeliveryTemplateId);
         Map<Long, DeliveryExpressTemplateRespBO> expressTemplateMap =
                 deliveryExpressTemplateService.getExpressTemplateMapByIdsAndArea(deliveryTemplateIds, address.getAreaId());
         // 2.2 计算配送费用
@@ -111,7 +135,7 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
             log.error("[calculate][找不到商品 templateIds {} areaId{} 对应的运费模板]", deliveryTemplateIds, address.getAreaId());
             throw exception(PRICE_CALCULATE_DELIVERY_PRICE_TEMPLATE_NOT_FOUND);
         }
-        calculateDeliveryPrice(selectedItem, expressTemplateMap, result);
+        calculateDeliveryPrice(expressItems, expressTemplateMap, result);
     }
 
     /**

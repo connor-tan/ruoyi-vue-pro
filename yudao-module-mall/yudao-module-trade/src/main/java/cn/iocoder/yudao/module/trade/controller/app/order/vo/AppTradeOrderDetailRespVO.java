@@ -158,4 +158,9 @@ public class AppTradeOrderDetailRespVO {
      */
     private List<AppTradeOrderItemRespVO> items;
 
+    /**
+     * 配送单数组
+     */
+    private List<AppTradeOrderDeliveryRespVO> deliveries;
+
 }

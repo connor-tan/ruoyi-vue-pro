@@ -53,8 +53,13 @@ public class TradePriceCalculatorHelper {
             orderItem.setSpuId(sku.getSpuId()).setSkuId(sku.getId())
                     .setCount(item.getCount()).setCartId(item.getCartId()).setSelected(item.getSelected());
             orderItem.setSubscriptionStudentId(item.getSubscriptionStudentId());
+            orderItem.setSubscriptionStudentNameSnapshot(item.getSubscriptionStudentNameSnapshot());
             orderItem.setSubscriptionSchoolId(item.getSubscriptionSchoolId());
+            orderItem.setSubscriptionSchoolNameSnapshot(item.getSubscriptionSchoolNameSnapshot());
+            orderItem.setSubscriptionClassId(item.getSubscriptionClassId());
+            orderItem.setSubscriptionClassNameSnapshot(item.getSubscriptionClassNameSnapshot());
             orderItem.setSubscriptionGradeCatalogId(item.getSubscriptionGradeCatalogId());
+            orderItem.setSubscriptionGradeNameSnapshot(item.getSubscriptionGradeNameSnapshot());
             orderItem.setSubscriptionWindowId(item.getSubscriptionWindowId());
             orderItem.setSubscriptionWindowNameSnapshot(item.getSubscriptionWindowNameSnapshot());
             orderItem.setSubscriptionTargetYearStart(item.getSubscriptionTargetYearStart());

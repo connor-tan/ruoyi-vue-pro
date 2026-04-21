@@ -13,6 +13,10 @@ public class SubscriptionGradeResolveRespBO {
 
     private String schoolName;
 
+    private Long effectiveClassId;
+
+    private String effectiveClassName;
+
     private Long effectiveGradeCatalogId;
 
     private String effectiveGradeNo;

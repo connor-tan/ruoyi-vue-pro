@@ -270,11 +270,25 @@ public class TradePriceCalculateRespBO {
          */
         private Integer givePoint;
 
+        private Integer resolvedDeliveryType;
+
+        private Long deliveryId;
+
         private Long subscriptionStudentId;
+
+        private String subscriptionStudentNameSnapshot;
 
         private Long subscriptionSchoolId;
 
+        private String subscriptionSchoolNameSnapshot;
+
+        private Long subscriptionClassId;
+
+        private String subscriptionClassNameSnapshot;
+
         private Long subscriptionGradeCatalogId;
+
+        private String subscriptionGradeNameSnapshot;
 
         private Long subscriptionWindowId;
 

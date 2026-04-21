@@ -21,6 +21,9 @@ public class TradeOrderItemBaseVO {
     @Schema(description = "订单编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long orderId;
 
+    @Schema(description = "配送单编号", example = "1")
+    private Long deliveryId;
+
     // ========== 商品基本信息 ==========
 
     @Schema(description = "商品 SPU 编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
@@ -63,5 +66,29 @@ public class TradeOrderItemBaseVO {
 
     @Schema(description = "售后状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer afterSaleStatus;
+
+    @Schema(description = "订刊学生编号", example = "1")
+    private Long subscriptionStudentId;
+
+    @Schema(description = "订刊学生名称快照", example = "张小明")
+    private String subscriptionStudentNameSnapshot;
+
+    @Schema(description = "订刊学校编号", example = "1")
+    private Long subscriptionSchoolId;
+
+    @Schema(description = "订刊学校名称快照", example = "实验小学")
+    private String subscriptionSchoolNameSnapshot;
+
+    @Schema(description = "订刊班级编号", example = "1")
+    private Long subscriptionClassId;
+
+    @Schema(description = "订刊班级名称快照", example = "2026级一年级1班")
+    private String subscriptionClassNameSnapshot;
+
+    @Schema(description = "订刊年级编号", example = "1")
+    private Long subscriptionGradeCatalogId;
+
+    @Schema(description = "订刊年级名称快照", example = "一年级")
+    private String subscriptionGradeNameSnapshot;
 
 }

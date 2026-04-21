@@ -5,6 +5,7 @@ import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderPageReq
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderSummaryRespVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderPageReqVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackRespDTO;
@@ -156,5 +157,23 @@ public interface TradeOrderQueryService {
      * @return 交易订单项数组
      */
     List<TradeOrderItemDO> getOrderItemListByOrderId(Collection<Long> orderIds);
+
+    /**
+     * 根据交易订单编号，查询配送单
+     *
+     * @param orderId 交易订单编号
+     * @return 配送单数组
+     */
+    default List<TradeOrderDeliveryDO> getOrderDeliveryListByOrderId(Long orderId) {
+        return getOrderDeliveryListByOrderId(singleton(orderId));
+    }
+
+    /**
+     * 根据交易订单编号数组，查询配送单
+     *
+     * @param orderIds 交易订单编号数组
+     * @return 配送单数组
+     */
+    List<TradeOrderDeliveryDO> getOrderDeliveryListByOrderId(Collection<Long> orderIds);
 
 }

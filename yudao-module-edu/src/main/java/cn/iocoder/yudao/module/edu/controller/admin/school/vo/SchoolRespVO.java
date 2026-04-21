@@ -35,6 +35,14 @@ public class SchoolRespVO {
     @ExcelProperty("学校地址")
     private String schoolAddress;
 
+    @Schema(description = "归属站点编号", example = "1")
+    @ExcelProperty("归属站点编号")
+    private Long stationId;
+
+    @Schema(description = "归属站点名称", example = "梁溪站")
+    @ExcelProperty("归属站点")
+    private String stationName;
+
     @Schema(description = "学校代码")
     @ExcelProperty("学校代码")
     private String code;

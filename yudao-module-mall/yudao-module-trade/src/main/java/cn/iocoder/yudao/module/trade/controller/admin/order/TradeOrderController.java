@@ -8,6 +8,7 @@ import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.*;
 import cn.iocoder.yudao.module.trade.convert.order.TradeOrderConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderLogDO;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderLogService;
@@ -89,13 +90,16 @@ public class TradeOrderController {
         }
         // 查询订单项
         List<TradeOrderItemDO> orderItems = tradeOrderQueryService.getOrderItemListByOrderId(id);
+        List<TradeOrderDeliveryDO> orderDeliveries = tradeOrderQueryService.getOrderDeliveryListByOrderId(id);
 
         // 拼接数据
         MemberUserRespDTO user = memberUserApi.getUser(order.getUserId());
         MemberUserRespDTO brokerageUser = order.getBrokerageUserId() != null ?
                 memberUserApi.getUser(order.getBrokerageUserId()) : null;
         List<TradeOrderLogDO> orderLogs = tradeOrderLogService.getOrderLogListByOrderId(id);
-        return success(TradeOrderConvert.INSTANCE.convert(order, orderItems, orderLogs, user, brokerageUser));
+        TradeOrderDetailRespVO respVO = TradeOrderConvert.INSTANCE.convert(order, orderItems, orderLogs, user, brokerageUser);
+        respVO.setDeliveries(TradeOrderConvert.INSTANCE.convertAdminDeliveryList(orderDeliveries));
+        return success(respVO);
     }
 
     @GetMapping("/get-express-track-list")
@@ -112,6 +116,14 @@ public class TradeOrderController {
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> deliveryOrder(@RequestBody TradeOrderDeliveryReqVO deliveryReqVO) {
         tradeOrderUpdateService.deliveryOrder(deliveryReqVO);
+        return success(true);
+    }
+
+    @PutMapping("/station-delivery")
+    @Operation(summary = "站点配送")
+    @PreAuthorize("@ss.hasPermission('trade:order:update')")
+    public CommonResult<Boolean> stationDeliveryOrder(@RequestBody TradeOrderStationDeliveryReqVO reqVO) {
+        tradeOrderUpdateService.stationDeliveryOrder(reqVO);
         return success(true);
     }
 

@@ -15,6 +15,10 @@ public class SubscriptionOrderEligibilityRespDTO {
 
     private String schoolName;
 
+    private Long classId;
+
+    private String className;
+
     private Long gradeCatalogId;
 
     private String gradeNo;

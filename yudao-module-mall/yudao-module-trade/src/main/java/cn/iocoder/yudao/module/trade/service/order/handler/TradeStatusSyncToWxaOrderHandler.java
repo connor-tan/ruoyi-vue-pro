@@ -82,7 +82,7 @@ public class TradeStatusSyncToWxaOrderHandler implements TradeOrderHandler {
                 .setOpenid(payOrder.getChannelUserId())
                 .setItemDesc(payOrder.getSubject())
                 .setReceiverContact(order.getReceiverMobile());
-        if (DeliveryTypeEnum.EXPRESS.getType().equals(order.getDeliveryType()) && StrUtil.isNotEmpty(order.getLogisticsNo())) {
+        if (StrUtil.isNotEmpty(order.getLogisticsNo()) && order.getLogisticsId() != null && order.getLogisticsId() > 0) {
             reqDTO.setLogisticsType(SocialWxaOrderUploadShippingInfoReqDTO.LOGISTICS_TYPE_EXPRESS)
                     .setExpressCompany(expressService.getDeliveryExpress(order.getLogisticsId()).getCode())
                     .setLogisticsNo(order.getLogisticsNo());

@@ -221,6 +221,7 @@ public class SubscriptionGradeResolveServiceImpl implements SubscriptionGradeRes
             }
             respBO.setSchoolId(targetSchool.getId());
             respBO.setSchoolName(targetSchool.getSchoolName());
+            fillClass(respBO, targetSchoolClass);
             SchoolGradeDO targetSchoolGrade = schoolGradeMap.get(targetSchoolClass.getSchoolGradeId());
             if (targetSchoolGrade == null) {
                 return block(respBO, SubscriptionBlockedReasonEnum.SCHOOL_GRADE_NOT_EXISTS);
@@ -275,6 +276,7 @@ public class SubscriptionGradeResolveServiceImpl implements SubscriptionGradeRes
         }
         respBO.setSchoolId(currentSchool.getId());
         respBO.setSchoolName(currentSchool.getSchoolName());
+        fillClass(respBO, currentSchoolClass);
         if (Objects.equals(window.getGradeCalcRule(), SubscriptionGradeCalcRuleEnum.PROMOTED_GRADE.getRule())) {
             return resolvePromotedGrade(respBO, currentSchoolGrade, orderedGradesMap.get(currentSchool.getId()),
                     gradeCatalogMap, nextGlobalGradeCatalogIdMap, nextSchoolGradeMap);
@@ -343,6 +345,11 @@ public class SubscriptionGradeResolveServiceImpl implements SubscriptionGradeRes
         respBO.setEffectiveGradeAliasName(gradeCatalog.getAliasName());
         respBO.setEffectiveGradeSort(gradeCatalog.getSort());
         return respBO;
+    }
+
+    private void fillClass(SubscriptionGradeResolveRespBO respBO, SchoolClassDO schoolClass) {
+        respBO.setEffectiveClassId(schoolClass.getId());
+        respBO.setEffectiveClassName(schoolClass.getClassName());
     }
 
     private SubscriptionGradeResolveRespBO block(SubscriptionGradeResolveRespBO respBO,

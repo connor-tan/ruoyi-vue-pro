@@ -167,6 +167,8 @@ public class SubscriptionOrderEligibilityApiImpl implements SubscriptionOrderEli
         respDTO.setStudentName(gradeResolve.getStudentName());
         respDTO.setSchoolId(gradeResolve.getSchoolId());
         respDTO.setSchoolName(gradeResolve.getSchoolName());
+        respDTO.setClassId(gradeResolve.getEffectiveClassId());
+        respDTO.setClassName(gradeResolve.getEffectiveClassName());
         respDTO.setGradeCatalogId(gradeResolve.getEffectiveGradeCatalogId());
         respDTO.setGradeNo(gradeResolve.getEffectiveGradeNo());
         respDTO.setGradeName(gradeResolve.getEffectiveGradeName());

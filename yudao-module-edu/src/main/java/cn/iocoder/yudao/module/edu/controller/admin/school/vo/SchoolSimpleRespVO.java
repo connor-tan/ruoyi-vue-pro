@@ -15,6 +15,12 @@ public class SchoolSimpleRespVO {
     @Schema(description = "学校名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "无锡市实验小学")
     private String schoolName;
 
+    @Schema(description = "归属站点编号", example = "1")
+    private Long stationId;
+
+    @Schema(description = "归属站点名称", example = "梁溪站")
+    private String stationName;
+
     @Schema(description = "办学学段编码列表", requiredMode = Schema.RequiredMode.REQUIRED, example = "[\"primary\",\"middle\"]")
     private List<String> stageCodes;
 

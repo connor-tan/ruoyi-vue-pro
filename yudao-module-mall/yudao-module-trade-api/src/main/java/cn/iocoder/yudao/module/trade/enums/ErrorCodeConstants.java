@@ -45,6 +45,15 @@ public interface ErrorCodeConstants {
     ErrorCode ORDER_PUBLICATION_SUBSCRIPTION_CONTEXT_REQUIRED = new ErrorCode(1_011_000_040, "刊物商品请从订刊入口选择学生后购买");
     ErrorCode ORDER_SUBSCRIPTION_CONTEXT_NOT_ALLOWED = new ErrorCode(1_011_000_041, "普通商品不能携带订刊购买信息");
     ErrorCode ORDER_SUBSCRIPTION_LIMIT_EXCEEDED = new ErrorCode(1_011_000_042, "订刊商品超过每生限购数量");
+    ErrorCode ORDER_DELIVERY_TYPE_REQUIRED_FOR_NORMAL_ITEM = new ErrorCode(1_011_000_043, "普通商品必须选择配送方式");
+    ErrorCode ORDER_SUBSCRIPTION_PICK_UP_NOT_SUPPORTED = new ErrorCode(1_011_000_044, "订刊商品暂不支持与用户自提一起下单");
+    ErrorCode ORDER_SCHOOL_STATION_NOT_CONFIGURED = new ErrorCode(1_011_000_045, "学校未配置配送站点，暂时无法下单");
+    ErrorCode ORDER_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_046, "订单配送单不存在");
+    ErrorCode ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_STATION = new ErrorCode(1_011_000_047, "订单配送失败，配送类型不是站点配送");
+    ErrorCode ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED = new ErrorCode(1_011_000_048, "订单收货失败，配送单不是【待收货】状态");
+    ErrorCode ORDER_RECEIVE_FAIL_DELIVERY_NOT_OWNED = new ErrorCode(1_011_000_049, "订单收货失败，配送单不属于当前用户");
+    ErrorCode ORDER_UPDATE_ADDRESS_FAIL_EXPRESS_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_050, "交易订单修改收货地址失败，原因：订单不存在可修改的快递配送单");
+    ErrorCode ORDER_RECEIVE_FAIL_SPLIT_DELIVERY_REQUIRED = new ErrorCode(1_011_000_051, "订单已拆分配送，请在订单详情中按配送单确认收货");
 
     // ========== After Sale 模块 1-011-000-100 ==========
     ErrorCode AFTER_SALE_NOT_FOUND = new ErrorCode(1_011_000_100, "售后单不存在");

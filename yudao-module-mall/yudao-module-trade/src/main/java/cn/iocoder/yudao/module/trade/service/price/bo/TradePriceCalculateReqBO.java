@@ -123,9 +123,19 @@ public class TradePriceCalculateReqBO {
 
         private Long subscriptionStudentId;
 
+        private String subscriptionStudentNameSnapshot;
+
         private Long subscriptionSchoolId;
 
+        private String subscriptionSchoolNameSnapshot;
+
+        private Long subscriptionClassId;
+
+        private String subscriptionClassNameSnapshot;
+
         private Long subscriptionGradeCatalogId;
+
+        private String subscriptionGradeNameSnapshot;
 
         private Long subscriptionWindowId;
 

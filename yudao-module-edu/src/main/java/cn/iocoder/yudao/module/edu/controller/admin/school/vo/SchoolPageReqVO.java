@@ -23,6 +23,12 @@ public class SchoolPageReqVO extends PageParam {
     @Schema(description = "学校地址")
     private String schoolAddress;
 
+    @Schema(description = "归属站点编号", example = "1")
+    private Long stationId;
+
+    @Schema(description = "是否已绑定站点", example = "true")
+    private Boolean stationBound;
+
     @Schema(description = "学校代码")
     private String code;
 

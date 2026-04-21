@@ -29,6 +29,7 @@ import cn.iocoder.yudao.module.trade.controller.app.order.vo.item.AppTradeOrderI
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderLogDO;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderItemAfterSaleStatusEnum;
@@ -194,6 +195,10 @@ public interface TradeOrderConvert {
 
     AppTradeOrderItemRespVO convert03(TradeOrderItemDO bean);
 
+    AppTradeOrderDeliveryRespVO convert04(TradeOrderDeliveryDO bean);
+
+    TradeOrderDeliveryRespVO convert05(TradeOrderDeliveryDO bean);
+
     @Mappings({
             @Mapping(target = "skuId", source = "tradeOrderItemDO.skuId"),
             @Mapping(target = "orderId", source = "tradeOrderItemDO.orderId"),
@@ -226,16 +231,20 @@ public interface TradeOrderConvert {
         // 商品项的构建
         Map<Long, CartDO> cartMap = convertMap(cartList, CartDO::getId);
         for (AppTradeOrderSettlementReqVO.Item item : settlementReqVO.getItems()) {
+            CartDO cart = item.getCartId() == null ? null : cartMap.get(item.getCartId());
             // 情况一：skuId + count
             if (item.getSkuId() != null) {
+                Long subscriptionStudentId = item.getStudentId() != null ? item.getStudentId()
+                        : cart != null ? cart.getSubscriptionStudentId() : null;
+                Long subscriptionWindowSkuId = item.getWindowSkuId() != null ? item.getWindowSkuId()
+                        : cart != null ? cart.getSubscriptionWindowSkuId() : null;
                 reqBO.getItems().add(new TradePriceCalculateReqBO.Item().setSkuId(item.getSkuId()).setCount(item.getCount())
                         .setCartId(item.getCartId()).setSelected(true)
-                        .setSubscriptionStudentId(item.getStudentId())
-                        .setSubscriptionWindowSkuId(item.getWindowSkuId())); // true 的原因，下单一定选中
+                        .setSubscriptionStudentId(subscriptionStudentId)
+                        .setSubscriptionWindowSkuId(subscriptionWindowSkuId)); // true 的原因，下单一定选中
                 continue;
             }
             // 情况二：cartId
-            CartDO cart = cartMap.get(item.getCartId());
             if (cart == null) {
                 continue;
             }
@@ -253,6 +262,26 @@ public interface TradeOrderConvert {
             respVO.getAddress().setAreaName(AreaUtils.format(address.getAreaId()));
         }
         return respVO;
+    }
+
+    default List<AppTradeOrderDeliveryRespVO> convertAppDeliveryList(List<TradeOrderDeliveryDO> deliveries) {
+        return CollectionUtils.convertList(deliveries, delivery -> {
+            AppTradeOrderDeliveryRespVO respVO = convert04(delivery);
+            if (delivery.getReceiverAreaId() != null) {
+                respVO.setReceiverAreaName(AreaUtils.format(delivery.getReceiverAreaId()));
+            }
+            return respVO;
+        });
+    }
+
+    default List<TradeOrderDeliveryRespVO> convertAdminDeliveryList(List<TradeOrderDeliveryDO> deliveries) {
+        return CollectionUtils.convertList(deliveries, delivery -> {
+            TradeOrderDeliveryRespVO respVO = convert05(delivery);
+            if (delivery.getReceiverAreaId() != null) {
+                respVO.setReceiverAreaName(AreaUtils.format(delivery.getReceiverAreaId()));
+            }
+            return respVO;
+        });
     }
 
     AppTradeOrderSettlementRespVO convert0(TradePriceCalculateRespBO calculate, MemberAddressRespDTO address);

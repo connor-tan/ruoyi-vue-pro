@@ -41,6 +41,10 @@ public class TradeOrderItemDO extends BaseDO {
      */
     private Long orderId;
     /**
+     * 配送单编号
+     */
+    private Long deliveryId;
+    /**
      * 购物车项编号
      *
      * 关联 {@link CartDO#getId()}
@@ -180,13 +184,33 @@ public class TradeOrderItemDO extends BaseDO {
      */
     private Long subscriptionStudentId;
     /**
+     * 订刊学生名称快照
+     */
+    private String subscriptionStudentNameSnapshot;
+    /**
      * 订刊学校编号
      */
     private Long subscriptionSchoolId;
     /**
+     * 订刊学校名称快照
+     */
+    private String subscriptionSchoolNameSnapshot;
+    /**
+     * 订刊班级编号
+     */
+    private Long subscriptionClassId;
+    /**
+     * 订刊班级名称快照
+     */
+    private String subscriptionClassNameSnapshot;
+    /**
      * 订刊解析年级编号
      */
     private Long subscriptionGradeCatalogId;
+    /**
+     * 订刊解析年级名称快照
+     */
+    private String subscriptionGradeNameSnapshot;
     /**
      * 订刊窗口编号
      */

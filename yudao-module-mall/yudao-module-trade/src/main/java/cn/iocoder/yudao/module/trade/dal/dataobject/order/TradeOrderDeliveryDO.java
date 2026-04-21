@@ -1,0 +1,116 @@
+package cn.iocoder.yudao.module.trade.dal.dataobject.order;
+
+import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
+import com.baomidou.mybatisplus.annotation.KeySequence;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+import java.time.LocalDateTime;
+
+/**
+ * 交易订单配送单 DO
+ */
+@TableName("trade_order_delivery")
+@KeySequence("trade_order_delivery_seq")
+@Data
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
+public class TradeOrderDeliveryDO extends BaseDO {
+
+    /**
+     * 配送单编号
+     */
+    private Long id;
+    /**
+     * 订单编号
+     */
+    private Long orderId;
+    /**
+     * 配送方式
+     *
+     * 枚举 {@link DeliveryTypeEnum}
+     */
+    private Integer deliveryType;
+    /**
+     * 配送状态
+     *
+     * 枚举 {@link TradeOrderStatusEnum}
+     */
+    private Integer status;
+    /**
+     * 商品数量
+     */
+    private Integer productCount;
+    /**
+     * 配送单实付金额
+     */
+    private Integer payPrice;
+    /**
+     * 配送单运费
+     */
+    private Integer deliveryPrice;
+    /**
+     * 物流公司编号
+     */
+    private Long logisticsId;
+    /**
+     * 物流单号
+     */
+    private String logisticsNo;
+    /**
+     * 发货时间
+     */
+    private LocalDateTime deliveryTime;
+    /**
+     * 收货时间
+     */
+    private LocalDateTime receiveTime;
+    /**
+     * 收件人名称
+     */
+    private String receiverName;
+    /**
+     * 收件人手机
+     */
+    private String receiverMobile;
+    /**
+     * 收件地区编号
+     */
+    private Integer receiverAreaId;
+    /**
+     * 收件详细地址
+     */
+    private String receiverDetailAddress;
+    /**
+     * 学校编号
+     */
+    private Long schoolId;
+    /**
+     * 学校名称快照
+     */
+    private String schoolNameSnapshot;
+    /**
+     * 站点编号
+     */
+    private Long stationId;
+    /**
+     * 站点名称快照
+     */
+    private String stationNameSnapshot;
+    /**
+     * 站点地址快照
+     */
+    private String stationAddressSnapshot;
+    /**
+     * 联系人
+     */
+    private String contactName;
+    /**
+     * 联系电话
+     */
+    private String contactMobile;
+}

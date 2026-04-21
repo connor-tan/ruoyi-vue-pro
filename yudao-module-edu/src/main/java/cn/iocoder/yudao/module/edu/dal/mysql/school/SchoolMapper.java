@@ -18,20 +18,32 @@ import java.util.List;
 public interface SchoolMapper extends BaseMapperX<SchoolDO> {
 
     default PageResult<SchoolDO> selectPage(SchoolPageReqVO reqVO, List<Long> areaIds, List<Long> stageSchoolIds) {
-        return selectPage(reqVO, new LambdaQueryWrapperX<SchoolDO>()
+        LambdaQueryWrapperX<SchoolDO> queryWrapper = new LambdaQueryWrapperX<SchoolDO>()
                 .likeIfPresent(SchoolDO::getSchoolName, reqVO.getSchoolName())
                 .inIfPresent(SchoolDO::getAreaId, areaIds)
                 .inIfPresent(SchoolDO::getId, stageSchoolIds)
+                .eqIfPresent(SchoolDO::getStationId, reqVO.getStationId())
                 .likeIfPresent(SchoolDO::getSchoolAddress, reqVO.getSchoolAddress())
                 .likeIfPresent(SchoolDO::getCode, reqVO.getCode())
                 .betweenIfPresent(SchoolDO::getCreateTime, reqVO.getCreateTime())
-                .orderByDesc(SchoolDO::getId));
+                .orderByDesc(SchoolDO::getId);
+        if (Boolean.TRUE.equals(reqVO.getStationBound())) {
+            queryWrapper.isNotNull(SchoolDO::getStationId);
+        } else if (Boolean.FALSE.equals(reqVO.getStationBound())) {
+            queryWrapper.isNull(SchoolDO::getStationId);
+        }
+        return selectPage(reqVO, queryWrapper);
     }
 
     default List<SchoolDO> selectListByAreaIds(List<Long> areaIds) {
         return selectList(new LambdaQueryWrapperX<SchoolDO>()
                 .inIfPresent(SchoolDO::getAreaId, areaIds)
                 .orderByAsc(SchoolDO::getId));
+    }
+
+    default long countByStationId(Long stationId) {
+        return selectCount(new LambdaQueryWrapperX<SchoolDO>()
+                .eq(SchoolDO::getStationId, stationId));
     }
 
 }

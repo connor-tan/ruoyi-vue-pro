@@ -13,7 +13,9 @@ import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderSummary
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderPageReqVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
+import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderDeliveryMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderItemMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderMapper;
 import cn.iocoder.yudao.module.trade.dal.redis.RedisKeyConstants;
@@ -48,6 +50,8 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
 
     @Resource
     private TradeOrderMapper tradeOrderMapper;
+    @Resource
+    private TradeOrderDeliveryMapper tradeOrderDeliveryMapper;
     @Resource
     private TradeOrderItemMapper tradeOrderItemMapper;
 
@@ -246,6 +250,14 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
             return Collections.emptyList();
         }
         return tradeOrderItemMapper.selectListByOrderId(orderIds);
+    }
+
+    @Override
+    public List<TradeOrderDeliveryDO> getOrderDeliveryListByOrderId(Collection<Long> orderIds) {
+        if (CollUtil.isEmpty(orderIds)) {
+            return Collections.emptyList();
+        }
+        return tradeOrderDeliveryMapper.selectListByOrderId(orderIds);
     }
 
     /**

@@ -57,8 +57,8 @@ public interface TradeOrderItemMapper extends BaseMapperX<TradeOrderItemDO> {
     @Select("""
             SELECT COALESCE(SUM(oi.count), 0)
             FROM trade_order_item oi
-            INNER JOIN trade_order o ON o.id = oi.order_id AND o.deleted = b'0'
-            WHERE oi.deleted = b'0'
+            INNER JOIN trade_order o ON o.id = oi.order_id AND o.deleted = false
+            WHERE oi.deleted = false
               AND oi.subscription_student_id = #{studentId}
               AND oi.subscription_window_sku_id = #{windowSkuId}
               AND o.status <> #{canceledStatus}

@@ -25,6 +25,11 @@ public interface ErrorCodeConstants {
     ErrorCode SCHOOL_STAGE_IN_USE = new ErrorCode(1_016_001_019, "学校已有 {} 年级定义，不能移除对应办学学段");
     ErrorCode SCHOOL_GRADE_STAGE_NOT_ALLOWED = new ErrorCode(1_016_001_020, "学校办学学段不包含 {}，不能添加 {}");
     ErrorCode SCHOOL_STAGE_NOT_CONFIGURED = new ErrorCode(1_016_001_021, "请先维护学校办学学段，再添加学校年级");
+    ErrorCode STATION_NOT_EXISTS = new ErrorCode(1_016_001_022, "站点不存在");
+    ErrorCode STATION_NAME_DUPLICATE = new ErrorCode(1_016_001_023, "同一区域下站点名称已存在");
+    ErrorCode STATION_DISABLED = new ErrorCode(1_016_001_024, "站点已停用，不能绑定到学校");
+    ErrorCode SCHOOL_STATION_AREA_NOT_MATCHED = new ErrorCode(1_016_001_025, "学校区域与站点区域不一致，不能绑定");
+    ErrorCode STATION_IN_USE_BY_SCHOOL = new ErrorCode(1_016_001_026, "站点已绑定学校，无法执行当前操作");
 
     ErrorCode STUDENT_NOT_EXISTS = new ErrorCode(1_017_001_001, "学生不存在");
     ErrorCode STUDENT_PARENT_NOT_EXISTS = new ErrorCode(1_017_001_002, "家长会员不存在");

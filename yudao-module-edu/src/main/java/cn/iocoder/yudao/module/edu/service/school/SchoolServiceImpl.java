@@ -32,8 +32,10 @@ import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolStageMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.service.station.StationService;
 import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -87,11 +89,14 @@ public class SchoolServiceImpl implements SchoolService {
     private StudentClassMapper studentClassMapper;
     @Resource
     private AreaApi areaApi;
+    @Resource
+    private StationService stationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createSchool(SchoolSaveReqVO createReqVO) {
         validateAreaSelectable(createReqVO.getAreaId());
+        stationService.validateStationBindable(createReqVO.getStationId(), createReqVO.getAreaId());
         List<String> stageCodes = normalizeStageCodes(createReqVO.getStageCodes());
         // 插入
         SchoolDO school = BeanUtils.toBean(createReqVO, SchoolDO.class);
@@ -112,6 +117,7 @@ public class SchoolServiceImpl implements SchoolService {
         if (!Objects.equals(school.getAreaId(), updateReqVO.getAreaId())) {
             validateAreaSelectable(updateReqVO.getAreaId());
         }
+        stationService.validateStationBindable(updateReqVO.getStationId(), updateReqVO.getAreaId());
         // 更新
         SchoolDO updateObj = BeanUtils.toBean(updateReqVO, SchoolDO.class);
         schoolMapper.updateById(updateObj);
@@ -172,6 +178,7 @@ public class SchoolServiceImpl implements SchoolService {
     public SchoolDO getSchool(Long id) {
         SchoolDO school = schoolMapper.selectById(id);
         fillSchoolStages(school);
+        fillSchoolStations(school);
         return school;
     }
 
@@ -186,6 +193,7 @@ public class SchoolServiceImpl implements SchoolService {
         }
         PageResult<SchoolDO> pageResult = schoolMapper.selectPage(pageReqVO, areaIds, stageSchoolIds);
         fillSchoolStages(pageResult.getList());
+        fillSchoolStations(pageResult.getList());
         return pageResult;
     }
 
@@ -194,6 +202,7 @@ public class SchoolServiceImpl implements SchoolService {
         List<SchoolDO> schools = schoolMapper.selectList(new LambdaQueryWrapperX<SchoolDO>()
                 .orderByAsc(SchoolDO::getId));
         fillSchoolStages(schools);
+        fillSchoolStations(schools);
         return schools.stream()
                 .map(this::buildSchoolSimpleResp)
                 .collect(Collectors.toList());
@@ -619,6 +628,25 @@ public class SchoolServiceImpl implements SchoolService {
         schools.forEach(school -> school.setStageCodes(stageCodeMap.getOrDefault(school.getId(), Collections.emptyList())));
     }
 
+    private void fillSchoolStations(SchoolDO school) {
+        if (school == null) {
+            return;
+        }
+        fillSchoolStations(List.of(school));
+    }
+
+    private void fillSchoolStations(List<SchoolDO> schools) {
+        if (CollUtil.isEmpty(schools)) {
+            return;
+        }
+        Map<Long, StationDO> stationMap = stationService.getStationMap(
+                schools.stream().map(SchoolDO::getStationId).filter(Objects::nonNull).toList());
+        schools.forEach(school -> {
+            StationDO station = stationMap.get(school.getStationId());
+            school.setStationName(station == null ? null : station.getStationName());
+        });
+    }
+
     private String buildStageNames(Collection<String> stageCodes) {
         return stageCodes.stream().map(this::getStageName).collect(Collectors.joining("、"));
     }
@@ -672,6 +700,8 @@ public class SchoolServiceImpl implements SchoolService {
         SchoolSimpleRespVO respVO = new SchoolSimpleRespVO();
         respVO.setId(school.getId());
         respVO.setSchoolName(school.getSchoolName());
+        respVO.setStationId(school.getStationId());
+        respVO.setStationName(school.getStationName());
         respVO.setStageCodes(school.getStageCodes());
         return respVO;
     }

@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolStageDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
@@ -15,6 +16,7 @@ import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolStageMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.service.station.StationService;
 import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +50,7 @@ class SchoolServiceImplTest {
     private StudentMapper studentMapper;
     private StudentClassMapper studentClassMapper;
     private AreaApi areaApi;
+    private StationService stationService;
 
     @BeforeEach
     void setUp() {
@@ -61,6 +64,7 @@ class SchoolServiceImplTest {
         studentMapper = mock(StudentMapper.class);
         studentClassMapper = mock(StudentClassMapper.class);
         areaApi = mock(AreaApi.class);
+        stationService = mock(StationService.class);
         ReflectionTestUtils.setField(service, "schoolMapper", schoolMapper);
         ReflectionTestUtils.setField(service, "schoolStageMapper", schoolStageMapper);
         ReflectionTestUtils.setField(service, "gradeCatalogMapper", gradeCatalogMapper);
@@ -70,13 +74,15 @@ class SchoolServiceImplTest {
         ReflectionTestUtils.setField(service, "studentMapper", studentMapper);
         ReflectionTestUtils.setField(service, "studentClassMapper", studentClassMapper);
         ReflectionTestUtils.setField(service, "areaApi", areaApi);
+        ReflectionTestUtils.setField(service, "stationService", stationService);
     }
 
     @Test
-    void createSchoolShouldSaveDistinctStages() {
+    void createSchoolShouldSaveDistinctStagesAndStation() {
         when(gradeCatalogMapper.selectListByStatus(0)).thenReturn(List.of(
                 gradeCatalog(4L, "primary", "P1", "一年级"),
                 gradeCatalog(10L, "middle", "M1", "初一")));
+        when(stationService.validateStationBindable(9L, 1L)).thenReturn(station(9L, 1L, 0));
         doAnswer(invocation -> {
             SchoolDO school = invocation.getArgument(0);
             school.setId(1L);
@@ -86,11 +92,15 @@ class SchoolServiceImplTest {
         reqVO.setSchoolName("测试九年一贯制学校");
         reqVO.setAreaId(1L);
         reqVO.setSchoolAddress("测试地址");
+        reqVO.setStationId(9L);
         reqVO.setStageCodes(List.of("primary", "middle", "primary"));
 
         Long schoolId = service.createSchool(reqVO);
 
         assertEquals(1L, schoolId);
+        ArgumentCaptor<SchoolDO> schoolCaptor = ArgumentCaptor.forClass(SchoolDO.class);
+        verify(schoolMapper).insert(schoolCaptor.capture());
+        assertEquals(9L, schoolCaptor.getValue().getStationId());
         ArgumentCaptor<Collection<SchoolStageDO>> captor = ArgumentCaptor.forClass(Collection.class);
         verify(schoolStageMapper).insertBatch(captor.capture());
         List<String> stages = captor.getValue().stream().map(SchoolStageDO::getStage).toList();
@@ -125,6 +135,7 @@ class SchoolServiceImplTest {
         reqVO.setSchoolName("测试小学");
         reqVO.setAreaId(1L);
         reqVO.setSchoolAddress("测试地址");
+        reqVO.setStationId(9L);
         reqVO.setStageCodes(List.of("primary"));
 
         ServiceException exception = assertThrows(ServiceException.class, () -> service.updateSchool(reqVO));
@@ -137,6 +148,15 @@ class SchoolServiceImplTest {
         school.setId(id);
         school.setAreaId(1L);
         return school;
+    }
+
+    private StationDO station(Long id, Long areaId, Integer status) {
+        StationDO station = new StationDO();
+        station.setId(id);
+        station.setAreaId(areaId);
+        station.setStatus(status);
+        station.setStationName("测试站点");
+        return station;
     }
 
     private SchoolStageDO schoolStage(Long schoolId, String stage) {
