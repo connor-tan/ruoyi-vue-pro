@@ -11,6 +11,8 @@ public class SubscriptionWindowSimpleRespVO {
 
     private String name;
 
+    private Long targetYearCatalogId;
+
     private Integer targetYearStart;
 
     private Integer targetYearEnd;

@@ -39,6 +39,12 @@ public interface SchoolYearMapper extends BaseMapperX<SchoolYearDO> {
                 .eq(SchoolYearDO::getYearStart, yearStart));
     }
 
+    default SchoolYearDO selectBySchoolIdAndYearCatalogId(Long schoolId, Long yearCatalogId) {
+        return selectOne(new LambdaQueryWrapperX<SchoolYearDO>()
+                .eq(SchoolYearDO::getSchoolId, schoolId)
+                .eq(SchoolYearDO::getYearCatalogId, yearCatalogId));
+    }
+
     default List<SchoolYearDO> selectListBySchoolIdsAndYearStarts(Collection<Long> schoolIds,
                                                                   Collection<Integer> yearStarts) {
         if (CollUtil.isEmpty(schoolIds) || CollUtil.isEmpty(yearStarts)) {
@@ -47,6 +53,21 @@ public interface SchoolYearMapper extends BaseMapperX<SchoolYearDO> {
         return selectList(new LambdaQueryWrapperX<SchoolYearDO>()
                 .in(SchoolYearDO::getSchoolId, schoolIds)
                 .in(SchoolYearDO::getYearStart, yearStarts));
+    }
+
+    default List<SchoolYearDO> selectListBySchoolIdsAndYearCatalogIds(Collection<Long> schoolIds,
+                                                                      Collection<Long> yearCatalogIds) {
+        if (CollUtil.isEmpty(schoolIds) || CollUtil.isEmpty(yearCatalogIds)) {
+            return Collections.emptyList();
+        }
+        return selectList(new LambdaQueryWrapperX<SchoolYearDO>()
+                .in(SchoolYearDO::getSchoolId, schoolIds)
+                .in(SchoolYearDO::getYearCatalogId, yearCatalogIds));
+    }
+
+    default long countByYearCatalogId(Long yearCatalogId) {
+        return selectCount(new LambdaQueryWrapperX<SchoolYearDO>()
+                .eq(SchoolYearDO::getYearCatalogId, yearCatalogId));
     }
 
     default int deleteBySchoolId(Long schoolId) {

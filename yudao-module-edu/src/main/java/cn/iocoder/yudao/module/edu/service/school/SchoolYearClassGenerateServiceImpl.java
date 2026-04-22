@@ -7,11 +7,13 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateReqBO;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateRespBO;
 import com.baomidou.dynamic.datasource.annotation.Master;
@@ -55,6 +57,8 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
     @Resource
     private SchoolYearMapper schoolYearMapper;
     @Resource
+    private YearCatalogMapper yearCatalogMapper;
+    @Resource
     private SchoolClassMapper schoolClassMapper;
     @Resource
     private SchoolGradeMapper schoolGradeMapper;
@@ -86,6 +90,7 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
                 .collect(Collectors.groupingBy(SchoolYearDO::getSchoolId, LinkedHashMap::new,
                         Collectors.toMap(SchoolYearDO::getYearStart, Function.identity(), (item1, item2) -> item1,
                                 LinkedHashMap::new)));
+        YearCatalogDO targetYearCatalog = getOrCreateYearCatalog(request);
 
         Map<Long, SchoolYearDO> sourceYearMap = new LinkedHashMap<>();
         Map<Long, SchoolYearDO> targetYearMap = new LinkedHashMap<>();
@@ -103,7 +108,7 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
             sourceYearMap.put(school.getId(), sourceYear);
             SchoolYearDO targetYear = yearMap.get(request.targetYearStart);
             if (targetYear == null) {
-                targetYear = buildTargetYear(school.getId(), sourceYear, request);
+                targetYear = buildTargetYear(school.getId(), sourceYear, targetYearCatalog, request);
                 respBO.setCreatedYearCount(respBO.getCreatedYearCount() + 1);
                 if (request.dryRun) {
                     targetYear.setId(buildDryRunYearId(school.getId(), request.targetYearStart));
@@ -260,15 +265,34 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
         return schoolGrade != null && firstGradeCatalogIds.contains(schoolGrade.getGradeCatalogId());
     }
 
-    private SchoolYearDO buildTargetYear(Long schoolId, SchoolYearDO sourceYear,
+    private SchoolYearDO buildTargetYear(Long schoolId, SchoolYearDO sourceYear, YearCatalogDO targetYearCatalog,
                                          SchoolYearClassGenerateRequest request) {
         return SchoolYearDO.builder()
                 .schoolId(schoolId)
+                .yearCatalogId(targetYearCatalog.getId())
                 .yearStart(request.targetYearStart)
                 .yearEnd(request.targetYearEnd)
                 .startDate(sourceYear.getStartDate().plusYears(1))
                 .endDate(sourceYear.getEndDate().plusYears(1))
                 .build();
+    }
+
+    private YearCatalogDO getOrCreateYearCatalog(SchoolYearClassGenerateRequest request) {
+        YearCatalogDO yearCatalog = yearCatalogMapper.selectByYearRange(request.targetYearStart, request.targetYearEnd);
+        if (yearCatalog != null) {
+            return yearCatalog;
+        }
+        yearCatalog = YearCatalogDO.builder()
+                .yearStart(request.targetYearStart)
+                .yearEnd(request.targetYearEnd)
+                .build();
+        if (request.dryRun) {
+            yearCatalog.setId(buildDryRunYearCatalogId(request.targetYearStart, request.targetYearEnd));
+            return yearCatalog;
+        }
+        yearCatalog.clean();
+        yearCatalogMapper.insert(yearCatalog);
+        return yearCatalog;
     }
 
     private SchoolYearClassGenerateRequest normalizeRequest(SchoolYearClassGenerateReqBO reqBO) {
@@ -315,6 +339,10 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
 
     private Long buildDryRunYearId(Long schoolId, Integer targetYearStart) {
         return -1L * (schoolId * 10000 + targetYearStart);
+    }
+
+    private Long buildDryRunYearCatalogId(Integer targetYearStart, Integer targetYearEnd) {
+        return -1L * (targetYearStart * 10000L + targetYearEnd);
     }
 
     private record SchoolYearClassGenerateRequest(Integer sourceYearStart, Integer sourceYearEnd,

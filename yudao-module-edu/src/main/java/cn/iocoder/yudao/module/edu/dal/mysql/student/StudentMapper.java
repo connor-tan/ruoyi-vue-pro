@@ -86,6 +86,12 @@ public interface StudentMapper extends BaseMapperX<StudentDO> {
                 .orderByAsc(StudentDO::getId));
     }
 
+    default List<StudentDO> selectListByBelongTo(Long belongTo) {
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .eq(StudentDO::getBelongTo, belongTo)
+                .orderByAsc(StudentDO::getId));
+    }
+
     default List<StudentDO> selectListByIdGreaterThan(Long lastId, Integer limit) {
         if (limit == null || limit <= 0) {
             return List.of();
@@ -104,6 +110,21 @@ public interface StudentMapper extends BaseMapperX<StudentDO> {
             ORDER BY current_school_id ASC
             """)
     List<Long> selectDistinctCurrentSchoolIds();
+
+    @Select({
+            "<script>",
+            "SELECT DISTINCT current_school_id",
+            "FROM edu_student",
+            "WHERE deleted = b'0'",
+            "  AND current_school_id IS NOT NULL",
+            "  AND status IN",
+            "  <foreach collection='statuses' item='status' open='(' separator=',' close=')'>",
+            "    #{status}",
+            "  </foreach>",
+            "ORDER BY current_school_id ASC",
+            "</script>"
+    })
+    List<Long> selectDistinctCurrentSchoolIdsByStatuses(@Param("statuses") Collection<Integer> statuses);
 
     @Update("UPDATE edu_student SET status = #{status}, update_time = NOW() WHERE id = #{id} AND deleted = b'0'")
     int updateStatusById(@Param("id") Long id, @Param("status") Integer status);

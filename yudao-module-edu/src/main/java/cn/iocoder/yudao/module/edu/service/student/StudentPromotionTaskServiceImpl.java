@@ -32,6 +32,7 @@ import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.Student
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentFlowDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentPromotionBatchDO;
@@ -40,6 +41,7 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentFlowMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionTaskMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionBatchMapper;
@@ -137,15 +139,14 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     @Resource
     private SchoolYearMapper schoolYearMapper;
     @Resource
+    private YearCatalogMapper yearCatalogMapper;
+    @Resource
     private AreaApi areaApi;
 
     @Override
     public List<StudentPromotionYearOptionRespVO> getPromotionYearOptions() {
-        return schoolYearMapper.selectList().stream()
-                .collect(Collectors.toMap(SchoolYearDO::getYearStart, Function.identity(), (item1, item2) -> item1,
-                        LinkedHashMap::new))
-                .values().stream()
-                .sorted(Comparator.comparing(SchoolYearDO::getYearStart).reversed())
+        return yearCatalogMapper.selectAllList().stream()
+                .sorted(Comparator.comparing(YearCatalogDO::getYearStart).reversed())
                 .map(this::buildYearOptionResp)
                 .collect(Collectors.toList());
     }
@@ -560,11 +561,12 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
         return items;
     }
 
-    private StudentPromotionYearOptionRespVO buildYearOptionResp(SchoolYearDO schoolYear) {
+    private StudentPromotionYearOptionRespVO buildYearOptionResp(YearCatalogDO yearCatalog) {
         StudentPromotionYearOptionRespVO respVO = new StudentPromotionYearOptionRespVO();
-        respVO.setYearStart(schoolYear.getYearStart());
-        respVO.setYearEnd(schoolYear.getYearEnd());
-        respVO.setName(schoolYear.getYearStart() + "-" + schoolYear.getYearEnd() + "学年");
+        respVO.setId(yearCatalog.getId());
+        respVO.setYearStart(yearCatalog.getYearStart());
+        respVO.setYearEnd(yearCatalog.getYearEnd());
+        respVO.setName(yearCatalog.getYearStart() + "-" + yearCatalog.getYearEnd() + "学年");
         return respVO;
     }
 

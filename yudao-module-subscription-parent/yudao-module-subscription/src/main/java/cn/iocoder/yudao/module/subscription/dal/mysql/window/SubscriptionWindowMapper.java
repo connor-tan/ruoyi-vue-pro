@@ -16,6 +16,7 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
     default PageResult<SubscriptionWindowDO> selectPage(SubscriptionWindowPageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<SubscriptionWindowDO>()
                 .likeIfPresent(SubscriptionWindowDO::getName, reqVO.getName())
+                .eqIfPresent(SubscriptionWindowDO::getTargetYearCatalogId, reqVO.getTargetYearCatalogId())
                 .eqIfPresent(SubscriptionWindowDO::getTargetYearStart, reqVO.getTargetYearStart())
                 .eqIfPresent(SubscriptionWindowDO::getTargetYearEnd, reqVO.getTargetYearEnd())
                 .eqIfPresent(SubscriptionWindowDO::getTargetPeriod, reqVO.getTargetPeriod())
@@ -56,5 +57,10 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
     default long countByTemplateId(Long templateId) {
         return selectCount(new LambdaQueryWrapperX<SubscriptionWindowDO>()
                 .eq(SubscriptionWindowDO::getTemplateId, templateId));
+    }
+
+    default long countByTargetYearCatalogId(Long targetYearCatalogId) {
+        return selectCount(new LambdaQueryWrapperX<SubscriptionWindowDO>()
+                .eq(SubscriptionWindowDO::getTargetYearCatalogId, targetYearCatalogId));
     }
 }

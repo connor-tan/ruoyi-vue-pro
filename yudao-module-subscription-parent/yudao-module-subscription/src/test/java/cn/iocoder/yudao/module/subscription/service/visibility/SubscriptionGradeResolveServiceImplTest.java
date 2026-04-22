@@ -69,6 +69,32 @@ class SubscriptionGradeResolveServiceImplTest {
         assertEquals(SubscriptionBlockedReasonEnum.NEXT_GRADE_NOT_ENABLED.getReason(), respBO.getBlockedReason());
     }
 
+    @Test
+    void resolveShouldBlockWhenTargetClassFirstSchoolYearMissing() {
+        StudentDO student = StudentDO.builder()
+                .id(1L)
+                .studentName("张三")
+                .currentSchoolId(1L)
+                .status(StudentStatusEnum.PENDING_ADVANCE.getStatus())
+                .build();
+        when(subscriptionSupportService.getStudent(1L)).thenReturn(student);
+        when(studentClassMapper.selectListByStudentIdRangeAndTargetYear(any(), any(), any(), any()))
+                .thenReturn(Collections.emptyList());
+        when(subscriptionSupportService.getSchoolGradeListBySchoolIds(any())).thenReturn(Collections.emptyList());
+        when(subscriptionSupportService.getSchoolMap(any())).thenReturn(Map.of(1L, SchoolDO.builder()
+                .id(1L)
+                .schoolName("测试学校")
+                .build()));
+        when(subscriptionSupportService.getSchoolGradeMap(any())).thenReturn(Collections.emptyMap());
+        when(subscriptionSupportService.getEnabledGradeCatalogList()).thenReturn(Collections.emptyList());
+        when(subscriptionSupportService.hasSchoolYear(1L, 99L)).thenReturn(false);
+
+        SubscriptionGradeResolveRespBO respBO = service.resolve(1L, targetClassFirstWindow());
+
+        assertEquals(SubscriptionBlockedReasonEnum.TARGET_SCHOOL_YEAR_NOT_CONFIGURED.getReason(),
+                respBO.getBlockedReason());
+    }
+
     private void mockCurrentChainData(List<SchoolGradeDO> schoolGrades, SchoolClassDO currentClass,
                                       List<GradeCatalogDO> enabledGradeCatalogs) {
         StudentDO student = StudentDO.builder()
@@ -105,6 +131,16 @@ class SubscriptionGradeResolveServiceImplTest {
         return SubscriptionWindowDO.builder()
                 .gradeResolveMode(SubscriptionGradeResolveModeEnum.CURRENT_CHAIN.getMode())
                 .gradeCalcRule(SubscriptionGradeCalcRuleEnum.PROMOTED_GRADE.getRule())
+                .build();
+    }
+
+    private SubscriptionWindowDO targetClassFirstWindow() {
+        return SubscriptionWindowDO.builder()
+                .gradeResolveMode(SubscriptionGradeResolveModeEnum.TARGET_CLASS_FIRST.getMode())
+                .gradeCalcRule(SubscriptionGradeCalcRuleEnum.CURRENT_GRADE.getRule())
+                .targetYearCatalogId(99L)
+                .targetYearStart(2026)
+                .targetYearEnd(2027)
                 .build();
     }
 

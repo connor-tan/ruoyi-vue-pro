@@ -4,6 +4,7 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationPublisherDO;
@@ -27,11 +28,13 @@ public interface SubscriptionSupportService {
 
     List<SubscriptionSupportStudentSimpleRespVO> getStudentSimpleList(String keyword, Long schoolId);
 
-    void validateWindowYear(Integer targetYearStart, Integer targetYearEnd);
+    YearCatalogDO validateWindowYear(Long targetYearCatalogId);
 
     StudentDO getStudent(Long id);
 
     List<Long> getStudentSchoolIdList();
+
+    List<Long> getStudentSchoolIdListByStatuses(Collection<Integer> statuses);
 
     List<StudentDO> getStudentListBySchoolId(Long schoolId);
 
@@ -58,6 +61,12 @@ public interface SubscriptionSupportService {
     List<GradeCatalogDO> getEnabledGradeCatalogList();
 
     Map<Long, GradeCatalogDO> getGradeCatalogMap(Collection<Long> ids);
+
+    boolean hasSchoolYear(Long schoolId, Long yearCatalogId);
+
+    long countSchoolYearByYearCatalogId(Long yearCatalogId);
+
+    Map<Long, Boolean> getSchoolYearCoverageMap(Collection<Long> schoolIds, Long yearCatalogId);
 
     void validateGradeCatalogIds(Collection<Long> ids);
 

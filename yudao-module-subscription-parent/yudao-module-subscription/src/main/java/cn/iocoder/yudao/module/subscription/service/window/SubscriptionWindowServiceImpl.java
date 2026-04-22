@@ -5,6 +5,9 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
+import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductSkuPublicationDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductSpuGradeDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
@@ -74,13 +77,14 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
     @Master
     public Long createWindow(SubscriptionWindowSaveReqVO createReqVO) {
         validateWindowTime(createReqVO.getStartTime(), createReqVO.getEndTime());
-        validateTargetYear(createReqVO.getTargetYearStart(), createReqVO.getTargetYearEnd());
+        YearCatalogDO targetYearCatalog = validateTargetYear(createReqVO.getTargetYearCatalogId());
         validateEnableConflict(null, createReqVO.getStatus(), createReqVO.getStartTime(), createReqVO.getEndTime());
         if (CommonStatusEnum.isEnable(createReqVO.getStatus())) {
             throw exception(ErrorCodeConstants.WINDOW_ENABLE_PRECHECK_FAILED, "新建窗口需先保存为停用状态，配置刊物和 SKU 后再启用");
         }
         SubscriptionWindowTemplateDO template = subscriptionWindowTemplateService.getEnabledWindowTemplate(createReqVO.getTemplateId());
         SubscriptionWindowDO subscriptionWindow = BeanUtils.toBean(createReqVO, SubscriptionWindowDO.class);
+        applyTargetYearCatalog(subscriptionWindow, targetYearCatalog);
         applyTemplateSnapshot(subscriptionWindow, template);
         subscriptionWindowMapper.insert(subscriptionWindow);
         return subscriptionWindow.getId();
@@ -91,7 +95,7 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
     public void updateWindow(SubscriptionWindowSaveReqVO updateReqVO) {
         SubscriptionWindowDO oldWindow = validateWindowExists(updateReqVO.getId());
         validateWindowTime(updateReqVO.getStartTime(), updateReqVO.getEndTime());
-        validateTargetYear(updateReqVO.getTargetYearStart(), updateReqVO.getTargetYearEnd());
+        YearCatalogDO targetYearCatalog = validateTargetYear(updateReqVO.getTargetYearCatalogId());
         validateEnableConflict(oldWindow.getId(), updateReqVO.getStatus(), updateReqVO.getStartTime(), updateReqVO.getEndTime());
         if (!CommonStatusEnum.isEnable(oldWindow.getStatus()) && CommonStatusEnum.isEnable(updateReqVO.getStatus())) {
             validateEnablePrecheck(oldWindow.getId(), updateReqVO.getStatus(), false);
@@ -102,6 +106,7 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
             throw exception(ErrorCodeConstants.WINDOW_TEMPLATE_SWITCH_LOCKED);
         }
         SubscriptionWindowDO updateObj = BeanUtils.toBean(updateReqVO, SubscriptionWindowDO.class);
+        applyTargetYearCatalog(updateObj, targetYearCatalog);
         updateObj.setTemplateId(nextTemplateId);
         if (templateChanged) {
             SubscriptionWindowTemplateDO template = subscriptionWindowTemplateService.getEnabledWindowTemplate(nextTemplateId);
@@ -183,8 +188,8 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         }
     }
 
-    private void validateTargetYear(Integer targetYearStart, Integer targetYearEnd) {
-        subscriptionSupportService.validateWindowYear(targetYearStart, targetYearEnd);
+    private YearCatalogDO validateTargetYear(Long targetYearCatalogId) {
+        return subscriptionSupportService.validateWindowYear(targetYearCatalogId);
     }
 
     private void validateEnableConflict(Long currentId, Integer status, LocalDateTime startTime, LocalDateTime endTime) {
@@ -213,6 +218,7 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         SubscriptionWindowDO window = validateWindowExists(windowId);
         List<String> blockers = new ArrayList<>();
         Set<String> warnings = new LinkedHashSet<>();
+        appendTargetYearCoverageDiagnostics(window, blockers, warnings);
         List<SubscriptionWindowSpuDO> windowSpus = subscriptionWindowSpuMapper.selectListByWindowId(windowId);
         if (windowSpus.isEmpty()) {
             blockers.add("订刊窗口未配置刊物");
@@ -318,12 +324,55 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         return respVO;
     }
 
+    private void appendTargetYearCoverageDiagnostics(SubscriptionWindowDO window, List<String> blockers,
+                                                     Set<String> warnings) {
+        if (!Objects.equals(window.getGradeResolveMode(), SubscriptionGradeResolveModeEnum.TARGET_CLASS_FIRST.getMode())) {
+            return;
+        }
+        if (subscriptionSupportService.countSchoolYearByYearCatalogId(window.getTargetYearCatalogId()) <= 0) {
+            blockers.add("目标学年尚未被任何学校配置学校学年，未来班级规则无法启用");
+            return;
+        }
+        List<Long> schoolIds = subscriptionSupportService.getStudentSchoolIdListByStatuses(List.of(
+                StudentStatusEnum.READING.getStatus(), StudentStatusEnum.PENDING_ADVANCE.getStatus()));
+        if (schoolIds.isEmpty()) {
+            return;
+        }
+        Map<Long, Boolean> coverageMap = subscriptionSupportService
+                .getSchoolYearCoverageMap(schoolIds, window.getTargetYearCatalogId());
+        List<Long> missingSchoolIds = schoolIds.stream()
+                .filter(schoolId -> !Boolean.TRUE.equals(coverageMap.get(schoolId)))
+                .distinct()
+                .toList();
+        if (missingSchoolIds.isEmpty()) {
+            return;
+        }
+        Map<Long, SchoolDO> schoolMap = subscriptionSupportService.getSchoolMap(missingSchoolIds);
+        String schoolNames = missingSchoolIds.stream()
+                .map(schoolId -> {
+                    SchoolDO school = schoolMap.get(schoolId);
+                    return school == null ? "学校#" + schoolId : school.getSchoolName();
+                })
+                .limit(10)
+                .collect(Collectors.joining("、"));
+        if (missingSchoolIds.size() > 10) {
+            schoolNames = schoolNames + " 等";
+        }
+        warnings.add("以下学校未配置目标学年，相关学生预售时会被阻断：" + schoolNames);
+    }
+
     private void applyTemplateSnapshot(SubscriptionWindowDO window, SubscriptionWindowTemplateDO template) {
         window.setTemplateId(template.getId());
         window.setTemplateNameSnapshot(template.getName());
         window.setTargetPeriod(template.getTargetPeriod());
         window.setGradeCalcRule(normalizeGradeCalcRule(template.getGradeCalcRule()));
         window.setGradeResolveMode(normalizeGradeResolveMode(template.getGradeResolveMode()));
+    }
+
+    private void applyTargetYearCatalog(SubscriptionWindowDO window, YearCatalogDO targetYearCatalog) {
+        window.setTargetYearCatalogId(targetYearCatalog.getId());
+        window.setTargetYearStart(targetYearCatalog.getYearStart());
+        window.setTargetYearEnd(targetYearCatalog.getYearEnd());
     }
 
     private boolean hasWindowConfig(Long windowId) {

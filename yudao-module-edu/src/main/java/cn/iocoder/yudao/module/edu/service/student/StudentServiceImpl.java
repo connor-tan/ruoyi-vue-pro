@@ -4,16 +4,21 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassSaveReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentPageReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentSaveReqVO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentFlowMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
@@ -78,6 +83,10 @@ public class StudentServiceImpl implements StudentService {
     @Resource
     private SchoolClassMapper schoolClassMapper;
     @Resource
+    private SchoolGradeMapper schoolGradeMapper;
+    @Resource
+    private GradeCatalogMapper gradeCatalogMapper;
+    @Resource
     private MemberUserApi memberUserApi;
 
     @Override
@@ -139,6 +148,35 @@ public class StudentServiceImpl implements StudentService {
             return new PageResult<>(Collections.emptyList(), pageResult.getTotal());
         }
         return new PageResult<>(buildStudentRespList(pageResult.getList()), pageResult.getTotal());
+    }
+
+    @Override
+    public List<AppStudentSimpleRespVO> getAppStudentSimpleList(Long belongTo) {
+        List<StudentDO> students = studentMapper.selectListByBelongTo(belongTo);
+        if (CollUtil.isEmpty(students)) {
+            return Collections.emptyList();
+        }
+        Map<Long, SchoolDO> schoolMap = schoolMapper.selectList(SchoolDO::getId,
+                        convertSet(students, StudentDO::getCurrentSchoolId))
+                .stream()
+                .collect(Collectors.toMap(SchoolDO::getId, Function.identity(), (item1, item2) -> item1));
+        Map<Long, List<StudentClassDO>> currentStudentClassMap = studentClassMapper.selectCurrentListByStudentIds(
+                        convertSet(students, StudentDO::getId))
+                .stream()
+                .collect(Collectors.groupingBy(StudentClassDO::getStudentId));
+        Map<Long, SchoolClassDO> schoolClassMap = getSchoolClassMap(convertSet(currentStudentClassMap.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList()), StudentClassDO::getClassId));
+        Map<Long, SchoolGradeDO> schoolGradeMap = schoolGradeMapper.selectList(SchoolGradeDO::getId,
+                        convertSet(schoolClassMap.values(), SchoolClassDO::getSchoolGradeId))
+                .stream()
+                .collect(Collectors.toMap(SchoolGradeDO::getId, Function.identity(), (item1, item2) -> item1));
+        Map<Long, GradeCatalogDO> gradeCatalogMap = gradeCatalogMapper.selectList(GradeCatalogDO::getId,
+                        convertSet(schoolGradeMap.values(), SchoolGradeDO::getGradeCatalogId))
+                .stream()
+                .collect(Collectors.toMap(GradeCatalogDO::getId, Function.identity(), (item1, item2) -> item1));
+        return students.stream().map(student -> buildAppStudentSimpleResp(student, schoolMap, currentStudentClassMap,
+                schoolClassMap, schoolGradeMap, gradeCatalogMap)).toList();
     }
 
     @Override
@@ -289,6 +327,37 @@ public class StudentServiceImpl implements StudentService {
         if (school != null) {
             respVO.setCurrentSchoolName(school.getSchoolName());
         }
+        return respVO;
+    }
+
+    private AppStudentSimpleRespVO buildAppStudentSimpleResp(StudentDO student,
+                                                             Map<Long, SchoolDO> schoolMap,
+                                                             Map<Long, List<StudentClassDO>> currentStudentClassMap,
+                                                             Map<Long, SchoolClassDO> schoolClassMap,
+                                                             Map<Long, SchoolGradeDO> schoolGradeMap,
+                                                             Map<Long, GradeCatalogDO> gradeCatalogMap) {
+        AppStudentSimpleRespVO respVO = new AppStudentSimpleRespVO();
+        respVO.setId(student.getId());
+        respVO.setStudentName(student.getStudentName());
+        respVO.setCurrentSchoolId(student.getCurrentSchoolId());
+        respVO.setStatus(student.getStatus());
+        SchoolDO school = schoolMap.get(student.getCurrentSchoolId());
+        respVO.setCurrentSchoolName(school == null ? null : school.getSchoolName());
+        List<StudentClassDO> currentStudentClasses = currentStudentClassMap.get(student.getId());
+        if (CollUtil.size(currentStudentClasses) != 1) {
+            return respVO;
+        }
+        SchoolClassDO schoolClass = schoolClassMap.get(currentStudentClasses.get(0).getClassId());
+        if (schoolClass == null) {
+            return respVO;
+        }
+        respVO.setClassName(schoolClass.getClassName());
+        SchoolGradeDO schoolGrade = schoolGradeMap.get(schoolClass.getSchoolGradeId());
+        if (schoolGrade == null) {
+            return respVO;
+        }
+        GradeCatalogDO gradeCatalog = gradeCatalogMap.get(schoolGrade.getGradeCatalogId());
+        respVO.setGradeName(gradeCatalog == null ? null : gradeCatalog.getGradeName());
         return respVO;
     }
 

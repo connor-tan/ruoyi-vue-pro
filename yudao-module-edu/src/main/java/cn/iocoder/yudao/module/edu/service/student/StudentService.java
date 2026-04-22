@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.edu.service.student;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentPageReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentRespVO;
@@ -60,6 +61,14 @@ public interface StudentService {
      * @return 学生分页
      */
     PageResult<StudentRespVO> getStudentPage(StudentPageReqVO pageReqVO);
+
+    /**
+     * 获得家长端学生精简列表
+     *
+     * @param belongTo 家长编号
+     * @return 学生精简列表
+     */
+    List<AppStudentSimpleRespVO> getAppStudentSimpleList(Long belongTo);
 
     // ==================== 子表（学生班级区间记录） ====================
 

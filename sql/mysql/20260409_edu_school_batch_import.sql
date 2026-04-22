@@ -13,6 +13,25 @@ SET NAMES utf8mb4;
 
 START TRANSACTION;
 
+INSERT INTO `edu_year_catalog`
+(`year_start`, `year_end`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+VALUES
+(2026, 2027, 'codex', NOW(), 'codex', NOW(), b'0')
+ON DUPLICATE KEY UPDATE
+`updater` = VALUES(`updater`),
+`update_time` = VALUES(`update_time`),
+`deleted` = VALUES(`deleted`);
+
+SET @school_batch_year_catalog_2026 := (
+  SELECT `id`
+  FROM `edu_year_catalog`
+  WHERE `year_start` = 2026
+    AND `year_end` = 2027
+    AND `deleted` = b'0'
+  ORDER BY `id` DESC
+  LIMIT 1
+);
+
 DROP TEMPORARY TABLE IF EXISTS tmp_school_batch_stage;
 CREATE TEMPORARY TABLE tmp_school_batch_stage (
     row_no INT NOT NULL PRIMARY KEY,
@@ -267,6 +286,7 @@ WHERE school_grade.id IS NULL;
 
 INSERT INTO edu_school_year (
     school_id,
+    year_catalog_id,
     year_start,
     year_end,
     start_date,
@@ -277,6 +297,7 @@ INSERT INTO edu_school_year (
 )
 SELECT
     school.id,
+    @school_batch_year_catalog_2026 AS year_catalog_id,
     2026 AS year_start,
     2027 AS year_end,
     '2026-09-01' AS start_date,

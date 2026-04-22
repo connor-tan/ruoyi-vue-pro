@@ -10,6 +10,7 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
@@ -17,6 +18,7 @@ import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
@@ -49,7 +51,6 @@ import org.springframework.validation.annotation.Validated;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,6 +64,8 @@ public class SubscriptionSupportServiceImpl implements SubscriptionSupportServic
 
     @Resource
     private SchoolYearMapper schoolYearMapper;
+    @Resource
+    private YearCatalogMapper yearCatalogMapper;
     @Resource
     private StudentMapper studentMapper;
     @Resource
@@ -96,14 +99,8 @@ public class SubscriptionSupportServiceImpl implements SubscriptionSupportServic
 
     @Override
     public List<SubscriptionSupportWindowYearSimpleRespVO> getWindowYearSimpleList() {
-        List<SchoolYearDO> schoolYears = schoolYearMapper.selectList(new LambdaQueryWrapperX<SchoolYearDO>()
-                .orderByDesc(SchoolYearDO::getYearStart)
-                .orderByDesc(SchoolYearDO::getYearEnd)
-                .orderByAsc(SchoolYearDO::getId));
-        return schoolYears.stream()
-                .collect(Collectors.toMap(year -> buildWindowYearKey(year.getYearStart(), year.getYearEnd()),
-                        this::buildWindowYearSimpleResp, (left, right) -> left, LinkedHashMap::new))
-                .values().stream()
+        return yearCatalogMapper.selectAllList().stream()
+                .map(this::buildWindowYearSimpleResp)
                 .sorted(Comparator.comparing(SubscriptionSupportWindowYearSimpleRespVO::getYearStart).reversed()
                         .thenComparing(SubscriptionSupportWindowYearSimpleRespVO::getYearEnd, Comparator.reverseOrder()))
                 .toList();
@@ -153,19 +150,15 @@ public class SubscriptionSupportServiceImpl implements SubscriptionSupportServic
     }
 
     @Override
-    public void validateWindowYear(Integer targetYearStart, Integer targetYearEnd) {
-        if (targetYearStart == null || targetYearEnd == null) {
+    public YearCatalogDO validateWindowYear(Long targetYearCatalogId) {
+        if (targetYearCatalogId == null) {
             throw exception(ErrorCodeConstants.SUPPORT_WINDOW_YEAR_NOT_EXISTS);
         }
-        boolean exists = schoolYearMapper.selectList(new LambdaQueryWrapperX<SchoolYearDO>()
-                        .eq(SchoolYearDO::getYearStart, targetYearStart)
-                        .eq(SchoolYearDO::getYearEnd, targetYearEnd))
-                .stream()
-                .findAny()
-                .isPresent();
-        if (!exists) {
+        YearCatalogDO yearCatalog = yearCatalogMapper.selectById(targetYearCatalogId);
+        if (yearCatalog == null) {
             throw exception(ErrorCodeConstants.SUPPORT_WINDOW_YEAR_NOT_EXISTS);
         }
+        return yearCatalog;
     }
 
     @Override
@@ -180,6 +173,14 @@ public class SubscriptionSupportServiceImpl implements SubscriptionSupportServic
     @Override
     public List<Long> getStudentSchoolIdList() {
         return studentMapper.selectDistinctCurrentSchoolIds();
+    }
+
+    @Override
+    public List<Long> getStudentSchoolIdListByStatuses(Collection<Integer> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return studentMapper.selectDistinctCurrentSchoolIdsByStatuses(statuses);
     }
 
     @Override
@@ -269,6 +270,29 @@ public class SubscriptionSupportServiceImpl implements SubscriptionSupportServic
         }
         List<GradeCatalogDO> gradeCatalogDOS = gradeCatalogMapper.selectList(new LambdaQueryWrapperX<GradeCatalogDO>().in(GradeCatalogDO::getId, ids));
         return CollectionUtils.convertMap(gradeCatalogDOS, GradeCatalogDO::getId);
+    }
+
+    @Override
+    public boolean hasSchoolYear(Long schoolId, Long yearCatalogId) {
+        if (schoolId == null || yearCatalogId == null) {
+            return false;
+        }
+        return schoolYearMapper.selectBySchoolIdAndYearCatalogId(schoolId, yearCatalogId) != null;
+    }
+
+    @Override
+    public long countSchoolYearByYearCatalogId(Long yearCatalogId) {
+        return yearCatalogId == null ? 0L : schoolYearMapper.countByYearCatalogId(yearCatalogId);
+    }
+
+    @Override
+    public Map<Long, Boolean> getSchoolYearCoverageMap(Collection<Long> schoolIds, Long yearCatalogId) {
+        if (schoolIds == null || schoolIds.isEmpty() || yearCatalogId == null) {
+            return Collections.emptyMap();
+        }
+        return schoolYearMapper.selectListBySchoolIdsAndYearCatalogIds(schoolIds, Collections.singleton(yearCatalogId))
+                .stream()
+                .collect(Collectors.toMap(SchoolYearDO::getSchoolId, item -> Boolean.TRUE, (left, right) -> left));
     }
 
     @Override
@@ -411,16 +435,13 @@ public class SubscriptionSupportServiceImpl implements SubscriptionSupportServic
                 ProductSkuPublicationDO::getProductSkuId);
     }
 
-    private SubscriptionSupportWindowYearSimpleRespVO buildWindowYearSimpleResp(SchoolYearDO schoolYear) {
+    private SubscriptionSupportWindowYearSimpleRespVO buildWindowYearSimpleResp(YearCatalogDO yearCatalog) {
         SubscriptionSupportWindowYearSimpleRespVO respVO = new SubscriptionSupportWindowYearSimpleRespVO();
-        respVO.setYearStart(schoolYear.getYearStart());
-        respVO.setYearEnd(schoolYear.getYearEnd());
-        respVO.setName(buildWindowYearName(schoolYear.getYearStart(), schoolYear.getYearEnd()));
+        respVO.setId(yearCatalog.getId());
+        respVO.setYearStart(yearCatalog.getYearStart());
+        respVO.setYearEnd(yearCatalog.getYearEnd());
+        respVO.setName(buildWindowYearName(yearCatalog.getYearStart(), yearCatalog.getYearEnd()));
         return respVO;
-    }
-
-    private String buildWindowYearKey(Integer yearStart, Integer yearEnd) {
-        return yearStart + "-" + yearEnd;
     }
 
     private String buildWindowYearName(Integer yearStart, Integer yearEnd) {

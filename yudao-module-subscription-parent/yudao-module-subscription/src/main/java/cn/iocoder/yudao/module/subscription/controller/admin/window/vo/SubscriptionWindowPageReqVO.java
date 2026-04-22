@@ -19,6 +19,9 @@ public class SubscriptionWindowPageReqVO extends PageParam {
     @Schema(description = "窗口名称")
     private String name;
 
+    @Schema(description = "目标学年目录编号")
+    private Long targetYearCatalogId;
+
     @Schema(description = "目标学年开始年份")
     private Integer targetYearStart;
 

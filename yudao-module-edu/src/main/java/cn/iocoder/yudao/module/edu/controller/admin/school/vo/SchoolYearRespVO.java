@@ -21,6 +21,9 @@ public class SchoolYearRespVO {
     @Schema(description = "学校编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long schoolId;
 
+    @Schema(description = "全局学年目录编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long yearCatalogId;
+
     @Schema(description = "学年开始年份", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023")
     private Integer yearStart;
 

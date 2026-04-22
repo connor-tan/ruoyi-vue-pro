@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class SubscriptionSupportWindowYearSimpleRespVO {
 
+    private Long id;
+
     private Integer yearStart;
 
     private Integer yearEnd;

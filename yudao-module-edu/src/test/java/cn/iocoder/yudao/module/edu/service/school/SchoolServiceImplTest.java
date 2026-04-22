@@ -3,10 +3,13 @@ package cn.iocoder.yudao.module.edu.service.school;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolGradeSaveReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolSaveReqVO;
+import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolYearSaveReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolStageDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
@@ -14,6 +17,7 @@ import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolStageMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.service.station.StationService;
@@ -25,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collection;
+import java.time.LocalDate;
 import java.util.List;
 
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_GRADE_STAGE_NOT_ALLOWED;
@@ -47,6 +52,7 @@ class SchoolServiceImplTest {
     private SchoolGradeMapper schoolGradeMapper;
     private SchoolClassMapper schoolClassMapper;
     private SchoolYearMapper schoolYearMapper;
+    private YearCatalogMapper yearCatalogMapper;
     private StudentMapper studentMapper;
     private StudentClassMapper studentClassMapper;
     private AreaApi areaApi;
@@ -61,6 +67,7 @@ class SchoolServiceImplTest {
         schoolGradeMapper = mock(SchoolGradeMapper.class);
         schoolClassMapper = mock(SchoolClassMapper.class);
         schoolYearMapper = mock(SchoolYearMapper.class);
+        yearCatalogMapper = mock(YearCatalogMapper.class);
         studentMapper = mock(StudentMapper.class);
         studentClassMapper = mock(StudentClassMapper.class);
         areaApi = mock(AreaApi.class);
@@ -71,6 +78,7 @@ class SchoolServiceImplTest {
         ReflectionTestUtils.setField(service, "schoolGradeMapper", schoolGradeMapper);
         ReflectionTestUtils.setField(service, "schoolClassMapper", schoolClassMapper);
         ReflectionTestUtils.setField(service, "schoolYearMapper", schoolYearMapper);
+        ReflectionTestUtils.setField(service, "yearCatalogMapper", yearCatalogMapper);
         ReflectionTestUtils.setField(service, "studentMapper", studentMapper);
         ReflectionTestUtils.setField(service, "studentClassMapper", studentClassMapper);
         ReflectionTestUtils.setField(service, "areaApi", areaApi);
@@ -143,6 +151,32 @@ class SchoolServiceImplTest {
         assertEquals(SCHOOL_STAGE_IN_USE.getCode(), exception.getCode());
     }
 
+    @Test
+    void createSchoolYearShouldSyncYearCatalogRange() {
+        when(schoolMapper.selectById(1L)).thenReturn(school(1L));
+        when(yearCatalogMapper.selectById(99L)).thenReturn(yearCatalog(99L, 2026, 2027));
+        when(schoolYearMapper.selectBySchoolIdAndYearCatalogId(1L, 99L)).thenReturn(null);
+        doAnswer(invocation -> {
+            SchoolYearDO schoolYear = invocation.getArgument(0);
+            schoolYear.setId(11L);
+            return 1;
+        }).when(schoolYearMapper).insert(any(SchoolYearDO.class));
+        SchoolYearSaveReqVO reqVO = new SchoolYearSaveReqVO();
+        reqVO.setSchoolId(1L);
+        reqVO.setYearCatalogId(99L);
+        reqVO.setStartDate(LocalDate.of(2026, 9, 1));
+        reqVO.setEndDate(LocalDate.of(2027, 6, 30));
+
+        Long schoolYearId = service.createSchoolYear(reqVO);
+
+        assertEquals(11L, schoolYearId);
+        ArgumentCaptor<SchoolYearDO> captor = ArgumentCaptor.forClass(SchoolYearDO.class);
+        verify(schoolYearMapper).insert(captor.capture());
+        assertEquals(99L, captor.getValue().getYearCatalogId());
+        assertEquals(2026, captor.getValue().getYearStart());
+        assertEquals(2027, captor.getValue().getYearEnd());
+    }
+
     private SchoolDO school(Long id) {
         SchoolDO school = new SchoolDO();
         school.setId(id);
@@ -181,6 +215,14 @@ class SchoolServiceImplTest {
                 .gradeNo(gradeNo)
                 .gradeName(gradeName)
                 .status(0)
+                .build();
+    }
+
+    private YearCatalogDO yearCatalog(Long id, Integer yearStart, Integer yearEnd) {
+        return YearCatalogDO.builder()
+                .id(id)
+                .yearStart(yearStart)
+                .yearEnd(yearEnd)
                 .build();
     }
 

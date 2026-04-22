@@ -37,6 +37,12 @@ mysql_file() {
   "${MYSQL_BIN}" -h "${DB_HOST}" -P "${DB_PORT}" -u"${DB_USER}" -p"${DB_PASSWORD}" -D "${DB_NAME}" < "$1"
 }
 
+year_catalog_id() {
+  local year_start="$1"
+  local year_end="$2"
+  mysql_exec "SELECT id FROM edu_year_catalog WHERE year_start = ${year_start} AND year_end = ${year_end} AND deleted = b'0' ORDER BY id DESC LIMIT 1;"
+}
+
 json_assert_success() {
   local response="$1"
   local label="$2"
@@ -173,9 +179,10 @@ disable_smoke_windows() {
 create_window() {
   local name="$1"
   local template_id="$2"
-  local start_time="$3"
-  local end_time="$4"
-  local status="$5"
+  local target_year_catalog_id="$3"
+  local start_time="$4"
+  local end_time="$5"
+  local status="$6"
   local body
   local response
   body="$(jq -nc \
@@ -183,13 +190,13 @@ create_window() {
     --arg startTime "${start_time}" \
     --arg endTime "${end_time}" \
     --argjson templateId "${template_id}" \
+    --argjson targetYearCatalogId "${target_year_catalog_id}" \
     --argjson status "${status}" \
     '{
       name: $name,
       startTime: $startTime,
       endTime: $endTime,
-      targetYearStart: 2026,
-      targetYearEnd: 2027,
+      targetYearCatalogId: $targetYearCatalogId,
       templateId: $templateId,
       status: $status,
       remark: "codex subscription full-chain smoke"
@@ -338,11 +345,16 @@ promoted_template_id="$(printf '%s' "${promoted_template_response}" | jq -r '.da
 
 current_template_id="$(mysql_exec "SELECT id FROM sub_window_template WHERE code = 'BACK_TO_SCHOOL_RESTOCK' AND deleted = b'0' ORDER BY id DESC LIMIT 1;")"
 presell_template_id="$(mysql_exec "SELECT id FROM sub_window_template WHERE code = 'NEW_YEAR_PRE_SALE' AND deleted = b'0' ORDER BY id DESC LIMIT 1;")"
+target_year_catalog_id_2026="$(year_catalog_id 2026 2027)"
+if [[ -z "${target_year_catalog_id_2026}" ]]; then
+  log "FAIL missing edu_year_catalog 2026-2027"
+  exit 1
+fi
 
-current_window_id="$(create_window "SUB_E2E_W_APP_CURRENT_OPEN" "${current_template_id}" "2026-04-01 00:00:00" "2026-05-31 23:59:59" 1)"
-presell_window_id="$(create_window "SUB_E2E_W_APP_PRESELL_OPEN" "${presell_template_id}" "2026-04-01 00:00:00" "2026-05-31 23:59:59" 1)"
-promoted_window_id="$(create_window "SUB_E2E_W_ADMIN_PROMOTED_OPEN" "${promoted_template_id}" "2026-04-01 00:00:00" "2026-05-31 23:59:59" 1)"
-closed_window_id="$(create_window "SUB_E2E_W_ADMIN_CLOSED" "${current_template_id}" "2026-01-01 00:00:00" "2026-02-01 00:00:00" 1)"
+current_window_id="$(create_window "SUB_E2E_W_APP_CURRENT_OPEN" "${current_template_id}" "${target_year_catalog_id_2026}" "2026-04-01 00:00:00" "2026-05-31 23:59:59" 1)"
+presell_window_id="$(create_window "SUB_E2E_W_APP_PRESELL_OPEN" "${presell_template_id}" "${target_year_catalog_id_2026}" "2026-04-01 00:00:00" "2026-05-31 23:59:59" 1)"
+promoted_window_id="$(create_window "SUB_E2E_W_ADMIN_PROMOTED_OPEN" "${promoted_template_id}" "${target_year_catalog_id_2026}" "2026-04-01 00:00:00" "2026-05-31 23:59:59" 1)"
+closed_window_id="$(create_window "SUB_E2E_W_ADMIN_CLOSED" "${current_template_id}" "${target_year_catalog_id_2026}" "2026-01-01 00:00:00" "2026-02-01 00:00:00" 1)"
 
 mysql_exec "UPDATE sub_window SET creator = 'codex-subscription-smoke', updater = 'codex-subscription-smoke' WHERE id IN (${current_window_id},${presell_window_id},${promoted_window_id},${closed_window_id}); UPDATE sub_window_template SET creator = 'codex-subscription-smoke', updater = 'codex-subscription-smoke' WHERE id = ${promoted_template_id};" >/dev/null
 

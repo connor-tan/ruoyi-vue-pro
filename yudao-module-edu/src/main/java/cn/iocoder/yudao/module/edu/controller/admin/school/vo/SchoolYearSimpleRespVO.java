@@ -15,6 +15,9 @@ public class SchoolYearSimpleRespVO {
     @Schema(description = "学年编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long id;
 
+    @Schema(description = "全局学年目录编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long yearCatalogId;
+
     @Schema(description = "学年名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023-2024学年")
     private String name;
 

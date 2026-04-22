@@ -5,6 +5,8 @@ import cn.iocoder.yudao.module.subscription.controller.app.publication.vo.AppSub
 import cn.iocoder.yudao.module.subscription.controller.app.publication.vo.AppSubscriptionPublicationRespVO;
 import cn.iocoder.yudao.module.subscription.controller.app.window.vo.AppSubscriptionCurrentWindowRespVO;
 
+import java.util.List;
+
 public interface SubscriptionAppQueryService {
 
     AppSubscriptionCurrentWindowRespVO getCurrentWindow();
@@ -13,4 +15,7 @@ public interface SubscriptionAppQueryService {
                                                                     AppSubscriptionPublicationPageReqVO reqVO);
 
     AppSubscriptionPublicationRespVO getPublication(Long loginUserId, Long studentId, Long productSpuId);
+
+    List<AppSubscriptionPublicationRespVO> getPublicationListBySpuIds(Long loginUserId, Long studentId,
+                                                                      List<Long> productSpuIds);
 }

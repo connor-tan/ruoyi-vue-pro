@@ -7,6 +7,9 @@ import lombok.Data;
 @Data
 public class StudentPromotionYearOptionRespVO {
 
+    @Schema(description = "学年目录编号", example = "1")
+    private Long id;
+
     @Schema(description = "学年开始年份", requiredMode = Schema.RequiredMode.REQUIRED, example = "2025")
     private Integer yearStart;
 

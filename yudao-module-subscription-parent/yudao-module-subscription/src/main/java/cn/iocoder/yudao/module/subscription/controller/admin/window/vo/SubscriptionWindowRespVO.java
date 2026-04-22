@@ -23,6 +23,8 @@ public class SubscriptionWindowRespVO {
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime endTime;
 
+    private Long targetYearCatalogId;
+
     private Integer targetYearStart;
 
     private Integer targetYearEnd;

@@ -5,11 +5,13 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateReqBO;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateRespBO;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +40,7 @@ class SchoolYearClassGenerateServiceImplTest {
     private SchoolYearClassGenerateServiceImpl service;
     private SchoolMapper schoolMapper;
     private SchoolYearMapper schoolYearMapper;
+    private YearCatalogMapper yearCatalogMapper;
     private SchoolClassMapper schoolClassMapper;
     private SchoolGradeMapper schoolGradeMapper;
     private GradeCatalogMapper gradeCatalogMapper;
@@ -47,11 +50,13 @@ class SchoolYearClassGenerateServiceImplTest {
         service = new SchoolYearClassGenerateServiceImpl();
         schoolMapper = mock(SchoolMapper.class);
         schoolYearMapper = mock(SchoolYearMapper.class);
+        yearCatalogMapper = mock(YearCatalogMapper.class);
         schoolClassMapper = mock(SchoolClassMapper.class);
         schoolGradeMapper = mock(SchoolGradeMapper.class);
         gradeCatalogMapper = mock(GradeCatalogMapper.class);
         ReflectionTestUtils.setField(service, "schoolMapper", schoolMapper);
         ReflectionTestUtils.setField(service, "schoolYearMapper", schoolYearMapper);
+        ReflectionTestUtils.setField(service, "yearCatalogMapper", yearCatalogMapper);
         ReflectionTestUtils.setField(service, "schoolClassMapper", schoolClassMapper);
         ReflectionTestUtils.setField(service, "schoolGradeMapper", schoolGradeMapper);
         ReflectionTestUtils.setField(service, "gradeCatalogMapper", gradeCatalogMapper);
@@ -80,6 +85,7 @@ class SchoolYearClassGenerateServiceImplTest {
         ArgumentCaptor<SchoolYearDO> yearCaptor = ArgumentCaptor.forClass(SchoolYearDO.class);
         verify(schoolYearMapper).insert(yearCaptor.capture());
         SchoolYearDO createdYear = yearCaptor.getValue();
+        assertEquals(9001L, createdYear.getYearCatalogId());
         assertEquals(2026, createdYear.getYearStart());
         assertEquals(2027, createdYear.getYearEnd());
         assertEquals(LocalDate.of(2026, 9, 1), createdYear.getStartDate());
@@ -200,6 +206,7 @@ class SchoolYearClassGenerateServiceImplTest {
                               List<SchoolGradeDO> schoolGrades, List<SchoolClassDO> sourceClasses,
                               List<SchoolClassDO> targetClasses) {
         when(schoolMapper.selectList()).thenReturn(schools);
+        when(yearCatalogMapper.selectByYearRange(2026, 2027)).thenReturn(yearCatalog(9001L, 2026, 2027));
         when(gradeCatalogMapper.selectListByStatus(0)).thenReturn(gradeCatalogs);
         when(schoolYearMapper.selectListBySchoolIdsAndYearStarts(any(), any())).thenReturn(schoolYears);
         when(schoolGradeMapper.selectListBySchoolIds(any())).thenReturn(schoolGrades);
@@ -239,6 +246,14 @@ class SchoolYearClassGenerateServiceImplTest {
                 .id(id)
                 .schoolId(schoolId)
                 .gradeCatalogId(gradeCatalogId)
+                .build();
+    }
+
+    private YearCatalogDO yearCatalog(Long id, Integer yearStart, Integer yearEnd) {
+        return YearCatalogDO.builder()
+                .id(id)
+                .yearStart(yearStart)
+                .yearEnd(yearEnd)
                 .build();
     }
 

@@ -32,6 +32,8 @@ public class SubscriptionWindowDO extends BaseDO {
 
     private LocalDateTime endTime;
 
+    private Long targetYearCatalogId;
+
     private Integer targetYearStart;
 
     private Integer targetYearEnd;

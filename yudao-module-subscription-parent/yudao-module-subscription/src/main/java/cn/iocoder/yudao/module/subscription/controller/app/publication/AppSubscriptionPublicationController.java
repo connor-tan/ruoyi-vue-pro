@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
@@ -41,5 +43,13 @@ public class AppSubscriptionPublicationController {
             @RequestParam("studentId") @Parameter(required = true) Long studentId,
             @RequestParam("productSpuId") @Parameter(required = true) Long productSpuId) {
         return success(subscriptionAppQueryService.getPublication(getLoginUserId(), studentId, productSpuId));
+    }
+
+    @GetMapping("/list-by-spu-ids")
+    @Operation(summary = "获得当前孩子在指定商品 SPU 中可见的刊物列表")
+    public CommonResult<List<AppSubscriptionPublicationRespVO>> getPublicationListBySpuIds(
+            @RequestParam("studentId") @Parameter(required = true) Long studentId,
+            @RequestParam("productSpuIds") @Parameter(required = true) List<Long> productSpuIds) {
+        return success(subscriptionAppQueryService.getPublicationListBySpuIds(getLoginUserId(), studentId, productSpuIds));
     }
 }

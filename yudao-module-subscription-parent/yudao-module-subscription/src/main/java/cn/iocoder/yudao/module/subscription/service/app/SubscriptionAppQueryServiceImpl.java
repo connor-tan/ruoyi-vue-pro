@@ -28,10 +28,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -107,6 +109,39 @@ public class SubscriptionAppQueryServiceImpl implements SubscriptionAppQueryServ
         return buildPublicationRespList(Collections.singletonList(visibleSpu)).stream()
                 .findFirst()
                 .orElseThrow(() -> exception(ErrorCodeConstants.APP_PUBLICATION_NOT_VISIBLE));
+    }
+
+    @Override
+    public List<AppSubscriptionPublicationRespVO> getPublicationListBySpuIds(Long loginUserId, Long studentId,
+                                                                             List<Long> productSpuIds) {
+        if (CollUtil.isEmpty(productSpuIds)) {
+            return Collections.emptyList();
+        }
+        SubscriptionWindowDO currentWindow = subscriptionWindowService.getCurrentOpenWindow();
+        if (currentWindow == null) {
+            return Collections.emptyList();
+        }
+        validateStudentBelongToParent(loginUserId, studentId);
+        SubscriptionVisibilityResultBO visibilityResult = subscriptionVisibilityService.calculate(studentId, currentWindow.getId());
+        if (visibilityResult.getBlockedReasonDesc() != null) {
+            throw exception(ErrorCodeConstants.PREVIEW_STUDENT_BLOCKED, visibilityResult.getBlockedReasonDesc());
+        }
+        Set<Long> productSpuIdSet = productSpuIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (productSpuIdSet.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Long, Integer> productSpuOrderMap = java.util.stream.IntStream.range(0, productSpuIds.size())
+                .boxed()
+                .filter(index -> productSpuIds.get(index) != null)
+                .collect(Collectors.toMap(productSpuIds::get, Function.identity(), (left, right) -> left));
+        return buildPublicationRespList(visibilityResult.getVisibleSpus().stream()
+                .filter(item -> productSpuIdSet.contains(item.getWindowSpu().getProductSpuId()))
+                .toList()).stream()
+                .sorted(Comparator.comparing(item -> productSpuOrderMap.getOrDefault(item.getProductSpuId(),
+                        Integer.MAX_VALUE)))
+                .toList();
     }
 
     private String normalizeGradeCalcRule(String gradeCalcRule) {

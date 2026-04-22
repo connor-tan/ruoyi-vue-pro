@@ -30,6 +30,12 @@ public interface ErrorCodeConstants {
     ErrorCode STATION_DISABLED = new ErrorCode(1_016_001_024, "站点已停用，不能绑定到学校");
     ErrorCode SCHOOL_STATION_AREA_NOT_MATCHED = new ErrorCode(1_016_001_025, "学校区域与站点区域不一致，不能绑定");
     ErrorCode STATION_IN_USE_BY_SCHOOL = new ErrorCode(1_016_001_026, "站点已绑定学校，无法执行当前操作");
+    ErrorCode SCHOOL_YEAR_IN_USE_UPDATE = new ErrorCode(1_016_001_027, "学校学年已被班级引用，无法切换全局学年");
+    ErrorCode YEAR_CATALOG_NOT_EXISTS = new ErrorCode(1_016_001_028, "学年目录不存在");
+    ErrorCode YEAR_CATALOG_DUPLICATE = new ErrorCode(1_016_001_029, "学年目录已存在");
+    ErrorCode YEAR_CATALOG_RANGE_INVALID = new ErrorCode(1_016_001_030, "学年结束年份必须是开始年份的下一年");
+    ErrorCode YEAR_CATALOG_IN_USE = new ErrorCode(1_016_001_031, "学年目录已被学校学年或订刊窗口引用，无法删除");
+    ErrorCode YEAR_CATALOG_IN_USE_UPDATE = new ErrorCode(1_016_001_032, "学年目录已被学校学年或订刊窗口引用，无法修改年份范围");
 
     ErrorCode STUDENT_NOT_EXISTS = new ErrorCode(1_017_001_001, "学生不存在");
     ErrorCode STUDENT_PARENT_NOT_EXISTS = new ErrorCode(1_017_001_002, "家长会员不存在");

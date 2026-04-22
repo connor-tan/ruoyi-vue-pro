@@ -233,6 +233,11 @@ public class SubscriptionGradeResolveServiceImpl implements SubscriptionGradeRes
             return fillGrade(respBO, targetGradeCatalog);
         }
         if (Objects.equals(student.getStatus(), StudentStatusEnum.PENDING_ADVANCE.getStatus())) {
+            if (student.getCurrentSchoolId() != null
+                    && !subscriptionSupportService.hasSchoolYear(student.getCurrentSchoolId(),
+                    window.getTargetYearCatalogId())) {
+                return block(respBO, SubscriptionBlockedReasonEnum.TARGET_SCHOOL_YEAR_NOT_CONFIGURED);
+            }
             return block(respBO, SubscriptionBlockedReasonEnum.FUTURE_CLASS_BIND_REQUIRED);
         }
         return resolveCurrentChain(respBO, student, currentSchool, currentClasses, schoolClassMap, schoolGradeMap,

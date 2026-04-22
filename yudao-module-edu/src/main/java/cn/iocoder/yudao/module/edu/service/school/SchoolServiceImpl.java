@@ -26,12 +26,14 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolStageDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolStageMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
@@ -81,6 +83,8 @@ public class SchoolServiceImpl implements SchoolService {
     private SchoolGradeMapper schoolGradeMapper;
     @Resource
     private SchoolYearMapper schoolYearMapper;
+    @Resource
+    private YearCatalogMapper yearCatalogMapper;
     @Resource
     private SchoolClassMapper schoolClassMapper;
     @Resource
@@ -322,14 +326,16 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     public PageResult<SchoolYearRespVO> getSchoolYearPage(PageParam pageReqVO, Long schoolId) {
         PageResult<SchoolYearDO> pageResult = schoolYearMapper.selectPage(pageReqVO, schoolId);
-        return new PageResult<>(BeanUtils.toBean(pageResult.getList(), SchoolYearRespVO.class), pageResult.getTotal());
+        return new PageResult<>(buildSchoolYearRespList(pageResult.getList()), pageResult.getTotal());
     }
 
     @Override
     public Long createSchoolYear(SchoolYearSaveReqVO schoolYear) {
         validateSchoolExists(schoolYear.getSchoolId());
-        validateSchoolYearUnique(null, schoolYear.getSchoolId(), schoolYear.getYearStart());
+        YearCatalogDO yearCatalog = validateYearCatalogExists(schoolYear.getYearCatalogId());
+        validateSchoolYearUnique(null, schoolYear.getSchoolId(), yearCatalog.getId());
         SchoolYearDO schoolYearDO = BeanUtils.toBean(schoolYear, SchoolYearDO.class);
+        applyYearCatalog(schoolYearDO, yearCatalog);
         schoolYearDO.clean(); // 清理掉创建、更新时间等相关属性值
         schoolYearMapper.insert(schoolYearDO);
         return schoolYearDO.getId();
@@ -338,11 +344,13 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     public void updateSchoolYear(SchoolYearSaveReqVO schoolYear) {
         validateSchoolExists(schoolYear.getSchoolId());
-        // 校验存在
-        validateSchoolYearExists(schoolYear.getId());
-        validateSchoolYearUnique(schoolYear.getId(), schoolYear.getSchoolId(), schoolYear.getYearStart());
-        // 更新
+        SchoolYearDO oldSchoolYear = validateSchoolYearExists(schoolYear.getId());
+        validateSchoolYearBelongsToSchool(oldSchoolYear, schoolYear.getSchoolId());
+        YearCatalogDO yearCatalog = validateYearCatalogExists(schoolYear.getYearCatalogId());
+        validateSchoolYearUnique(schoolYear.getId(), schoolYear.getSchoolId(), yearCatalog.getId());
+        validateSchoolYearChangeable(oldSchoolYear, yearCatalog.getId());
         SchoolYearDO schoolYearDO = BeanUtils.toBean(schoolYear, SchoolYearDO.class);
+        applyYearCatalog(schoolYearDO, yearCatalog);
         schoolYearDO.clean(); // 解决更新情况下：updateTime 不更新
         schoolYearMapper.updateById(schoolYearDO);
     }
@@ -364,7 +372,8 @@ public class SchoolServiceImpl implements SchoolService {
 
     @Override
     public SchoolYearRespVO getSchoolYear(Long id) {
-        return BeanUtils.toBean(schoolYearMapper.selectById(id), SchoolYearRespVO.class);
+        SchoolYearDO schoolYear = schoolYearMapper.selectById(id);
+        return schoolYear == null ? null : buildSchoolYearResp(schoolYear);
     }
 
     @Override
@@ -389,8 +398,8 @@ public class SchoolServiceImpl implements SchoolService {
         }
     }
 
-    private void validateSchoolYearUnique(Long id, Long schoolId, Integer yearStart) {
-        SchoolYearDO schoolYear = schoolYearMapper.selectBySchoolIdAndYearStart(schoolId, yearStart);
+    private void validateSchoolYearUnique(Long id, Long schoolId, Long yearCatalogId) {
+        SchoolYearDO schoolYear = schoolYearMapper.selectBySchoolIdAndYearCatalogId(schoolId, yearCatalogId);
         if (schoolYear == null) {
             return;
         }
@@ -398,6 +407,15 @@ public class SchoolServiceImpl implements SchoolService {
             return;
         }
         throw exception(SCHOOL_YEAR_DUPLICATE);
+    }
+
+    private void validateSchoolYearChangeable(SchoolYearDO schoolYear, Long yearCatalogId) {
+        if (Objects.equals(schoolYear.getYearCatalogId(), yearCatalogId)) {
+            return;
+        }
+        if (schoolClassMapper.countBySchoolYearId(schoolYear.getId()) > 0) {
+            throw exception(SCHOOL_YEAR_IN_USE_UPDATE);
+        }
     }
 
     private void deleteSchoolYearBySchoolId(Long schoolId) {
@@ -753,11 +771,21 @@ public class SchoolServiceImpl implements SchoolService {
     private SchoolYearSimpleRespVO buildSchoolYearSimpleResp(SchoolYearDO schoolYear) {
         SchoolYearSimpleRespVO respVO = new SchoolYearSimpleRespVO();
         respVO.setId(schoolYear.getId());
+        respVO.setYearCatalogId(schoolYear.getYearCatalogId());
         respVO.setYearStart(schoolYear.getYearStart());
         respVO.setYearEnd(schoolYear.getYearEnd());
         respVO.setStartDate(schoolYear.getStartDate());
         respVO.setEndDate(schoolYear.getEndDate());
         respVO.setName(buildSchoolYearName(schoolYear));
+        return respVO;
+    }
+
+    private List<SchoolYearRespVO> buildSchoolYearRespList(List<SchoolYearDO> schoolYears) {
+        return schoolYears.stream().map(this::buildSchoolYearResp).collect(Collectors.toList());
+    }
+
+    private SchoolYearRespVO buildSchoolYearResp(SchoolYearDO schoolYear) {
+        SchoolYearRespVO respVO = BeanUtils.toBean(schoolYear, SchoolYearRespVO.class);
         return respVO;
     }
 
@@ -842,6 +870,20 @@ public class SchoolServiceImpl implements SchoolService {
 
     private String buildSchoolYearName(SchoolYearDO schoolYear) {
         return schoolYear.getYearStart() + "-" + schoolYear.getYearEnd() + "学年";
+    }
+
+    private YearCatalogDO validateYearCatalogExists(Long yearCatalogId) {
+        YearCatalogDO yearCatalog = yearCatalogMapper.selectById(yearCatalogId);
+        if (yearCatalog == null) {
+            throw exception(YEAR_CATALOG_NOT_EXISTS);
+        }
+        return yearCatalog;
+    }
+
+    private void applyYearCatalog(SchoolYearDO schoolYear, YearCatalogDO yearCatalog) {
+        schoolYear.setYearCatalogId(yearCatalog.getId());
+        schoolYear.setYearStart(yearCatalog.getYearStart());
+        schoolYear.setYearEnd(yearCatalog.getYearEnd());
     }
 
     private void fillClassNameIfBlank(SchoolClassDO schoolClass, GradeCatalogDO gradeCatalog) {

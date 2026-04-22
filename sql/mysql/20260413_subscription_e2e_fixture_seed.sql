@@ -1,5 +1,34 @@
 SET NAMES utf8mb4;
 
+INSERT INTO `edu_year_catalog`
+(`year_start`, `year_end`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+VALUES
+(2025, 2026, 'codex-subscription-e2e', NOW(), 'codex-subscription-e2e', NOW(), b'0'),
+(2026, 2027, 'codex-subscription-e2e', NOW(), 'codex-subscription-e2e', NOW(), b'0')
+ON DUPLICATE KEY UPDATE
+`updater` = VALUES(`updater`),
+`update_time` = VALUES(`update_time`),
+`deleted` = VALUES(`deleted`);
+
+SET @sub_e2e_year_catalog_2025 := (
+  SELECT `id`
+  FROM `edu_year_catalog`
+  WHERE `year_start` = 2025
+    AND `year_end` = 2026
+    AND `deleted` = b'0'
+  ORDER BY `id` DESC
+  LIMIT 1
+);
+SET @sub_e2e_year_catalog_2026 := (
+  SELECT `id`
+  FROM `edu_year_catalog`
+  WHERE `year_start` = 2026
+    AND `year_end` = 2027
+    AND `deleted` = b'0'
+  ORDER BY `id` DESC
+  LIMIT 1
+);
+
 -- Dedicated subscription E2E students and class bindings.
 -- Repeatable cleanup is limited to creator/mark/name prefixes used by this script.
 
@@ -69,9 +98,9 @@ CREATE TEMPORARY TABLE tmp_sub_e2e_fallback_school AS
 SELECT * FROM tmp_sub_e2e_school_resolved;
 
 INSERT INTO edu_school_year (
-    school_id, year_start, year_end, start_date, end_date, creator, updater, deleted
+    school_id, year_catalog_id, year_start, year_end, start_date, end_date, creator, updater, deleted
 )
-SELECT school_id, 2025, 2026, '2025-09-01', '2026-06-30',
+SELECT school_id, @sub_e2e_year_catalog_2025, 2025, 2026, '2025-09-01', '2026-06-30',
        'codex-subscription-e2e', 'codex-subscription-e2e', b'0'
 FROM tmp_sub_e2e_school_resolved school
 WHERE NOT EXISTS (
@@ -82,9 +111,9 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO edu_school_year (
-    school_id, year_start, year_end, start_date, end_date, creator, updater, deleted
+    school_id, year_catalog_id, year_start, year_end, start_date, end_date, creator, updater, deleted
 )
-SELECT school_id, 2026, 2027, '2026-09-01', '2027-06-30',
+SELECT school_id, @sub_e2e_year_catalog_2026, 2026, 2027, '2026-09-01', '2027-06-30',
        'codex-subscription-e2e', 'codex-subscription-e2e', b'0'
 FROM tmp_sub_e2e_school_resolved school
 WHERE NOT EXISTS (

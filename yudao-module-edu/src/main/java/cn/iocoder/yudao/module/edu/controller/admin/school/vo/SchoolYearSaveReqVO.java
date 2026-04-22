@@ -21,13 +21,9 @@ public class SchoolYearSaveReqVO {
     @NotNull(message = "学校ID不能为空")
     private Long schoolId;
 
-    @Schema(description = "学年开始年份", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023")
-    @NotNull(message = "学年开始不能为空")
-    private Integer yearStart;
-
-    @Schema(description = "学年结束年份", requiredMode = Schema.RequiredMode.REQUIRED, example = "2024")
-    @NotNull(message = "学年结束不能为空")
-    private Integer yearEnd;
+    @Schema(description = "全局学年目录编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "全局学年不能为空")
+    private Long yearCatalogId;
 
     @Schema(description = "开学日期", requiredMode = Schema.RequiredMode.REQUIRED, example = "2023-09-01")
     @NotNull(message = "开学日期不能为空")
