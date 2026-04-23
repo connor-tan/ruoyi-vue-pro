@@ -27,6 +27,9 @@ public class ProductCategoryRespVO {
     @Schema(description = "开启状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
     private Integer status;
 
+    @Schema(description = "业务场景", requiredMode = Schema.RequiredMode.REQUIRED, example = "PUBLICATION")
+    private String bizScene;
+
     @Schema(description = "分类描述", example = "描述")
     private String description;
 

@@ -41,6 +41,9 @@ public class ProductSpuRespVO {
     @ExcelProperty("商品分类编号")
     private Long categoryId;
 
+    @Schema(description = "业务场景", example = "PUBLICATION")
+    private String bizScene;
+
     @Schema(description = "商品品牌编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @ExcelProperty("商品品牌编号")
     private Long brandId;
@@ -122,5 +125,44 @@ public class ProductSpuRespVO {
     @Schema(description = "浏览量", requiredMode = Schema.RequiredMode.REQUIRED, example = "888")
     @ExcelProperty("商品点击量")
     private Integer browseCount;
+
+    @Schema(description = "刊物扩展")
+    private PublicationSpuExtRespVO publicationExt;
+
+    @Schema(description = "刊物扩展")
+    @Data
+    public static class PublicationSpuExtRespVO {
+
+        @Schema(description = "出版社编号", example = "1")
+        private Long publisherId;
+
+        @Schema(description = "出版社名称", example = "人民教育出版社")
+        private String publisherName;
+
+        @Schema(description = "刊物类型编号", example = "1")
+        private Long publicationTypeId;
+
+        @Schema(description = "刊物类型名称", example = "教辅刊物")
+        private String publicationTypeName;
+
+        @Schema(description = "刊物类型标识规则", example = "SKU_ISBN_REQUIRED")
+        private String publicationTypeIdentifierRule;
+
+        @Schema(description = "出刊周期", example = "MONTHLY")
+        private String issueCycle;
+
+        @Schema(description = "ISSN", example = "1674-1234")
+        private String issn;
+
+        @Schema(description = "CN 刊号", example = "CN11-1234/G4")
+        private String cnCode;
+
+        @Schema(description = "邮发代号", example = "80-123")
+        private String postDistributionCode;
+
+        @Schema(description = "履约方式", example = "SCHOOL_STATION")
+        private String fulfillmentMode;
+
+    }
 
 }

@@ -15,6 +15,9 @@ public class ProductSkuRespVO {
     @Schema(description = "商品 SKU 名字", requiredMode = Schema.RequiredMode.REQUIRED, example = "清凉小短袖")
     private String name;
 
+    @Schema(description = "SKU 状态", example = "0")
+    private Integer status;
+
     @Schema(description = "销售价格，单位：分", requiredMode = Schema.RequiredMode.REQUIRED, example = "1999")
     private Integer price;
 
@@ -47,5 +50,35 @@ public class ProductSkuRespVO {
 
     @Schema(description = "属性数组")
     private List<ProductSkuSaveReqVO.Property> properties;
+
+    @Schema(description = "刊物 SKU 扩展")
+    private PublicationSkuExtRespVO publicationExt;
+
+    @Schema(description = "适用年级目录编号数组")
+    private List<Long> applicableGradeCatalogIds;
+
+    @Schema(description = "适用年级名称数组")
+    private List<String> applicableGradeNames;
+
+    @Schema(description = "刊物 SKU 扩展")
+    @Data
+    public static class PublicationSkuExtRespVO {
+
+        @Schema(description = "售卖周期", example = "FULL_YEAR")
+        private String targetPeriod;
+
+        @Schema(description = "册别", example = "上册")
+        private String volumeLabel;
+
+        @Schema(description = "版本", example = "人教版")
+        private String editionLabel;
+
+        @Schema(description = "ISBN", example = "9787300000000")
+        private String isbn;
+
+        @Schema(description = "备注", example = "秋季版")
+        private String remark;
+
+    }
 
 }

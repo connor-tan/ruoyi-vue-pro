@@ -31,6 +31,10 @@ public class ProductCategorySaveReqVO {
     @NotNull(message = "开启状态不能为空")
     private Integer status;
 
+    @Schema(description = "业务场景", requiredMode = Schema.RequiredMode.REQUIRED, example = "PUBLICATION")
+    @NotBlank(message = "业务场景不能为空")
+    private String bizScene;
+
     @Schema(description = "分类描述", example = "描述")
     private String description;
 

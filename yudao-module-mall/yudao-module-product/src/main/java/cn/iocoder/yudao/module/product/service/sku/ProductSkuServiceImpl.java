@@ -11,6 +11,7 @@ import cn.iocoder.yudao.module.product.dal.dataobject.property.ProductPropertyDO
 import cn.iocoder.yudao.module.product.dal.dataobject.property.ProductPropertyValueDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.dal.mysql.sku.ProductSkuMapper;
+import cn.iocoder.yudao.module.product.enums.sku.ProductSkuStatusEnum;
 import cn.iocoder.yudao.module.product.service.property.ProductPropertyService;
 import cn.iocoder.yudao.module.product.service.property.ProductPropertyValueService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
@@ -143,9 +144,12 @@ public class ProductSkuServiceImpl implements ProductSkuService {
     }
 
     @Override
-    public void createSkuList(Long spuId, List<ProductSkuSaveReqVO> skuCreateReqList) {
-        List<ProductSkuDO> skus = BeanUtils.toBean(skuCreateReqList, ProductSkuDO.class, sku -> sku.setSpuId(spuId).setSalesCount(0));
-        productSkuMapper.insertBatch(skus);
+    public List<ProductSkuDO> createSkuList(Long spuId, List<ProductSkuSaveReqVO> skuCreateReqList) {
+        List<ProductSkuDO> skus = BeanUtils.toBean(skuCreateReqList, ProductSkuDO.class, sku -> sku.setSpuId(spuId)
+                .setSalesCount(0)
+                .setStatus(ObjectUtil.defaultIfNull(sku.getStatus(), ProductSkuStatusEnum.ENABLE.getStatus())));
+        skus.forEach(productSkuMapper::insert);
+        return skus;
     }
 
     @Override
@@ -217,39 +221,35 @@ public class ProductSkuServiceImpl implements ProductSkuService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateSkuList(Long spuId, List<ProductSkuSaveReqVO> skus) {
-        // 构建属性与 SKU 的映射关系;
-        Map<String, Long> existsSkuMap = convertMap(productSkuMapper.selectListBySpuId(spuId),
-                ProductSkuConvert.INSTANCE::buildPropertyKey, ProductSkuDO::getId);
-
-        // 拆分三个集合，新插入的、需要更新的、需要删除的
+    public List<ProductSkuDO> updateSkuList(Long spuId, List<ProductSkuSaveReqVO> skus) {
+        Map<Long, ProductSkuDO> existsSkuMap = convertMap(productSkuMapper.selectListBySpuId(spuId), ProductSkuDO::getId);
         List<ProductSkuDO> insertSkus = new ArrayList<>();
         List<ProductSkuDO> updateSkus = new ArrayList<>();
+        List<ProductSkuDO> result = new ArrayList<>();
         List<ProductSkuDO> allUpdateSkus = BeanUtils.toBean(skus, ProductSkuDO.class, sku -> sku.setSpuId(spuId));
         allUpdateSkus.forEach(sku -> {
-            String propertiesKey = ProductSkuConvert.INSTANCE.buildPropertyKey(sku);
-            // 1、找得到的，进行更新
-            Long existsSkuId = existsSkuMap.remove(propertiesKey);
-            if (existsSkuId != null) {
-                sku.setId(existsSkuId);
+            ProductSkuDO existsSku = sku.getId() == null ? null : existsSkuMap.remove(sku.getId());
+            if (existsSku != null) {
+                sku.setSalesCount(existsSku.getSalesCount());
+                sku.setStatus(ObjectUtil.defaultIfNull(sku.getStatus(), existsSku.getStatus()));
                 updateSkus.add(sku);
+                result.add(sku);
                 return;
             }
-            // 2、找不到，进行插入
-            sku.setSpuId(spuId);
+            sku.setSalesCount(0);
+            sku.setStatus(ObjectUtil.defaultIfNull(sku.getStatus(), ProductSkuStatusEnum.ENABLE.getStatus()));
             insertSkus.add(sku);
+            result.add(sku);
         });
 
-        // 执行最终的批量操作
-        if (CollUtil.isNotEmpty(insertSkus)) {
-            productSkuMapper.insertBatch(insertSkus);
-        }
+        insertSkus.forEach(productSkuMapper::insert);
         if (CollUtil.isNotEmpty(updateSkus)) {
             updateSkus.forEach(sku -> productSkuMapper.updateById(sku));
         }
         if (CollUtil.isNotEmpty(existsSkuMap)) {
-            productSkuMapper.deleteByIds(existsSkuMap.values());
+            productSkuMapper.deleteByIds(existsSkuMap.keySet());
         }
+        return result;
     }
 
     @Override

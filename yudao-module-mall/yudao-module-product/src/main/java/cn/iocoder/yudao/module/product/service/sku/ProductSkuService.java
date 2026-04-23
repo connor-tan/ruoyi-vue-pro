@@ -59,7 +59,7 @@ public interface ProductSkuService {
      * @param spuId 商品 SPU 编号
      * @param list  SKU 对象集合
      */
-    void createSkuList(Long spuId, List<ProductSkuSaveReqVO> list);
+    List<ProductSkuDO> createSkuList(Long spuId, List<ProductSkuSaveReqVO> list);
 
     /**
      * 根据 SPU 编号，批量更新它的 SKU 信息
@@ -67,7 +67,7 @@ public interface ProductSkuService {
      * @param spuId SPU 编码
      * @param skus  SKU 的集合
      */
-    void updateSkuList(Long spuId, List<ProductSkuSaveReqVO> skus);
+    List<ProductSkuDO> updateSkuList(Long spuId, List<ProductSkuSaveReqVO> skus);
 
     /**
      * 更新 SKU 库存（增量）

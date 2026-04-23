@@ -16,6 +16,9 @@ public interface ErrorCodeConstants {
     ErrorCode CATEGORY_EXISTS_CHILDREN = new ErrorCode(1_008_001_003, "存在子分类，无法删除");
     ErrorCode CATEGORY_DISABLED = new ErrorCode(1_008_001_004, "商品分类({})已禁用，无法使用");
     ErrorCode CATEGORY_HAVE_BIND_SPU = new ErrorCode(1_008_001_005, "类别下存在商品，无法删除");
+    ErrorCode CATEGORY_BIZ_SCENE_REQUIRED = new ErrorCode(1_008_001_006, "商品分类业务场景不能为空");
+    ErrorCode CATEGORY_BIZ_SCENE_INVALID = new ErrorCode(1_008_001_007, "商品分类业务场景不合法");
+    ErrorCode CATEGORY_PARENT_BIZ_SCENE_INCONSISTENT = new ErrorCode(1_008_001_008, "父子分类业务场景必须一致");
 
     // ========== 商品品牌相关编号 1-008-002-000 ==========
     ErrorCode BRAND_NOT_EXISTS = new ErrorCode(1_008_002_000, "品牌不存在");
@@ -37,6 +40,8 @@ public interface ErrorCodeConstants {
     ErrorCode SPU_SAVE_FAIL_COUPON_TEMPLATE_NOT_EXISTS = new ErrorCode(1_008_005_002, "商品 SPU 保存失败，原因：优惠劵不存在");
     ErrorCode SPU_NOT_ENABLE = new ErrorCode(1_008_005_003, "商品 SPU【{}】不处于上架状态");
     ErrorCode SPU_NOT_RECYCLE = new ErrorCode(1_008_005_004, "商品 SPU 不处于回收站状态");
+    ErrorCode NORMAL_PRODUCT_BRAND_REQUIRED = new ErrorCode(1_008_005_005, "普通商品品牌不能为空");
+    ErrorCode NORMAL_PRODUCT_DELIVERY_REQUIRED = new ErrorCode(1_008_005_006, "普通商品配送方式不能为空");
 
     // ========== 商品 SKU 1-008-006-000 ==========
     ErrorCode SKU_NOT_EXISTS = new ErrorCode(1_008_006_000, "商品 SKU 不存在");
@@ -52,5 +57,23 @@ public interface ErrorCodeConstants {
     // ========== 商品 收藏 1-008-008-000 ==========
     ErrorCode FAVORITE_EXISTS = new ErrorCode(1_008_008_000, "该商品已经被收藏");
     ErrorCode FAVORITE_NOT_EXISTS = new ErrorCode(1_008_008_001, "商品收藏不存在");
+
+    // ========== 刊物主数据 1-008-009-000 ==========
+    ErrorCode PUBLICATION_PUBLISHER_NOT_EXISTS = new ErrorCode(1_008_009_000, "出版社不存在");
+    ErrorCode PUBLICATION_PUBLISHER_NAME_EXISTS = new ErrorCode(1_008_009_001, "出版社名称已存在");
+    ErrorCode PUBLICATION_TYPE_NOT_EXISTS = new ErrorCode(1_008_009_002, "刊物类型不存在");
+    ErrorCode PUBLICATION_TYPE_NAME_EXISTS = new ErrorCode(1_008_009_003, "刊物类型名称已存在");
+
+    // ========== 刊物商品 1-008-010-000 ==========
+    ErrorCode PUBLICATION_EXT_REQUIRED = new ErrorCode(1_008_010_000, "刊物扩展信息不能为空");
+    ErrorCode PUBLICATION_PUBLISHER_REQUIRED = new ErrorCode(1_008_010_001, "刊物出版社不能为空");
+    ErrorCode PUBLICATION_TYPE_REQUIRED = new ErrorCode(1_008_010_002, "刊物类型不能为空");
+    ErrorCode PUBLICATION_ISSUE_CYCLE_REQUIRED = new ErrorCode(1_008_010_003, "出刊周期不能为空");
+    ErrorCode PUBLICATION_SKU_REQUIRED = new ErrorCode(1_008_010_004, "刊物至少需要一个 SKU");
+    ErrorCode PUBLICATION_SKU_EXT_REQUIRED = new ErrorCode(1_008_010_005, "刊物 SKU 扩展信息不能为空");
+    ErrorCode PUBLICATION_SKU_GRADE_REQUIRED = new ErrorCode(1_008_010_006, "刊物 SKU 适用年级不能为空");
+    ErrorCode PUBLICATION_TITLE_IDENTIFIER_REQUIRED = new ErrorCode(1_008_010_007, "当前刊物类型要求至少填写 ISSN、CN 刊号、邮发代号之一");
+    ErrorCode PUBLICATION_SKU_ISBN_REQUIRED = new ErrorCode(1_008_010_008, "当前刊物类型要求每个 SKU 都填写 ISBN");
+    ErrorCode PUBLICATION_GRADE_CATALOG_NOT_EXISTS = new ErrorCode(1_008_010_009, "适用年级不存在或已禁用");
 
 }

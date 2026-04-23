@@ -7,9 +7,12 @@ import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.*;
 import cn.iocoder.yudao.module.product.convert.spu.ProductSpuConvert;
+import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
+import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
+import cn.iocoder.yudao.module.product.service.publication.ProductPublicationService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,9 +30,12 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static cn.iocoder.yudao.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
 
 @Tag(name = "管理后台 - 商品 SPU")
@@ -42,6 +48,10 @@ public class ProductSpuController {
     private ProductSpuService productSpuService;
     @Resource
     private ProductSkuService productSkuService;
+    @Resource
+    private ProductCategoryService categoryService;
+    @Resource
+    private ProductPublicationService productPublicationService;
 
     @PostMapping("/create")
     @Operation(summary = "创建商品 SPU")
@@ -87,7 +97,10 @@ public class ProductSpuController {
         }
         // 查询商品 SKU
         List<ProductSkuDO> skus = productSkuService.getSkuListBySpuId(spu.getId());
-        return success(ProductSpuConvert.INSTANCE.convert(spu, skus));
+        ProductSpuRespVO respVO = ProductSpuConvert.INSTANCE.convert(spu, skus);
+        fillBizScene(List.of(respVO));
+        productPublicationService.fillAdminDetail(respVO, respVO.getSkus());
+        return success(respVO);
     }
 
     @GetMapping("/list-all-simple")
@@ -105,8 +118,11 @@ public class ProductSpuController {
     @Parameter(name = "spuIds", description = "spu 编号列表", required = true, example = "[1,2,3]")
     @PreAuthorize("@ss.hasPermission('product:spu:query')")
     public CommonResult<List<ProductSpuRespVO>> getSpuList(@RequestParam("spuIds") Collection<Long> spuIds) {
-        return success(ProductSpuConvert.INSTANCE.convertForSpuDetailRespListVO(
-                productSpuService.getSpuList(spuIds), productSkuService.getSkuListBySpuId(spuIds)));
+        List<ProductSpuRespVO> respVOList = ProductSpuConvert.INSTANCE.convertForSpuDetailRespListVO(
+                productSpuService.getSpuList(spuIds), productSkuService.getSkuListBySpuId(spuIds));
+        fillBizScene(respVOList);
+        respVOList.forEach(item -> productPublicationService.fillAdminDetail(item, item.getSkus()));
+        return success(respVOList);
     }
 
     @GetMapping("/page")
@@ -114,14 +130,16 @@ public class ProductSpuController {
     @PreAuthorize("@ss.hasPermission('product:spu:query')")
     public CommonResult<PageResult<ProductSpuRespVO>> getSpuPage(@Valid ProductSpuPageReqVO pageVO) {
         PageResult<ProductSpuDO> pageResult = productSpuService.getSpuPage(pageVO);
-        return success(BeanUtils.toBean(pageResult, ProductSpuRespVO.class));
+        PageResult<ProductSpuRespVO> respPage = BeanUtils.toBean(pageResult, ProductSpuRespVO.class);
+        fillBizScene(respPage.getList());
+        return success(respPage);
     }
 
     @GetMapping("/get-count")
     @Operation(summary = "获得商品 SPU 分页 tab count")
     @PreAuthorize("@ss.hasPermission('product:spu:query')")
-    public CommonResult<Map<Integer, Long>> getSpuCount() {
-        return success(productSpuService.getTabsCount());
+    public CommonResult<Map<Integer, Long>> getSpuCount(@RequestParam(value = "bizScene", required = false) String bizScene) {
+        return success(productSpuService.getTabsCount(bizScene));
     }
 
     @GetMapping("/export-excel")
@@ -135,6 +153,21 @@ public class ProductSpuController {
         // 导出 Excel
         ExcelUtils.write(response, "商品列表.xls", "数据", ProductSpuRespVO.class,
                 BeanUtils.toBean(list, ProductSpuRespVO.class));
+    }
+
+    private void fillBizScene(List<ProductSpuRespVO> spus) {
+        if (spus == null || spus.isEmpty()) {
+            return;
+        }
+        Set<Long> categoryIds = convertSet(spus, ProductSpuRespVO::getCategoryId);
+        Map<Long, ProductCategoryDO> categoryMap = convertMap(categoryService.getCategoryList(
+                new cn.iocoder.yudao.module.product.controller.admin.category.vo.ProductCategoryListReqVO()), ProductCategoryDO::getId);
+        spus.forEach(spu -> {
+            ProductCategoryDO category = categoryMap.get(spu.getCategoryId());
+            if (category != null) {
+                spu.setBizScene(category.getBizScene());
+            }
+        });
     }
 
 }

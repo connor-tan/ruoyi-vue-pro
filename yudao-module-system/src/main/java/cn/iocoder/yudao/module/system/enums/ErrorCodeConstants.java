@@ -168,4 +168,8 @@ public interface ErrorCodeConstants {
     // ========== 站内信发送 1-002-028-000 ==========
     ErrorCode NOTIFY_SEND_TEMPLATE_PARAM_MISS = new ErrorCode(1_002_028_000, "模板参数({})缺失");
 
+    // ========== 地区模块 1-002-029-000 ==========
+    ErrorCode AREA_NOT_EXISTS = new ErrorCode(1_002_029_000, "地区不存在");
+    ErrorCode AREA_NOT_SELECTABLE = new ErrorCode(1_002_029_001, "地区不处于启用状态，不允许选择");
+
 }

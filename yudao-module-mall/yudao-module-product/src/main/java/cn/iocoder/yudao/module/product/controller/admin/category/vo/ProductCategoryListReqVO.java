@@ -15,6 +15,9 @@ public class ProductCategoryListReqVO {
     @Schema(description = "开启状态", example = "0")
     private Integer status;
 
+    @Schema(description = "业务场景", example = "PUBLICATION")
+    private String bizScene;
+
     @Schema(description = "父分类编号", example = "1")
     private Long parentId;
 

@@ -13,12 +13,16 @@ import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuSaveReq
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuUpdateStatusReqVO;
 import cn.iocoder.yudao.module.product.controller.app.spu.vo.AppProductSpuPageReqVO;
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
+import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
+import cn.iocoder.yudao.module.product.enums.sku.ProductSkuStatusEnum;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.product.service.brand.ProductBrandService;
 import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
+import cn.iocoder.yudao.module.product.service.publication.ProductPublicationService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
+import cn.iocoder.yudao.module.product.service.spu.scene.ProductSceneHandler;
 import com.google.common.collect.Maps;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
@@ -27,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
@@ -52,24 +57,27 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     private ProductBrandService brandService;
     @Resource
     private ProductCategoryService categoryService;
+    @Resource
+    private ProductPublicationService productPublicationService;
+    @Resource
+    private List<ProductSceneHandler> productSceneHandlers;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createSpu(ProductSpuSaveReqVO createReqVO) {
-        // 校验分类、品牌
-        validateCategory(createReqVO.getCategoryId());
-        brandService.validateProductBrand(createReqVO.getBrandId());
-        // 校验 SKU
-        List<ProductSkuSaveReqVO> skuSaveReqList = createReqVO.getSkus();
-        productSkuService.validateSkuList(skuSaveReqList, createReqVO.getSpecType());
+        ProductCategoryDO category = validateLeafCategory(createReqVO.getCategoryId());
+        ProductSceneHandler sceneHandler = getSceneHandler(category.getBizScene());
+        sceneHandler.validateForSave(category, createReqVO);
 
         ProductSpuDO spu = BeanUtils.toBean(createReqVO, ProductSpuDO.class);
+        createReqVO.setBizScene(category.getBizScene());
         // 初始化 SPU 中 SKU 相关属性
-        initSpuFromSkus(spu, skuSaveReqList);
+        initSpuFromSkus(spu, createReqVO.getSkus());
         // 插入 SPU
         productSpuMapper.insert(spu);
         // 插入 SKU
-        productSkuService.createSkuList(spu.getId(), skuSaveReqList);
+        List<ProductSkuDO> savedSkus = productSkuService.createSkuList(spu.getId(), createReqVO.getSkus());
+        sceneHandler.afterSave(spu.getId(), createReqVO, savedSkus, convertSet(savedSkus, ProductSkuDO::getId));
         // 返回
         return spu.getId();
     }
@@ -79,19 +87,21 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     public void updateSpu(ProductSpuSaveReqVO updateReqVO) {
         // 校验 SPU 是否存在
         ProductSpuDO spu = validateSpuExists(updateReqVO.getId());
-        // 校验分类、品牌
-        validateCategory(updateReqVO.getCategoryId());
-        brandService.validateProductBrand(updateReqVO.getBrandId());
-        // 校验SKU
-        List<ProductSkuSaveReqVO> skuSaveReqList = updateReqVO.getSkus();
-        productSkuService.validateSkuList(skuSaveReqList, updateReqVO.getSpecType());
+        ProductCategoryDO category = validateLeafCategory(updateReqVO.getCategoryId());
+        ProductSceneHandler sceneHandler = getSceneHandler(category.getBizScene());
+        sceneHandler.validateForSave(category, updateReqVO);
+        List<ProductSkuDO> oldSkus = productSkuService.getSkuListBySpuId(spu.getId());
 
         // 更新 SPU
         ProductSpuDO updateObj = BeanUtils.toBean(updateReqVO, ProductSpuDO.class).setStatus(spu.getStatus());
-        initSpuFromSkus(updateObj, skuSaveReqList);
+        updateReqVO.setBizScene(category.getBizScene());
+        initSpuFromSkus(updateObj, updateReqVO.getSkus());
         productSpuMapper.updateById(updateObj);
         // 批量更新 SKU
-        productSkuService.updateSkuList(updateObj.getId(), updateReqVO.getSkus());
+        List<ProductSkuDO> savedSkus = productSkuService.updateSkuList(updateObj.getId(), updateReqVO.getSkus());
+        Set<Long> cleanupSkuIds = new LinkedHashSet<>(convertSet(oldSkus, ProductSkuDO::getId));
+        cleanupSkuIds.addAll(convertSet(savedSkus, ProductSkuDO::getId));
+        sceneHandler.afterSave(updateObj.getId(), updateReqVO, savedSkus, cleanupSkuIds);
     }
 
     /**
@@ -102,14 +112,19 @@ public class ProductSpuServiceImpl implements ProductSpuService {
      * @param skus 商品 SKU 数组
      */
     private void initSpuFromSkus(ProductSpuDO spu, List<ProductSkuSaveReqVO> skus) {
+        List<ProductSkuSaveReqVO> enabledSkus = skus == null ? Collections.emptyList() : skus.stream()
+                .filter(item -> ProductSkuStatusEnum.isEnable(
+                        ObjectUtil.defaultIfNull(item.getStatus(), ProductSkuStatusEnum.ENABLE.getStatus())))
+                .collect(Collectors.toList());
+        List<ProductSkuSaveReqVO> aggregateSkus = CollUtil.isNotEmpty(enabledSkus) ? enabledSkus : Collections.emptyList();
         // sku 单价最低的商品的价格
-        spu.setPrice(getMinValue(skus, ProductSkuSaveReqVO::getPrice));
+        spu.setPrice(CollUtil.isEmpty(aggregateSkus) ? 0 : getMinValue(aggregateSkus, ProductSkuSaveReqVO::getPrice));
         // sku 单价最低的商品的市场价格
-        spu.setMarketPrice(getMinValue(skus, ProductSkuSaveReqVO::getMarketPrice));
+        spu.setMarketPrice(CollUtil.isEmpty(aggregateSkus) ? 0 : getMinValue(aggregateSkus, ProductSkuSaveReqVO::getMarketPrice));
         // sku 单价最低的商品的成本价格
-        spu.setCostPrice(getMinValue(skus, ProductSkuSaveReqVO::getCostPrice));
+        spu.setCostPrice(CollUtil.isEmpty(aggregateSkus) ? 0 : getMinValue(aggregateSkus, ProductSkuSaveReqVO::getCostPrice));
         // skus 库存总数
-        spu.setStock(getSumValue(skus, ProductSkuSaveReqVO::getStock, Math::addExact));
+        spu.setStock(CollUtil.isEmpty(aggregateSkus) ? 0 : getSumValue(aggregateSkus, ProductSkuSaveReqVO::getStock, Math::addExact));
         // 若是 spu 已有状态则不处理
         if (spu.getStatus() == null) {
             spu.setStatus(ProductSpuStatusEnum.ENABLE.getStatus()); // 默认状态为上架
@@ -123,12 +138,21 @@ public class ProductSpuServiceImpl implements ProductSpuService {
      *
      * @param id 商品分类编号
      */
-    private void validateCategory(Long id) {
+    private ProductCategoryDO validateLeafCategory(Long id) {
         categoryService.validateCategory(id);
+        ProductCategoryDO category = categoryService.getCategory(id);
         // 校验层级
         if (categoryService.getCategoryLevel(id) < CATEGORY_LEVEL) {
             throw exception(SPU_SAVE_FAIL_CATEGORY_LEVEL_ERROR);
         }
+        return category;
+    }
+
+    private ProductSceneHandler getSceneHandler(String bizScene) {
+        return productSceneHandlers.stream()
+                .filter(handler -> Objects.equals(handler.getBizScene(), bizScene))
+                .findFirst()
+                .orElseThrow(() -> exception(CATEGORY_BIZ_SCENE_INVALID));
     }
 
     @Override
@@ -171,6 +195,8 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         // TODO 芋艿：【可选】参与活动中的商品，不允许删除？？？
 
         // 删除 SPU
+        List<ProductSkuDO> skuList = productSkuService.getSkuListBySpuId(id);
+        productPublicationService.clearPublication(id, convertSet(skuList, ProductSkuDO::getId));
         productSpuMapper.deleteById(id);
         // 删除关联的 SKU
         productSkuService.deleteSkuBySpuId(id);
@@ -214,7 +240,7 @@ public class ProductSpuServiceImpl implements ProductSpuService {
 
     @Override
     public PageResult<ProductSpuDO> getSpuPage(ProductSpuPageReqVO pageReqVO) {
-        return productSpuMapper.selectPage(pageReqVO);
+        return productSpuMapper.selectPage(pageReqVO, resolveSceneCategoryIds(pageReqVO.getBizScene()));
     }
 
     @Override
@@ -256,29 +282,42 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     }
 
     @Override
-    public Map<Integer, Long> getTabsCount() {
+    public Map<Integer, Long> getTabsCount(String bizScene) {
+        Set<Long> sceneCategoryIds = resolveSceneCategoryIds(bizScene);
         Map<Integer, Long> counts = Maps.newLinkedHashMapWithExpectedSize(5);
         // 查询销售中的商品数量
         counts.put(ProductSpuPageReqVO.FOR_SALE,
-                productSpuMapper.selectCount(ProductSpuDO::getStatus, ProductSpuStatusEnum.ENABLE.getStatus()));
+                productSpuMapper.selectCountByTab(ProductSpuPageReqVO.FOR_SALE, sceneCategoryIds));
         // 查询仓库中的商品数量
         counts.put(ProductSpuPageReqVO.IN_WAREHOUSE,
-                productSpuMapper.selectCount(ProductSpuDO::getStatus, ProductSpuStatusEnum.DISABLE.getStatus()));
+                productSpuMapper.selectCountByTab(ProductSpuPageReqVO.IN_WAREHOUSE, sceneCategoryIds));
         // 查询售空的商品数量
         counts.put(ProductSpuPageReqVO.SOLD_OUT,
-                productSpuMapper.selectCount(ProductSpuDO::getStock, 0));
+                productSpuMapper.selectCountByTab(ProductSpuPageReqVO.SOLD_OUT, sceneCategoryIds));
         // 查询触发警戒库存的商品数量
         counts.put(ProductSpuPageReqVO.ALERT_STOCK,
-                productSpuMapper.selectCount());
+                productSpuMapper.selectCountByTab(ProductSpuPageReqVO.ALERT_STOCK, sceneCategoryIds));
         // 查询回收站中的商品数量
         counts.put(ProductSpuPageReqVO.RECYCLE_BIN,
-                productSpuMapper.selectCount(ProductSpuDO::getStatus, ProductSpuStatusEnum.RECYCLE.getStatus()));
+                productSpuMapper.selectCountByTab(ProductSpuPageReqVO.RECYCLE_BIN, sceneCategoryIds));
         return counts;
     }
 
     @Override
     public Long getSpuCountByCategoryId(Long categoryId) {
         return productSpuMapper.selectCount(ProductSpuDO::getCategoryId, categoryId);
+    }
+
+    private Set<Long> resolveSceneCategoryIds(String bizScene) {
+        if (bizScene == null) {
+            return null;
+        }
+        categoryService.validateBizScene(bizScene);
+        List<ProductCategoryDO> categories = categoryService.getCategoryList(new ProductCategoryListReqVO().setBizScene(bizScene));
+        if (CollUtil.isEmpty(categories)) {
+            return Collections.singleton(-1L);
+        }
+        return convertSet(categories, ProductCategoryDO::getId);
     }
 
 }

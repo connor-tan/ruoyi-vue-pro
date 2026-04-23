@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import org.apache.ibatis.annotations.*;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
 
@@ -37,11 +38,12 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
      * @param reqVO 分页请求参数
      * @return 商品 SPU 分页列表数据
      */
-    default PageResult<ProductSpuDO> selectPage(ProductSpuPageReqVO reqVO) {
+    default PageResult<ProductSpuDO> selectPage(ProductSpuPageReqVO reqVO, Collection<Long> categoryIds) {
         Integer tabType = reqVO.getTabType();
         LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<ProductSpuDO>()
                 .likeIfPresent(ProductSpuDO::getName, reqVO.getName())
                 .eqIfPresent(ProductSpuDO::getCategoryId, reqVO.getCategoryId())
+                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds)
                 .betweenIfPresent(ProductSpuDO::getCreateTime, reqVO.getCreateTime())
                 .orderByDesc(ProductSpuDO::getSort)
                 .orderByDesc(ProductSpuDO::getId);
@@ -54,12 +56,10 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
      *
      * @return 触发警戒库存的 SPU 数量
      */
-    default Long selectCount() {
-        LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<>();
-        // 库存小于等于警戒库存
-        queryWrapper.le(ProductSpuDO::getStock, ProductConstants.ALERT_STOCK)
-                // 如果库存触发警戒库存且状态为回收站的话则不计入触发警戒库存的个数
-                .notIn(ProductSpuDO::getStatus, ProductSpuStatusEnum.RECYCLE.getStatus());
+    default Long selectCountByTab(Integer tabType, Collection<Long> categoryIds) {
+        LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<ProductSpuDO>()
+                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds);
+        appendTabQuery(tabType, queryWrapper);
         return selectCount(queryWrapper);
     }
 

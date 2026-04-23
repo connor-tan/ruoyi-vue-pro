@@ -53,6 +53,13 @@ public interface ProductCategoryService {
     void validateCategory(Long id);
 
     /**
+     * 校验商品分类场景是否合法
+     *
+     * @param bizScene 业务场景
+     */
+    void validateBizScene(String bizScene);
+
+    /**
      * 获得商品分类的层级
      *
      * @param id 编号

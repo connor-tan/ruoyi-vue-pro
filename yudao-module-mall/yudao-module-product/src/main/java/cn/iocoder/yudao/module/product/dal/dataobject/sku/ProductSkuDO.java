@@ -4,6 +4,7 @@ import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.property.ProductPropertyDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.property.ProductPropertyValueDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
+import cn.iocoder.yudao.module.product.enums.sku.ProductSkuStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -39,6 +40,10 @@ public class ProductSkuDO extends BaseDO {
      * 关联 {@link ProductSpuDO#getId()}
      */
     private Long spuId;
+    /**
+     * SKU 名称
+     */
+    private String name;
     /**
      * 属性数组，JSON 格式
      */
@@ -93,6 +98,12 @@ public class ProductSkuDO extends BaseDO {
      * 商品销量
      */
     private Integer salesCount;
+    /**
+     * SKU 状态
+     *
+     * 枚举 {@link ProductSkuStatusEnum}
+     */
+    private Integer status;
 
     /**
      * 商品属性
@@ -131,4 +142,3 @@ public class ProductSkuDO extends BaseDO {
     }
 
 }
-

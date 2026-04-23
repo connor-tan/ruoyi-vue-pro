@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.product.controller.admin.category.vo.ProductCateg
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.mysql.category.ProductCategoryMapper;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -41,8 +42,9 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
 
     @Override
     public Long createCategory(ProductCategorySaveReqVO createReqVO) {
+        validateBizScene(createReqVO.getBizScene());
         // 校验父分类存在
-        validateParentProductCategory(createReqVO.getParentId());
+        validateParentProductCategory(createReqVO.getParentId(), createReqVO.getBizScene());
 
         // 插入
         ProductCategoryDO category = BeanUtils.toBean(createReqVO, ProductCategoryDO.class);
@@ -53,10 +55,11 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
 
     @Override
     public void updateCategory(ProductCategorySaveReqVO updateReqVO) {
+        validateBizScene(updateReqVO.getBizScene());
         // 校验分类是否存在
         validateProductCategoryExists(updateReqVO.getId());
         // 校验父分类存在
-        validateParentProductCategory(updateReqVO.getParentId());
+        validateParentProductCategory(updateReqVO.getParentId(), updateReqVO.getBizScene());
 
         // 更新
         ProductCategoryDO updateObj = BeanUtils.toBean(updateReqVO, ProductCategoryDO.class);
@@ -80,7 +83,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         productCategoryMapper.deleteById(id);
     }
 
-    private void validateParentProductCategory(Long id) {
+    private void validateParentProductCategory(Long id, String bizScene) {
         // 如果是根分类，无需验证
         if (Objects.equals(id, PARENT_ID_NULL)) {
             return;
@@ -93,6 +96,9 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         // 父分类不能是二级分类
         if (!Objects.equals(category.getParentId(), PARENT_ID_NULL)) {
             throw exception(CATEGORY_PARENT_NOT_FIRST_LEVEL);
+        }
+        if (!Objects.equals(category.getBizScene(), bizScene)) {
+            throw exception(CATEGORY_PARENT_BIZ_SCENE_INCONSISTENT);
         }
     }
 
@@ -142,6 +148,16 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         }
         if (Objects.equals(category.getStatus(), CommonStatusEnum.DISABLE.getStatus())) {
             throw exception(CATEGORY_DISABLED, category.getName());
+        }
+    }
+
+    @Override
+    public void validateBizScene(String bizScene) {
+        if (bizScene == null) {
+            throw exception(CATEGORY_BIZ_SCENE_REQUIRED);
+        }
+        if (BizSceneEnum.valueOfCode(bizScene) == null) {
+            throw exception(CATEGORY_BIZ_SCENE_INVALID);
         }
     }
 

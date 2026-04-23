@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.product.controller.admin.spu.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -10,6 +11,9 @@ import java.util.List;
 @Schema(description = "管理后台 - 商品 SKU 创建/更新 Request VO")
 @Data
 public class ProductSkuSaveReqVO {
+
+    @Schema(description = "商品 SKU 编号", example = "1024")
+    private Long id;
 
     @Schema(description = "商品 SKU 名字", requiredMode = Schema.RequiredMode.REQUIRED, example = "清凉小短袖")
     @NotEmpty(message = "商品 SKU 名字不能为空")
@@ -48,8 +52,18 @@ public class ProductSkuSaveReqVO {
     @Schema(description = "二级分销的佣金，单位：分", example = "19")
     private Integer secondBrokeragePrice;
 
+    @Schema(description = "SKU 状态", example = "0")
+    private Integer status;
+
     @Schema(description = "属性数组")
     private List<Property> properties;
+
+    @Schema(description = "刊物 SKU 扩展")
+    @Valid
+    private PublicationSkuExtSaveReqVO publicationExt;
+
+    @Schema(description = "适用年级目录编号数组")
+    private List<Long> applicableGradeCatalogIds;
 
     @Schema(description = "商品属性")
     @Data
@@ -68,6 +82,27 @@ public class ProductSkuSaveReqVO {
 
         @Schema(description = "属性值名字", example = "红色")
         private String valueName;
+
+    }
+
+    @Schema(description = "刊物 SKU 扩展")
+    @Data
+    public static class PublicationSkuExtSaveReqVO {
+
+        @Schema(description = "售卖周期", example = "FULL_YEAR")
+        private String targetPeriod;
+
+        @Schema(description = "册别", example = "上册")
+        private String volumeLabel;
+
+        @Schema(description = "版本", example = "人教版")
+        private String editionLabel;
+
+        @Schema(description = "ISBN", example = "9787300000000")
+        private String isbn;
+
+        @Schema(description = "备注", example = "秋季版")
+        private String remark;
 
     }
 

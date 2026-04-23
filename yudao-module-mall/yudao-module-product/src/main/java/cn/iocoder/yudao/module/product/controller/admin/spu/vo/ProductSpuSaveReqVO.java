@@ -36,7 +36,6 @@ public class ProductSpuSaveReqVO {
     private Long categoryId;
 
     @Schema(description = "商品品牌编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "商品品牌不能为空")
     private Long brandId;
 
     @Schema(description = "商品封面图", requiredMode = Schema.RequiredMode.REQUIRED, example = "https://www.iocoder.cn/xx.png")
@@ -60,7 +59,6 @@ public class ProductSpuSaveReqVO {
     // ========== 物流相关字段 =========
 
     @Schema(description = "配送方式数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotEmpty(message = "配送方式不能为空")
     private List<Integer> deliveryTypes;
 
     @Schema(description = "物流配置模板编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "111")
@@ -69,11 +67,9 @@ public class ProductSpuSaveReqVO {
     // ========== 营销相关字段 =========
 
     @Schema(description = "赠送积分", requiredMode = Schema.RequiredMode.REQUIRED, example = "111")
-    @NotNull(message = "商品赠送积分不能为空")
     private Integer giveIntegral;
 
     @Schema(description = "分销类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
-    @NotNull(message = "商品分销类型不能为空")
     private Boolean subCommissionType;
 
     // ========== 统计相关字段 =========
@@ -92,5 +88,39 @@ public class ProductSpuSaveReqVO {
     @Schema(description = "SKU 数组")
     @Valid
     private List<ProductSkuSaveReqVO> skus;
+
+    @Schema(description = "刊物扩展")
+    @Valid
+    private PublicationSpuExtSaveReqVO publicationExt;
+
+    @Schema(description = "业务场景，仅用于回显", example = "PUBLICATION")
+    private String bizScene;
+
+    @Schema(description = "刊物扩展")
+    @Data
+    public static class PublicationSpuExtSaveReqVO {
+
+        @Schema(description = "出版社编号", example = "1")
+        private Long publisherId;
+
+        @Schema(description = "刊物类型编号", example = "1")
+        private Long publicationTypeId;
+
+        @Schema(description = "出刊周期", example = "MONTHLY")
+        private String issueCycle;
+
+        @Schema(description = "ISSN", example = "1674-1234")
+        private String issn;
+
+        @Schema(description = "CN 刊号", example = "CN11-1234/G4")
+        private String cnCode;
+
+        @Schema(description = "邮发代号", example = "80-123")
+        private String postDistributionCode;
+
+        @Schema(description = "履约方式", example = "SCHOOL_STATION")
+        private String fulfillmentMode;
+
+    }
 
 }
