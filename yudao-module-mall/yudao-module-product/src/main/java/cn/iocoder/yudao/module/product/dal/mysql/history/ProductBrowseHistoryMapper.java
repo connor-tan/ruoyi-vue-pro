@@ -34,8 +34,8 @@ public interface ProductBrowseHistoryMapper extends BaseMapperX<ProductBrowseHis
                 .orderByDesc(ProductBrowseHistoryDO::getId));
     }
 
-    default void updateUserDeletedByUserId(Long userId, Collection<Long> spuIds, Boolean userDeleted) {
-        update(new LambdaUpdateWrapper<ProductBrowseHistoryDO>()
+    default int updateUserDeletedByUserId(Long userId, Collection<Long> spuIds, Boolean userDeleted) {
+        return update(new LambdaUpdateWrapper<ProductBrowseHistoryDO>()
                 .eq(ProductBrowseHistoryDO::getUserId, userId)
                 .in(CollUtil.isNotEmpty(spuIds), ProductBrowseHistoryDO::getSpuId, spuIds)
                 .set(ProductBrowseHistoryDO::getUserDeleted, userDeleted));

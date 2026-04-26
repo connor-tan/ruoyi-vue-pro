@@ -15,18 +15,18 @@ public interface UserRoleMapper extends BaseMapperX<UserRoleDO> {
         return selectList(UserRoleDO::getUserId, userId);
     }
 
-    default void deleteListByUserIdAndRoleIdIds(Long userId, Collection<Long> roleIds) {
-        delete(new LambdaQueryWrapper<UserRoleDO>()
+    default int deleteListByUserIdAndRoleIdIds(Long userId, Collection<Long> roleIds) {
+        return delete(new LambdaQueryWrapper<UserRoleDO>()
                 .eq(UserRoleDO::getUserId, userId)
                 .in(UserRoleDO::getRoleId, roleIds));
     }
 
-    default void deleteListByUserId(Long userId) {
-        delete(new LambdaQueryWrapper<UserRoleDO>().eq(UserRoleDO::getUserId, userId));
+    default int deleteListByUserId(Long userId) {
+        return delete(new LambdaQueryWrapper<UserRoleDO>().eq(UserRoleDO::getUserId, userId));
     }
 
-    default void deleteListByRoleId(Long roleId) {
-        delete(new LambdaQueryWrapper<UserRoleDO>().eq(UserRoleDO::getRoleId, roleId));
+    default int deleteListByRoleId(Long roleId) {
+        return delete(new LambdaQueryWrapper<UserRoleDO>().eq(UserRoleDO::getRoleId, roleId));
     }
 
     default List<UserRoleDO> selectListByRoleIds(Collection<Long> roleIds) {

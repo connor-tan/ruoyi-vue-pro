@@ -37,8 +37,8 @@ public interface MesMdProductSopMapper extends BaseMapperX<MesMdProductSopDO> {
                 .neIfPresent(MesMdProductSopDO::getId, excludeId));
     }
 
-    default void deleteByItemId(Long itemId) {
-        delete(MesMdProductSopDO::getItemId, itemId);
+    default int deleteByItemId(Long itemId) {
+        return delete(MesMdProductSopDO::getItemId, itemId);
     }
 
 }

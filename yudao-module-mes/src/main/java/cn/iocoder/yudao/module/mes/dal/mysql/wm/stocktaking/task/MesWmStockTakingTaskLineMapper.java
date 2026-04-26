@@ -23,8 +23,8 @@ public interface MesWmStockTakingTaskLineMapper extends BaseMapperX<MesWmStockTa
                 .orderByAsc(MesWmStockTakingTaskLineDO::getId));
     }
 
-    default void deleteByTaskId(Long taskId) {
-        delete(MesWmStockTakingTaskLineDO::getTaskId, taskId);
+    default int deleteByTaskId(Long taskId) {
+        return delete(MesWmStockTakingTaskLineDO::getTaskId, taskId);
     }
 
     default PageResult<MesWmStockTakingTaskLineDO> selectPage(MesWmStockTakingTaskLinePageReqVO reqVO) {

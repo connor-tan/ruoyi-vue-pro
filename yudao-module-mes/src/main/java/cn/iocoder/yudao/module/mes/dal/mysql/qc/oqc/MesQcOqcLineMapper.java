@@ -27,8 +27,8 @@ public interface MesQcOqcLineMapper extends BaseMapperX<MesQcOqcLineDO> {
         return selectList(MesQcOqcLineDO::getOqcId, oqcId);
     }
 
-    default void deleteByOqcId(Long oqcId) {
-        delete(new LambdaQueryWrapperX<MesQcOqcLineDO>()
+    default int deleteByOqcId(Long oqcId) {
+        return delete(new LambdaQueryWrapperX<MesQcOqcLineDO>()
                 .eq(MesQcOqcLineDO::getOqcId, oqcId));
     }
 

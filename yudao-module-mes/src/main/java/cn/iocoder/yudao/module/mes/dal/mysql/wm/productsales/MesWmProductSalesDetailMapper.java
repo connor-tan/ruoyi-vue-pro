@@ -22,12 +22,12 @@ public interface MesWmProductSalesDetailMapper extends BaseMapperX<MesWmProductS
         return selectList(MesWmProductSalesDetailDO::getSalesId, salesId);
     }
 
-    default void deleteByLineId(Long lineId) {
-        delete(MesWmProductSalesDetailDO::getLineId, lineId);
+    default int deleteByLineId(Long lineId) {
+        return delete(MesWmProductSalesDetailDO::getLineId, lineId);
     }
 
-    default void deleteBySalesId(Long salesId) {
-        delete(MesWmProductSalesDetailDO::getSalesId, salesId);
+    default int deleteBySalesId(Long salesId) {
+        return delete(MesWmProductSalesDetailDO::getSalesId, salesId);
     }
 
 }

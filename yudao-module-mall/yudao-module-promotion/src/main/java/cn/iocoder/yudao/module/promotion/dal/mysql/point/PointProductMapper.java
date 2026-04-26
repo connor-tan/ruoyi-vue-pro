@@ -25,8 +25,8 @@ public interface PointProductMapper extends BaseMapperX<PointProductDO> {
         return selectList(PointProductDO::getActivityId, activityId);
     }
 
-    default void updateByActivityId(PointProductDO pointProductDO) {
-        update(pointProductDO, new LambdaUpdateWrapper<PointProductDO>()
+    default int updateByActivityId(PointProductDO pointProductDO) {
+        return update(pointProductDO, new LambdaUpdateWrapper<PointProductDO>()
                 .eq(PointProductDO::getActivityId, pointProductDO.getActivityId()));
     }
 

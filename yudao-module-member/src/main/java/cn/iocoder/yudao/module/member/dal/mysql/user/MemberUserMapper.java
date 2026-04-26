@@ -70,12 +70,12 @@ public interface MemberUserMapper extends BaseMapperX<MemberUserDO> {
      * @param id        用户编号
      * @param incrCount 增加积分（正数）
      */
-    default void updatePointIncr(Long id, Integer incrCount) {
+    default int updatePointIncr(Long id, Integer incrCount) {
         Assert.isTrue(incrCount > 0);
         LambdaUpdateWrapper<MemberUserDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<MemberUserDO>()
                 .setSql(" point = point + " + incrCount)
                 .eq(MemberUserDO::getId, id);
-        update(null, lambdaUpdateWrapper);
+        return update(null, lambdaUpdateWrapper);
     }
 
     /**

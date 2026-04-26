@@ -23,8 +23,8 @@ public interface MesProRouteProductMapper extends BaseMapperX<MesProRouteProduct
         return selectOne(MesProRouteProductDO::getItemId, itemId);
     }
 
-    default void deleteByRouteId(Long routeId) {
-        delete(new LambdaQueryWrapperX<MesProRouteProductDO>()
+    default int deleteByRouteId(Long routeId) {
+        return delete(new LambdaQueryWrapperX<MesProRouteProductDO>()
                 .eq(MesProRouteProductDO::getRouteId, routeId));
     }
 

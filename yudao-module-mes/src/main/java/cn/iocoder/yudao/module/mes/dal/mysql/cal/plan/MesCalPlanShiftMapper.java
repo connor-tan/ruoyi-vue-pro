@@ -34,8 +34,8 @@ public interface MesCalPlanShiftMapper extends BaseMapperX<MesCalPlanShiftDO> {
         return selectCount(MesCalPlanShiftDO::getPlanId, planId);
     }
 
-    default void deleteByPlanId(Long planId) {
-        delete(new LambdaQueryWrapperX<MesCalPlanShiftDO>()
+    default int deleteByPlanId(Long planId) {
+        return delete(new LambdaQueryWrapperX<MesCalPlanShiftDO>()
                 .eq(MesCalPlanShiftDO::getPlanId, planId));
     }
 

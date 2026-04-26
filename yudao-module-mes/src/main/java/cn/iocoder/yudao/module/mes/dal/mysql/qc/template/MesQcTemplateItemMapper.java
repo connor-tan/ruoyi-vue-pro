@@ -37,8 +37,8 @@ public interface MesQcTemplateItemMapper extends BaseMapperX<MesQcTemplateItemDO
                 .eq(MesQcTemplateItemDO::getItemId, itemId));
     }
 
-    default void deleteByTemplateId(Long templateId) {
-        delete(new LambdaQueryWrapperX<MesQcTemplateItemDO>()
+    default int deleteByTemplateId(Long templateId) {
+        return delete(new LambdaQueryWrapperX<MesQcTemplateItemDO>()
                 .eq(MesQcTemplateItemDO::getTemplateId, templateId));
     }
 

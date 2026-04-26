@@ -17,12 +17,12 @@ public interface CodegenColumnMapper extends BaseMapperX<CodegenColumnDO> {
                 .orderByAsc(CodegenColumnDO::getOrdinalPosition));
     }
 
-    default void deleteListByTableId(Long tableId) {
-        delete(CodegenColumnDO::getTableId, tableId);
+    default int deleteListByTableId(Long tableId) {
+        return delete(CodegenColumnDO::getTableId, tableId);
     }
 
-    default void deleteListByTableId(Collection<Long> tableIds) {
-        delete(new LambdaQueryWrapperX<CodegenColumnDO>()
+    default int deleteListByTableId(Collection<Long> tableIds) {
+        return delete(new LambdaQueryWrapperX<CodegenColumnDO>()
                .in(CodegenColumnDO::getTableId, tableIds));
     }
 

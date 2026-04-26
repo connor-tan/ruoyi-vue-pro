@@ -31,8 +31,8 @@ public interface MesCalPlanTeamMapper extends BaseMapperX<MesCalPlanTeamDO> {
                 .eq(MesCalPlanTeamDO::getTeamId, teamId));
     }
 
-    default void deleteByPlanId(Long planId) {
-        delete(new LambdaQueryWrapperX<MesCalPlanTeamDO>()
+    default int deleteByPlanId(Long planId) {
+        return delete(new LambdaQueryWrapperX<MesCalPlanTeamDO>()
                 .eq(MesCalPlanTeamDO::getPlanId, planId));
     }
 

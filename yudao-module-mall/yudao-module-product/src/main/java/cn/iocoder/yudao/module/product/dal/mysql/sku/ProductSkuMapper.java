@@ -5,8 +5,8 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,12 +16,7 @@ public interface ProductSkuMapper extends BaseMapperX<ProductSkuDO> {
 
     /**
      * 查询商品 SKU（包含已删除）
-     * 注意：使用 @Results 手动指定 typeHandler，否则 @Select 不会应用 autoResultMap，properties 字段无法解析 JSON
      */
-    @Select("SELECT * FROM product_sku WHERE id = #{id}")
-    @Results({
-            @Result(column = "properties", property = "properties", typeHandler = JacksonTypeHandler.class),
-    })
     ProductSkuDO selectByIdIncludeDeleted(@Param("id") Long id);
 
     default List<ProductSkuDO> selectListBySpuId(Long spuId) {
@@ -32,8 +27,8 @@ public interface ProductSkuMapper extends BaseMapperX<ProductSkuDO> {
         return selectList(ProductSkuDO::getSpuId, spuIds);
     }
 
-    default void deleteBySpuId(Long spuId) {
-        delete(new LambdaQueryWrapperX<ProductSkuDO>().eq(ProductSkuDO::getSpuId, spuId));
+    default int deleteBySpuId(Long spuId) {
+        return delete(new LambdaQueryWrapperX<ProductSkuDO>().eq(ProductSkuDO::getSpuId, spuId));
     }
 
     /**
@@ -42,13 +37,13 @@ public interface ProductSkuMapper extends BaseMapperX<ProductSkuDO> {
      * @param id        编号
      * @param incrCount 增加库存（正数）
      */
-    default void updateStockIncr(Long id, Integer incrCount) {
+    default int updateStockIncr(Long id, Integer incrCount) {
         Assert.isTrue(incrCount > 0);
         LambdaUpdateWrapper<ProductSkuDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<ProductSkuDO>()
                 .setSql(" stock = stock + " + incrCount
                     + ", sales_count = sales_count - " + incrCount)
                 .eq(ProductSkuDO::getId, id);
-        update(null, lambdaUpdateWrapper);
+        return update(null, lambdaUpdateWrapper);
     }
 
     /**

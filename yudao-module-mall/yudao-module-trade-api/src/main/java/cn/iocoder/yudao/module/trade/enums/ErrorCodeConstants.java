@@ -42,6 +42,20 @@ public interface ErrorCodeConstants {
     ErrorCode ORDER_PICK_UP_FAIL_COMBINATION_NOT_SUCCESS = new ErrorCode(1_011_000_037, "交易订单自提失败，原因：商品拼团记录不是【成功】状态");
     ErrorCode ORDER_CREATE_FAIL_INSUFFICIENT_USER_POINTS = new ErrorCode(1_011_000_038, "交易订单创建失败，原因：用户积分不足");
     ErrorCode ORDER_PICK_UP_FAIL_STATUS_NOT_UNDELIVERED = new ErrorCode(1_011_000_039, "交易订单自提失败，订单不是【待核销】状态");
+    ErrorCode ORDER_PUBLICATION_STUDENT_REQUIRED = new ErrorCode(1_011_000_040, "刊物商品必须选择学生后购买");
+    ErrorCode ORDER_NORMAL_STUDENT_NOT_ALLOWED = new ErrorCode(1_011_000_041, "普通商品不能携带学生购买信息");
+    ErrorCode ORDER_ITEM_DELIVERY_TYPE_REQUIRED = new ErrorCode(1_011_000_042, "商品必须选择配送方式");
+    ErrorCode ORDER_PUBLICATION_MULTI_DELIVERY_FOR_STUDENT = new ErrorCode(1_011_000_043, "同一学生本次结算只能选择一种配送方式");
+    ErrorCode ORDER_SCHOOL_STATION_NOT_CONFIGURED = new ErrorCode(1_011_000_044, "当前学生所在学校未配置站点配送信息");
+    ErrorCode ORDER_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_045, "订单配送组不存在");
+    ErrorCode ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_STATION = new ErrorCode(1_011_000_046, "订单配送失败，配送组类型不是站点配送");
+    ErrorCode ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED = new ErrorCode(1_011_000_047, "订单收货失败，配送组不是【待收货】状态");
+    ErrorCode ORDER_RECEIVE_FAIL_DELIVERY_NOT_OWNED = new ErrorCode(1_011_000_048, "订单收货失败，配送组不属于当前用户");
+    ErrorCode ORDER_RECEIVE_FAIL_SPLIT_DELIVERY_REQUIRED = new ErrorCode(1_011_000_049, "订单已拆分多个配送组，请按配送组确认收货");
+    ErrorCode ORDER_ITEM_DELIVERY_TYPE_ILLEGAL = new ErrorCode(1_011_000_050, "当前商品不支持所选配送方式");
+    ErrorCode ORDER_SPLIT_MARKETING_NOT_SUPPORTED = new ErrorCode(1_011_000_051, "当前订单包含多个配送组，暂不支持优惠劵、积分或营销活动混合结算");
+    ErrorCode ORDER_UPDATE_ADDRESS_FAIL_EXPRESS_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_052, "交易订单修改收货地址失败，原因：订单不存在可修改的快递配送组");
+    ErrorCode ORDER_PUBLICATION_OFFER_SKU_REQUIRED = new ErrorCode(1_011_000_053, "刊物商品必须携带订刊窗口 SKU 后购买");
 
     // ========== After Sale 模块 1-011-000-100 ==========
     ErrorCode AFTER_SALE_NOT_FOUND = new ErrorCode(1_011_000_100, "售后单不存在");

@@ -21,14 +21,14 @@ public interface CrmContactBusinessMapper extends BaseMapperX<CrmContactBusiness
                 CrmContactBusinessDO::getBusinessId, businessId);
     }
 
-    default void deleteByContactIdAndBusinessId(Long contactId, Collection<Long> businessIds) {
-        delete(new LambdaQueryWrapper<CrmContactBusinessDO>()
+    default int deleteByContactIdAndBusinessId(Long contactId, Collection<Long> businessIds) {
+        return delete(new LambdaQueryWrapper<CrmContactBusinessDO>()
                 .eq(CrmContactBusinessDO::getContactId, contactId)
                 .in(CrmContactBusinessDO::getBusinessId, businessIds));
     }
 
-    default void deleteByBusinessIdAndContactId(Long businessId, List<Long> contactIds) {
-        delete(new LambdaQueryWrapper<CrmContactBusinessDO>()
+    default int deleteByBusinessIdAndContactId(Long businessId, List<Long> contactIds) {
+        return delete(new LambdaQueryWrapper<CrmContactBusinessDO>()
                 .eq(CrmContactBusinessDO::getBusinessId, businessId)
                 .in(CrmContactBusinessDO::getContactId, contactIds));
     }

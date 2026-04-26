@@ -27,8 +27,8 @@ public interface MesWmOutsourceIssueLineMapper extends BaseMapperX<MesWmOutsourc
         return selectList(MesWmOutsourceIssueLineDO::getIssueId, issueId);
     }
 
-    default void deleteByIssueId(Long issueId) {
-        delete(MesWmOutsourceIssueLineDO::getIssueId, issueId);
+    default int deleteByIssueId(Long issueId) {
+        return delete(MesWmOutsourceIssueLineDO::getIssueId, issueId);
     }
 
 }

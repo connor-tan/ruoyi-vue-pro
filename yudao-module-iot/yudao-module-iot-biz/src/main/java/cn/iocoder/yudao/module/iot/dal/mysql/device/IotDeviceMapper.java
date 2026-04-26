@@ -166,8 +166,8 @@ public interface IotDeviceMapper extends BaseMapperX<IotDeviceDO> {
      * @param ids       设备编号列表
      * @param gatewayId 网关设备编号（可以为 null，表示解绑）
      */
-    default void updateGatewayIdBatch(Collection<Long> ids, Long gatewayId) {
-        update(null, new LambdaUpdateWrapper<IotDeviceDO>()
+    default int updateGatewayIdBatch(Collection<Long> ids, Long gatewayId) {
+        return update(null, new LambdaUpdateWrapper<IotDeviceDO>()
                 .set(IotDeviceDO::getGatewayId, gatewayId)
                 .in(IotDeviceDO::getId, ids));
     }

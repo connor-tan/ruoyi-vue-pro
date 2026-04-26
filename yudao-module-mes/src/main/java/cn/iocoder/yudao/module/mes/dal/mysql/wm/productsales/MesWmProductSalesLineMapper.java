@@ -19,8 +19,8 @@ public interface MesWmProductSalesLineMapper extends BaseMapperX<MesWmProductSal
         return selectList(MesWmProductSalesLineDO::getSalesId, salesId);
     }
 
-    default void deleteBySalesId(Long salesId) {
-        delete(MesWmProductSalesLineDO::getSalesId, salesId);
+    default int deleteBySalesId(Long salesId) {
+        return delete(MesWmProductSalesLineDO::getSalesId, salesId);
     }
 
     default cn.iocoder.yudao.framework.common.pojo.PageResult<MesWmProductSalesLineDO> selectPage(
@@ -31,8 +31,8 @@ public interface MesWmProductSalesLineMapper extends BaseMapperX<MesWmProductSal
                 .orderByDesc(MesWmProductSalesLineDO::getId));
     }
 
-    default void updateQualityStatusByIds(List<Long> ids, Integer qualityStatus) {
-        update(new MesWmProductSalesLineDO().setQualityStatus(qualityStatus),
+    default int updateQualityStatusByIds(List<Long> ids, Integer qualityStatus) {
+        return update(new MesWmProductSalesLineDO().setQualityStatus(qualityStatus),
                 new LambdaUpdateWrapper<MesWmProductSalesLineDO>().in(MesWmProductSalesLineDO::getId, ids));
     }
 

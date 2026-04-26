@@ -54,4 +54,22 @@ public class CartDO extends BaseDO {
      */
     private Boolean selected;
 
+    /**
+     * 订刊学生编号
+     */
+    private Long subscriptionStudentId;
+
+    /**
+     * 订刊窗口 SKU 编号
+     *
+     * @deprecated 新模型使用 {@link #subscriptionOfferSkuId}
+     */
+    @Deprecated
+    private Long subscriptionWindowSkuId;
+
+    /**
+     * 订刊窗口 SKU 编号（offerSku）
+     */
+    private Long subscriptionOfferSkuId;
+
 }

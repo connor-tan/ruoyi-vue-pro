@@ -25,12 +25,12 @@ public interface MesWmTransferDetailMapper extends BaseMapperX<MesWmTransferDeta
                 .orderByAsc(MesWmTransferDetailDO::getId));
     }
 
-    default void deleteByLineId(Long lineId) {
-        delete(MesWmTransferDetailDO::getLineId, lineId);
+    default int deleteByLineId(Long lineId) {
+        return delete(MesWmTransferDetailDO::getLineId, lineId);
     }
 
-    default void deleteByTransferId(Long transferId) {
-        delete(MesWmTransferDetailDO::getTransferId, transferId);
+    default int deleteByTransferId(Long transferId) {
+        return delete(MesWmTransferDetailDO::getTransferId, transferId);
     }
 
 }

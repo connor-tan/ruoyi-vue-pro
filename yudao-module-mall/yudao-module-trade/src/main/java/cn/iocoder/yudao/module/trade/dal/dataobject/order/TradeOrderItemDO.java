@@ -41,6 +41,10 @@ public class TradeOrderItemDO extends BaseDO {
      */
     private Long orderId;
     /**
+     * 配送组编号
+     */
+    private Long deliveryId;
+    /**
      * 购物车项编号
      *
      * 关联 {@link CartDO#getId()}
@@ -173,6 +177,95 @@ public class TradeOrderItemDO extends BaseDO {
      */
     private Integer afterSaleStatus;
 
+    // ========== 订刊快照 ==========
+
+    /**
+     * 订刊学生编号
+     */
+    private Long subscriptionStudentId;
+    /**
+     * 订刊学生名称快照
+     */
+    private String subscriptionStudentNameSnapshot;
+    /**
+     * 订刊学校编号
+     */
+    private Long subscriptionSchoolId;
+    /**
+     * 订刊学校名称快照
+     */
+    private String subscriptionSchoolNameSnapshot;
+    /**
+     * 订刊班级编号
+     */
+    private Long subscriptionClassId;
+    /**
+     * 订刊班级名称快照
+     */
+    private String subscriptionClassNameSnapshot;
+    /**
+     * 订刊解析年级编号
+     */
+    private Long subscriptionGradeCatalogId;
+    /**
+     * 订刊解析年级名称快照
+     */
+    private String subscriptionGradeNameSnapshot;
+    /**
+     * 订刊窗口编号
+     */
+    private Long subscriptionWindowId;
+    /**
+     * 订刊窗口名称快照
+     */
+    private String subscriptionWindowNameSnapshot;
+    /**
+     * 订刊目标学年开始年份
+     */
+    private Integer subscriptionTargetYearStart;
+    /**
+     * 订刊目标学年结束年份
+     */
+    private Integer subscriptionTargetYearEnd;
+    /**
+     * 订刊目标周期
+     */
+    private String subscriptionTargetPeriod;
+    /**
+     * 订刊窗口刊物编号
+     *
+     * @deprecated 新模型使用 {@link #subscriptionOfferId}
+     */
+    @Deprecated
+    private Long subscriptionWindowSpuId;
+    /**
+     * 订刊窗口 SKU 编号
+     *
+     * @deprecated 新模型使用 {@link #subscriptionOfferSkuId}
+     */
+    @Deprecated
+    private Long subscriptionWindowSkuId;
+    /**
+     * 订刊窗口刊物编号（offer）
+     */
+    private Long subscriptionOfferId;
+    /**
+     * 订刊窗口 SKU 编号（offerSku）
+     */
+    private Long subscriptionOfferSkuId;
+    /**
+     * 订刊可见原因
+     */
+    private String subscriptionVisibilityReason;
+    /**
+     * 订刊命中特殊规则编号
+     */
+    private Long subscriptionMatchedRuleId;
+    /**
+     * 是否突破刊物商品适用年级
+     */
+    private Boolean subscriptionGradeApplicabilityOverride;
+
     /**
      * 商品属性
      */
@@ -208,4 +301,3 @@ public class TradeOrderItemDO extends BaseDO {
     }
 
 }
-

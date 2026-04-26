@@ -26,13 +26,13 @@ public interface DiscountProductMapper extends BaseMapperX<DiscountProductDO> {
         return selectList(DiscountProductDO::getActivityId, activityIds);
     }
 
-    default void updateByActivityId(DiscountProductDO discountProductDO) {
-        update(discountProductDO, new LambdaUpdateWrapper<DiscountProductDO>()
+    default int updateByActivityId(DiscountProductDO discountProductDO) {
+        return update(discountProductDO, new LambdaUpdateWrapper<DiscountProductDO>()
                 .eq(DiscountProductDO::getActivityId, discountProductDO.getActivityId()));
     }
 
-    default void deleteByActivityId(Long activityId) {
-        delete(DiscountProductDO::getActivityId, activityId);
+    default int deleteByActivityId(Long activityId) {
+        return delete(DiscountProductDO::getActivityId, activityId);
     }
 
     default List<DiscountProductDO> selectListBySkuIdsAndStatusAndNow(Collection<Long> skuIds, Integer status) {

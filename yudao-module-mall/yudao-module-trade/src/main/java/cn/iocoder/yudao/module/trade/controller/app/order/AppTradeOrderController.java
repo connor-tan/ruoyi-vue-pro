@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.trade.controller.app.order.vo.item.AppTradeOrderI
 import cn.iocoder.yudao.module.trade.convert.order.TradeOrderConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
@@ -110,11 +111,12 @@ public class AppTradeOrderController {
 
         // 2.1 查询订单项
         List<TradeOrderItemDO> orderItems = tradeOrderQueryService.getOrderItemListByOrderId(order.getId());
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderQueryService.getOrderDeliveryListByOrderId(order.getId());
         // 2.2 查询物流公司
         DeliveryExpressDO express = order.getLogisticsId() != null && order.getLogisticsId() > 0 ?
                 deliveryExpressService.getDeliveryExpress(order.getLogisticsId()) : null;
         // 2.3 最终组合
-        return success(TradeOrderConvert.INSTANCE.convert02(order, orderItems, tradeOrderProperties, express));
+        return success(TradeOrderConvert.INSTANCE.convert02(order, orderItems, deliveries, tradeOrderProperties, express));
     }
 
     @GetMapping("/get-express-track-list")
@@ -165,6 +167,14 @@ public class AppTradeOrderController {
     @Parameter(name = "id", description = "交易订单编号")
     public CommonResult<Boolean> receiveOrder(@RequestParam("id") Long id) {
         tradeOrderUpdateService.receiveOrderByMember(getLoginUserId(), id);
+        return success(true);
+    }
+
+    @PutMapping("/receive-delivery")
+    @Operation(summary = "确认订单配送组收货")
+    @Parameter(name = "deliveryId", description = "配送组编号")
+    public CommonResult<Boolean> receiveDelivery(@RequestParam("deliveryId") Long deliveryId) {
+        tradeOrderUpdateService.receiveDeliveryByMember(getLoginUserId(), deliveryId);
         return success(true);
     }
 

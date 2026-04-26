@@ -24,8 +24,8 @@ public interface ProductPropertyValueMapper extends BaseMapperX<ProductPropertyV
                 .eq(ProductPropertyValueDO::getName, name));
     }
 
-    default void deleteByPropertyId(Long propertyId) {
-        delete(new LambdaQueryWrapperX<ProductPropertyValueDO>()
+    default int deleteByPropertyId(Long propertyId) {
+        return delete(new LambdaQueryWrapperX<ProductPropertyValueDO>()
                 .eq(ProductPropertyValueDO::getPropertyId, propertyId));
     }
 

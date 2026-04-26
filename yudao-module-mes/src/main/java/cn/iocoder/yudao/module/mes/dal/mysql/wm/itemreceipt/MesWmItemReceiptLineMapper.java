@@ -26,8 +26,8 @@ public interface MesWmItemReceiptLineMapper extends BaseMapperX<MesWmItemReceipt
         return selectList(MesWmItemReceiptLineDO::getReceiptId, receiptId);
     }
 
-    default void deleteByReceiptId(Long receiptId) {
-        delete(MesWmItemReceiptLineDO::getReceiptId, receiptId);
+    default int deleteByReceiptId(Long receiptId) {
+        return delete(MesWmItemReceiptLineDO::getReceiptId, receiptId);
     }
 
     default List<MesWmItemReceiptLineDO> selectListByReceiptIds(java.util.Collection<Long> receiptIds) {

@@ -3,11 +3,8 @@ package cn.iocoder.yudao.module.edu.dal.mysql.studentclass;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -98,6 +95,14 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
         return selectListByStudentIdsAndTargetYearInternal(studentIds, yearStart, yearEnd);
     }
 
+    default List<StudentClassDO> selectListByStudentIdsAndTargetYearCatalogId(Collection<Long> studentIds,
+                                                                              Long yearCatalogId) {
+        if (studentIds == null || studentIds.isEmpty() || yearCatalogId == null) {
+            return Collections.emptyList();
+        }
+        return selectListByStudentIdsAndTargetYearCatalogIdInternal(studentIds, yearCatalogId);
+    }
+
     default List<StudentClassDO> selectListByStudentIdRangeAndTargetYear(Long startExclusiveStudentId,
                                                                          Long endInclusiveStudentId,
                                                                          Integer yearStart,
@@ -109,40 +114,14 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
                 yearStart, yearEnd);
     }
 
-    @Select({
-            "<script>",
-            "SELECT sc.*",
-            "FROM edu_student_class sc",
-            "INNER JOIN edu_school_class c ON c.id = sc.class_id AND c.deleted = b'0'",
-            "INNER JOIN edu_school_year y ON y.id = c.school_year_id AND y.deleted = b'0'",
-            "WHERE sc.deleted = b'0'",
-            "  AND sc.student_id IN",
-            "  <foreach collection='studentIds' item='studentId' open='(' separator=',' close=')'>",
-            "    #{studentId}",
-            "  </foreach>",
-            "  AND y.year_start = #{yearStart}",
-            "  AND y.year_end = #{yearEnd}",
-            "ORDER BY sc.student_id ASC, sc.start_date ASC, sc.id ASC",
-            "</script>"
-    })
     List<StudentClassDO> selectListByStudentIdsAndTargetYearInternal(@Param("studentIds") Collection<Long> studentIds,
                                                                      @Param("yearStart") Integer yearStart,
                                                                      @Param("yearEnd") Integer yearEnd);
 
-    @Select({
-            "<script>",
-            "SELECT sc.*",
-            "FROM edu_student_class sc",
-            "INNER JOIN edu_school_class c ON c.id = sc.class_id AND c.deleted = b'0'",
-            "INNER JOIN edu_school_year y ON y.id = c.school_year_id AND y.deleted = b'0'",
-            "WHERE sc.deleted = b'0'",
-            "  AND sc.student_id &gt; #{startExclusiveStudentId}",
-            "  AND sc.student_id &lt;= #{endInclusiveStudentId}",
-            "  AND y.year_start = #{yearStart}",
-            "  AND y.year_end = #{yearEnd}",
-            "ORDER BY sc.student_id ASC, sc.start_date ASC, sc.id ASC",
-            "</script>"
-    })
+    List<StudentClassDO> selectListByStudentIdsAndTargetYearCatalogIdInternal(
+            @Param("studentIds") Collection<Long> studentIds,
+            @Param("yearCatalogId") Long yearCatalogId);
+
     List<StudentClassDO> selectListByStudentIdRangeAndTargetYearInternal(
             @Param("startExclusiveStudentId") Long startExclusiveStudentId,
             @Param("endInclusiveStudentId") Long endInclusiveStudentId,
@@ -194,10 +173,8 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
         return deleteBatch(StudentClassDO::getStudentId, studentIds);
     }
 
-    @Delete("DELETE FROM edu_student_class WHERE id = #{id}")
-    int deletePhysicallyById(Long id);
+    int deletePhysicallyById(@Param("id") Long id);
 
-    @Update("UPDATE edu_student_class SET end_date = NULL, update_time = NOW() WHERE id = #{id} AND deleted = b'0'")
     int restoreEndDateById(@Param("id") Long id);
 
 }

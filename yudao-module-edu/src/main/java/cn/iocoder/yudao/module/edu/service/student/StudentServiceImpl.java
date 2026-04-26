@@ -2,7 +2,10 @@ package cn.iocoder.yudao.module.edu.service.student;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentOrderContextRespDTO;
+import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassRespVO;
@@ -14,15 +17,20 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentFlowMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.service.station.StationService;
+import cn.iocoder.yudao.module.edu.service.school.SchoolGradeSequenceUtils;
+import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
@@ -32,13 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -71,6 +73,8 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATU
 public class StudentServiceImpl implements StudentService {
 
     private static final Integer STUDENT_STATUS_READING = StudentStatusEnum.READING.getStatus();
+    private static final String GRADE_RESOLVE_SOURCE_TARGET_YEAR_CLASS = "TARGET_YEAR_CLASS";
+    private static final String GRADE_RESOLVE_SOURCE_PROMOTED_FROM_CURRENT = "PROMOTED_FROM_CURRENT";
 
     @Resource
     private StudentMapper studentMapper;
@@ -87,7 +91,11 @@ public class StudentServiceImpl implements StudentService {
     @Resource
     private GradeCatalogMapper gradeCatalogMapper;
     @Resource
+    private SchoolYearMapper schoolYearMapper;
+    @Resource
     private MemberUserApi memberUserApi;
+    @Resource
+    private StationService stationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -180,9 +188,244 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
+    public Map<Long, EduStudentOrderContextRespDTO> getOrderStudentContextMap(Long belongTo, Collection<Long> studentIds) {
+        if (CollUtil.isEmpty(studentIds)) {
+            return Collections.emptyMap();
+        }
+        List<StudentDO> students = studentMapper.selectList(StudentDO::getId, studentIds).stream()
+                .filter(student -> Objects.equals(student.getBelongTo(), belongTo))
+                .toList();
+        if (CollUtil.isEmpty(students)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, SchoolDO> schoolMap = schoolMapper.selectList(SchoolDO::getId,
+                        convertSet(students, StudentDO::getCurrentSchoolId))
+                .stream()
+                .collect(Collectors.toMap(SchoolDO::getId, Function.identity(), (item1, item2) -> item1));
+        Map<Long, List<StudentClassDO>> currentStudentClassMap = studentClassMapper.selectCurrentListByStudentIds(
+                        convertSet(students, StudentDO::getId))
+                .stream()
+                .collect(Collectors.groupingBy(StudentClassDO::getStudentId));
+        Map<Long, SchoolClassDO> schoolClassMap = getSchoolClassMap(convertSet(currentStudentClassMap.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList()), StudentClassDO::getClassId));
+        Map<Long, SchoolGradeDO> schoolGradeMap = schoolGradeMapper.selectList(SchoolGradeDO::getId,
+                        convertSet(schoolClassMap.values(), SchoolClassDO::getSchoolGradeId))
+                .stream()
+                .collect(Collectors.toMap(SchoolGradeDO::getId, Function.identity(), (item1, item2) -> item1));
+        Map<Long, GradeCatalogDO> gradeCatalogMap = gradeCatalogMapper.selectList(GradeCatalogDO::getId,
+                        convertSet(schoolGradeMap.values(), SchoolGradeDO::getGradeCatalogId))
+                .stream()
+                .collect(Collectors.toMap(GradeCatalogDO::getId, Function.identity(), (item1, item2) -> item1));
+        Map<Long, StationDO> stationMap = stationService.getStationMap(
+                convertSet(schoolMap.values(), SchoolDO::getStationId));
+        return students.stream()
+                .map(student -> buildOrderStudentContextResp(student, schoolMap, currentStudentClassMap,
+                        schoolClassMap, schoolGradeMap, gradeCatalogMap, stationMap))
+                .collect(Collectors.toMap(EduStudentOrderContextRespDTO::getStudentId,
+                        Function.identity(), (item1, item2) -> item1));
+    }
+
+    @Override
+    public Map<Long, EduStudentSubscriptionContextRespDTO> getSubscriptionStudentContextMap(
+            Long belongTo,
+            Collection<Long> studentIds,
+            Integer targetYearStart,
+            Integer targetYearEnd,
+            Long targetYearCatalogId,
+            String gradeCalcRule,
+            String gradeResolveMode) {
+        if (CollUtil.isEmpty(studentIds)) {
+            return Collections.emptyMap();
+        }
+        List<StudentDO> students = studentMapper.selectList(StudentDO::getId, studentIds).stream()
+                .filter(student -> Objects.equals(student.getBelongTo(), belongTo))
+                .toList();
+        if (CollUtil.isEmpty(students)) {
+            return Collections.emptyMap();
+        }
+        return students.stream()
+                .map(student -> resolveSubscriptionStudentContext(student, targetYearStart, targetYearEnd,
+                        targetYearCatalogId))
+                .collect(Collectors.toMap(EduStudentSubscriptionContextRespDTO::getStudentId,
+                        Function.identity(), (item1, item2) -> item1));
+    }
+
+    @Override
     public List<StudentClassRespVO> getStudentClassListByStudentId(Long studentId) {
         validateStudentExists(studentId);
         return buildStudentClassRespList(studentClassMapper.selectListByStudentId(studentId));
+    }
+
+    private EduStudentSubscriptionContextRespDTO resolveSubscriptionStudentContext(
+            StudentDO student,
+            Integer targetYearStart,
+            Integer targetYearEnd,
+            Long targetYearCatalogId) {
+        EduStudentSubscriptionContextRespDTO respDTO = buildSubscriptionBaseContext(student, student.getCurrentSchoolId());
+        List<StudentClassDO> targetClasses = targetYearCatalogId == null
+                ? studentClassMapper.selectListByStudentIdsAndTargetYear(
+                Collections.singleton(student.getId()), targetYearStart, targetYearEnd)
+                : studentClassMapper.selectListByStudentIdsAndTargetYearCatalogId(
+                Collections.singleton(student.getId()), targetYearCatalogId);
+        if (targetClasses.size() == 1) {
+            EduStudentSubscriptionContextRespDTO filled = fillSubscriptionClassAndGrade(respDTO, targetClasses.get(0));
+            if (filled.getBlockedReason() == null) {
+                filled.setGradeResolveSource(GRADE_RESOLVE_SOURCE_TARGET_YEAR_CLASS);
+            }
+            return filled;
+        }
+        if (targetClasses.size() > 1) {
+            return blockSubscription(respDTO, "MULTI_TARGET_YEAR_CLASS", "目标学年存在多个班级关系");
+        }
+        return resolveSubscriptionPromotedFromCurrent(respDTO, student, targetYearCatalogId);
+    }
+
+    private EduStudentSubscriptionContextRespDTO resolveSubscriptionPromotedFromCurrent(
+            EduStudentSubscriptionContextRespDTO respDTO, StudentDO student, Long targetYearCatalogId) {
+        SchoolDO currentSchool = schoolMapper.selectById(student.getCurrentSchoolId());
+        if (currentSchool == null) {
+            return blockSubscription(respDTO, "SCHOOL_GRADE_NOT_EXISTS", "学校或年级不存在");
+        }
+        SchoolYearDO targetSchoolYear = targetYearCatalogId == null ? null
+                : schoolYearMapper.selectBySchoolIdAndYearCatalogId(currentSchool.getId(), targetYearCatalogId);
+        if (targetSchoolYear == null) {
+            return blockSubscription(respDTO, "TARGET_SCHOOL_YEAR_NOT_CONFIGURED", "学校未配置目标学年");
+        }
+        if (targetSchoolYear.getStartDate() != null && !LocalDate.now().isBefore(targetSchoolYear.getStartDate())) {
+            return blockSubscription(respDTO, "TARGET_YEAR_CLASS_NOT_READY", "目标学年班级未生成或学生未升班");
+        }
+        if (Objects.equals(student.getStatus(), StudentStatusEnum.PENDING_ADVANCE.getStatus())) {
+            return blockSubscription(respDTO, "TARGET_YEAR_CLASS_REQUIRED", "待升学学生必须绑定目标学年班级");
+        }
+        if (!Objects.equals(student.getStatus(), StudentStatusEnum.READING.getStatus())) {
+            return blockSubscription(respDTO, "STUDENT_STATUS_UNSUPPORTED", "学生状态不支持订刊");
+        }
+        List<StudentClassDO> currentClasses = studentClassMapper.selectCurrentListByStudentId(student.getId());
+        if (currentClasses.size() != 1) {
+            return blockSubscription(respDTO, "NO_CURRENT_CLASS", "学生未解析出唯一当前班级");
+        }
+        SchoolClassDO currentClass = schoolClassMapper.selectById(currentClasses.get(0).getClassId());
+        if (currentClass == null || currentClass.getSchoolYearId() == null) {
+            return blockSubscription(respDTO, "SCHOOL_GRADE_NOT_EXISTS", "学校或年级不存在");
+        }
+        SchoolYearDO currentSchoolYear = schoolYearMapper.selectById(currentClass.getSchoolYearId());
+        if (currentSchoolYear == null || !isNextSchoolYear(currentSchoolYear, targetSchoolYear)) {
+            return blockSubscription(respDTO, "TARGET_YEAR_NOT_NEXT", "目标学年不是当前学年的下一学年");
+        }
+        EduStudentSubscriptionContextRespDTO filled = fillSubscriptionClassAndGrade(respDTO, currentClasses.get(0));
+        if (filled.getBlockedReason() != null) {
+            return filled;
+        }
+        EduStudentSubscriptionContextRespDTO promoted = fillPromotedGrade(filled, currentSchool.getId());
+        if (promoted.getBlockedReason() == null) {
+            promoted.setGradeResolveSource(GRADE_RESOLVE_SOURCE_PROMOTED_FROM_CURRENT);
+        }
+        return promoted;
+    }
+
+    private boolean isNextSchoolYear(SchoolYearDO currentSchoolYear, SchoolYearDO targetSchoolYear) {
+        return currentSchoolYear.getYearStart() != null && currentSchoolYear.getYearEnd() != null
+                && targetSchoolYear.getYearStart() != null && targetSchoolYear.getYearEnd() != null
+                && targetSchoolYear.getYearStart() == currentSchoolYear.getYearStart() + 1
+                && targetSchoolYear.getYearEnd() == currentSchoolYear.getYearEnd() + 1;
+    }
+
+    private EduStudentSubscriptionContextRespDTO buildSubscriptionBaseContext(StudentDO student, Long schoolId) {
+        EduStudentSubscriptionContextRespDTO respDTO = new EduStudentSubscriptionContextRespDTO();
+        respDTO.setStudentId(student.getId());
+        respDTO.setStudentName(student.getStudentName());
+        respDTO.setStatus(student.getStatus());
+        fillSubscriptionSchool(respDTO, schoolId);
+        return respDTO;
+    }
+
+    private void fillSubscriptionSchool(EduStudentSubscriptionContextRespDTO respDTO, Long schoolId) {
+        SchoolDO school = schoolId == null ? null : schoolMapper.selectById(schoolId);
+        if (school == null) {
+            return;
+        }
+        respDTO.setSchoolId(school.getId());
+        respDTO.setSchoolName(school.getSchoolName());
+        if (school.getStationId() == null) {
+            return;
+        }
+        Map<Long, StationDO> stationMap = stationService.getStationMap(Collections.singleton(school.getStationId()));
+        StationDO station = stationMap.get(school.getStationId());
+        if (station == null) {
+            return;
+        }
+        respDTO.setStationId(station.getId());
+        respDTO.setStationName(station.getStationName());
+        respDTO.setStationAddress(station.getStationAddress());
+        respDTO.setContactName(station.getContactName());
+        respDTO.setContactMobile(station.getContactMobile());
+    }
+
+    private EduStudentSubscriptionContextRespDTO fillSubscriptionClassAndGrade(
+            EduStudentSubscriptionContextRespDTO respDTO, StudentClassDO studentClass) {
+        SchoolClassDO schoolClass = schoolClassMapper.selectById(studentClass.getClassId());
+        if (schoolClass == null) {
+            return blockSubscription(respDTO, "SCHOOL_GRADE_NOT_EXISTS", "学校或年级不存在");
+        }
+        fillSubscriptionSchool(respDTO, schoolClass.getSchoolId());
+        respDTO.setClassId(schoolClass.getId());
+        respDTO.setClassName(schoolClass.getClassName());
+        SchoolGradeDO schoolGrade = schoolGradeMapper.selectById(schoolClass.getSchoolGradeId());
+        if (schoolGrade == null) {
+            return blockSubscription(respDTO, "SCHOOL_GRADE_NOT_EXISTS", "学校或年级不存在");
+        }
+        GradeCatalogDO gradeCatalog = gradeCatalogMapper.selectById(schoolGrade.getGradeCatalogId());
+        if (gradeCatalog == null || !CommonStatusEnum.isEnable(gradeCatalog.getStatus())) {
+            return blockSubscription(respDTO, "SCHOOL_GRADE_NOT_EXISTS", "学校或年级不存在");
+        }
+        return fillSubscriptionGrade(respDTO, gradeCatalog);
+    }
+
+    private EduStudentSubscriptionContextRespDTO fillPromotedGrade(EduStudentSubscriptionContextRespDTO respDTO,
+                                                                  Long schoolId) {
+        if (respDTO.getGradeCatalogId() == null || schoolId == null) {
+            return blockSubscription(respDTO, "SCHOOL_GRADE_NOT_EXISTS", "学校或年级不存在");
+        }
+        List<GradeCatalogDO> enabledGrades = gradeCatalogMapper.selectListByStatus(CommonStatusEnum.ENABLE.getStatus());
+        Map<Long, Long> nextGlobalGradeMap = SchoolGradeSequenceUtils.buildNextGradeCatalogIdMap(enabledGrades);
+        Long expectedNextGradeCatalogId = nextGlobalGradeMap.get(respDTO.getGradeCatalogId());
+        if (expectedNextGradeCatalogId == null) {
+            return blockSubscription(respDTO, "TERMINAL_GRADE_PROMOTION_UNSUPPORTED", "终端年级不支持升学订刊");
+        }
+        List<SchoolGradeDO> schoolGrades = schoolGradeMapper.selectListBySchoolId(schoolId);
+        Map<Long, GradeCatalogDO> gradeCatalogMap = enabledGrades.stream()
+                .collect(Collectors.toMap(GradeCatalogDO::getId, Function.identity(), (item1, item2) -> item1));
+        Map<Long, SchoolGradeDO> nextSchoolGradeMap =
+                SchoolGradeSequenceUtils.buildNextSchoolGradeMap(schoolGrades, gradeCatalogMap);
+        SchoolGradeDO currentSchoolGrade = schoolGradeMapper.selectBySchoolIdAndGradeCatalogId(schoolId,
+                respDTO.getGradeCatalogId());
+        SchoolGradeDO nextSchoolGrade = currentSchoolGrade == null ? null : nextSchoolGradeMap.get(currentSchoolGrade.getId());
+        if (nextSchoolGrade == null || !Objects.equals(nextSchoolGrade.getGradeCatalogId(), expectedNextGradeCatalogId)) {
+            return blockSubscription(respDTO, "NEXT_GRADE_NOT_ENABLED", "学校未启用连续下一年级");
+        }
+        GradeCatalogDO nextGradeCatalog = gradeCatalogMap.get(expectedNextGradeCatalogId);
+        if (nextGradeCatalog == null) {
+            return blockSubscription(respDTO, "SCHOOL_GRADE_NOT_EXISTS", "学校或年级不存在");
+        }
+        return fillSubscriptionGrade(respDTO, nextGradeCatalog);
+    }
+
+    private EduStudentSubscriptionContextRespDTO fillSubscriptionGrade(
+            EduStudentSubscriptionContextRespDTO respDTO, GradeCatalogDO gradeCatalog) {
+        respDTO.setGradeCatalogId(gradeCatalog.getId());
+        respDTO.setGradeNo(gradeCatalog.getGradeNo());
+        respDTO.setGradeName(gradeCatalog.getGradeName());
+        respDTO.setGradeAliasName(gradeCatalog.getAliasName());
+        respDTO.setGradeSort(gradeCatalog.getSort());
+        return respDTO;
+    }
+
+    private EduStudentSubscriptionContextRespDTO blockSubscription(
+            EduStudentSubscriptionContextRespDTO respDTO, String reason, String reasonDesc) {
+        respDTO.setBlockedReason(reason);
+        respDTO.setBlockedReasonDesc(reasonDesc);
+        return respDTO;
     }
 
     private void validateStudentSaveReqVO(StudentSaveReqVO reqVO) {
@@ -283,7 +526,7 @@ public class StudentServiceImpl implements StudentService {
 
     private void validateStudentClassDateRange(List<StudentClassSaveReqVO> studentClasses) {
         List<StudentClassSaveReqVO> sortedStudentClasses = new ArrayList<>(studentClasses);
-        sortedStudentClasses.sort((item1, item2) -> item1.getStartDate().compareTo(item2.getStartDate()));
+        sortedStudentClasses.sort(Comparator.comparing(StudentClassSaveReqVO::getStartDate));
         for (int i = 1; i < sortedStudentClasses.size(); i++) {
             StudentClassSaveReqVO previous = sortedStudentClasses.get(i - 1);
             StudentClassSaveReqVO current = sortedStudentClasses.get(i);
@@ -359,6 +602,53 @@ public class StudentServiceImpl implements StudentService {
         GradeCatalogDO gradeCatalog = gradeCatalogMap.get(schoolGrade.getGradeCatalogId());
         respVO.setGradeName(gradeCatalog == null ? null : gradeCatalog.getGradeName());
         return respVO;
+    }
+
+    private EduStudentOrderContextRespDTO buildOrderStudentContextResp(StudentDO student,
+                                                                       Map<Long, SchoolDO> schoolMap,
+                                                                       Map<Long, List<StudentClassDO>> currentStudentClassMap,
+                                                                       Map<Long, SchoolClassDO> schoolClassMap,
+                                                                       Map<Long, SchoolGradeDO> schoolGradeMap,
+                                                                       Map<Long, GradeCatalogDO> gradeCatalogMap,
+                                                                       Map<Long, StationDO> stationMap) {
+        EduStudentOrderContextRespDTO respDTO = new EduStudentOrderContextRespDTO();
+        respDTO.setStudentId(student.getId());
+        respDTO.setStudentName(student.getStudentName());
+        respDTO.setStatus(student.getStatus());
+        SchoolDO school = schoolMap.get(student.getCurrentSchoolId());
+        if (school != null) {
+            respDTO.setSchoolId(school.getId());
+            respDTO.setSchoolName(school.getSchoolName());
+            StationDO station = stationMap.get(school.getStationId());
+            if (station != null) {
+                respDTO.setStationId(station.getId());
+                respDTO.setStationName(station.getStationName());
+                respDTO.setStationAddress(station.getStationAddress());
+                respDTO.setContactName(station.getContactName());
+                respDTO.setContactMobile(station.getContactMobile());
+            }
+        }
+        List<StudentClassDO> currentStudentClasses = currentStudentClassMap.get(student.getId());
+        if (CollUtil.size(currentStudentClasses) != 1) {
+            return respDTO;
+        }
+        SchoolClassDO schoolClass = schoolClassMap.get(currentStudentClasses.get(0).getClassId());
+        if (schoolClass == null) {
+            return respDTO;
+        }
+        respDTO.setClassId(schoolClass.getId());
+        respDTO.setClassName(schoolClass.getClassName());
+        SchoolGradeDO schoolGrade = schoolGradeMap.get(schoolClass.getSchoolGradeId());
+        if (schoolGrade == null) {
+            return respDTO;
+        }
+        GradeCatalogDO gradeCatalog = gradeCatalogMap.get(schoolGrade.getGradeCatalogId());
+        if (gradeCatalog == null) {
+            return respDTO;
+        }
+        respDTO.setGradeCatalogId(gradeCatalog.getId());
+        respDTO.setGradeName(gradeCatalog.getGradeName());
+        return respDTO;
     }
 
     private List<StudentClassRespVO> buildStudentClassRespList(List<StudentClassDO> studentClasses) {

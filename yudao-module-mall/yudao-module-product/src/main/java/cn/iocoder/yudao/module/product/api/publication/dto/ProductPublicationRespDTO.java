@@ -13,6 +13,8 @@ public class ProductPublicationRespDTO {
 
     private Long categoryId;
 
+    private String categoryName;
+
     private String bizScene;
 
     private String picUrl;

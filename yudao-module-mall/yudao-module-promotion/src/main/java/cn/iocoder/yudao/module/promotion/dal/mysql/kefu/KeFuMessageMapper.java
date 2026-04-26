@@ -43,8 +43,8 @@ public interface KeFuMessageMapper extends BaseMapperX<KeFuMessageDO> {
                 .eq(KeFuMessageDO::getReadStatus, readStatus));
     }
 
-    default void updateReadStatusBatchByIds(Collection<Long> ids, KeFuMessageDO keFuMessageDO) {
-        update(keFuMessageDO, new LambdaUpdateWrapper<KeFuMessageDO>()
+    default int updateReadStatusBatchByIds(Collection<Long> ids, KeFuMessageDO keFuMessageDO) {
+        return update(keFuMessageDO, new LambdaUpdateWrapper<KeFuMessageDO>()
                 .in(KeFuMessageDO::getId, ids));
     }
 

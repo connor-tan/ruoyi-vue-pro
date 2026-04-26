@@ -25,8 +25,8 @@ public interface MesWmStockTakingTaskResultMapper extends BaseMapperX<MesWmStock
                 .orderByDesc(MesWmStockTakingTaskResultDO::getId));
     }
 
-    default void deleteByTaskId(Long taskId) {
-        delete(MesWmStockTakingTaskResultDO::getTaskId, taskId);
+    default int deleteByTaskId(Long taskId) {
+        return delete(MesWmStockTakingTaskResultDO::getTaskId, taskId);
     }
 
 }

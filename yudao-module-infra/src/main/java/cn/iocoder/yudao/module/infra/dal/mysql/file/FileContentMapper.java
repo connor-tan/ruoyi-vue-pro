@@ -10,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface FileContentMapper extends BaseMapper<FileContentDO> {
 
-    default void deleteByConfigIdAndPath(Long configId, String path) {
-        this.delete(new LambdaQueryWrapper<FileContentDO>()
+    default int deleteByConfigIdAndPath(Long configId, String path) {
+        return this.delete(new LambdaQueryWrapper<FileContentDO>()
                 .eq(FileContentDO::getConfigId, configId)
                 .eq(FileContentDO::getPath, path));
     }

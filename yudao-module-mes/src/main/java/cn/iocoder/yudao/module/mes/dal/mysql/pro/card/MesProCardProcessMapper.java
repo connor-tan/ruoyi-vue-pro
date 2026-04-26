@@ -30,8 +30,8 @@ public interface MesProCardProcessMapper extends BaseMapperX<MesProCardProcessDO
         return selectList(MesProCardProcessDO::getCardId, cardId);
     }
 
-    default void deleteByCardId(Long cardId) {
-        delete(MesProCardProcessDO::getCardId, cardId);
+    default int deleteByCardId(Long cardId) {
+        return delete(MesProCardProcessDO::getCardId, cardId);
     }
 
 }

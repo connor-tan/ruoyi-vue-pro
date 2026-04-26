@@ -16,8 +16,8 @@ public interface UserPostMapper extends BaseMapperX<UserPostDO> {
         return selectList(UserPostDO::getUserId, userId);
     }
 
-    default void deleteByUserIdAndPostId(Long userId, Collection<Long> postIds) {
-        delete(new LambdaQueryWrapperX<UserPostDO>()
+    default int deleteByUserIdAndPostId(Long userId, Collection<Long> postIds) {
+        return delete(new LambdaQueryWrapperX<UserPostDO>()
                 .eq(UserPostDO::getUserId, userId)
                 .in(UserPostDO::getPostId, postIds));
     }
@@ -26,7 +26,7 @@ public interface UserPostMapper extends BaseMapperX<UserPostDO> {
         return selectList(UserPostDO::getPostId, postIds);
     }
 
-    default void deleteByUserId(Long userId) {
-        delete(Wrappers.lambdaUpdate(UserPostDO.class).eq(UserPostDO::getUserId, userId));
+    default int deleteByUserId(Long userId) {
+        return delete(Wrappers.lambdaUpdate(UserPostDO.class).eq(UserPostDO::getUserId, userId));
     }
 }

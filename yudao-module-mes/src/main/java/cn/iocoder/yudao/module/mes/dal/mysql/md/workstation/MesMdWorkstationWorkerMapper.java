@@ -25,8 +25,8 @@ public interface MesMdWorkstationWorkerMapper extends BaseMapperX<MesMdWorkstati
                 .eq(MesMdWorkstationWorkerDO::getPostId, postId));
     }
 
-    default void deleteByWorkstationId(Long workstationId) {
-        delete(MesMdWorkstationWorkerDO::getWorkstationId, workstationId);
+    default int deleteByWorkstationId(Long workstationId) {
+        return delete(MesMdWorkstationWorkerDO::getWorkstationId, workstationId);
     }
 
 }

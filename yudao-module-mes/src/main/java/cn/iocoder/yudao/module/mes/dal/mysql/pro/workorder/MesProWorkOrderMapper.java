@@ -35,8 +35,8 @@ public interface MesProWorkOrderMapper extends BaseMapperX<MesProWorkOrderDO> {
         return selectOne(MesProWorkOrderDO::getCode, code);
     }
 
-    default void updateProducedQuantity(Long id, BigDecimal incrQuantityProduced) {
-        update(null, new LambdaUpdateWrapper<MesProWorkOrderDO>()
+    default int updateProducedQuantity(Long id, BigDecimal incrQuantityProduced) {
+        return update(null, new LambdaUpdateWrapper<MesProWorkOrderDO>()
                 .eq(MesProWorkOrderDO::getId, id)
                 .setSql("quantity_produced = IFNULL(quantity_produced, 0) + " + incrQuantityProduced));
     }

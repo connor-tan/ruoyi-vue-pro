@@ -36,6 +36,10 @@ public interface ErrorCodeConstants {
     ErrorCode YEAR_CATALOG_RANGE_INVALID = new ErrorCode(1_016_001_030, "学年结束年份必须是开始年份的下一年");
     ErrorCode YEAR_CATALOG_IN_USE = new ErrorCode(1_016_001_031, "学年目录已被学校学年或订刊窗口引用，无法删除");
     ErrorCode YEAR_CATALOG_IN_USE_UPDATE = new ErrorCode(1_016_001_032, "学年目录已被学校学年或订刊窗口引用，无法修改年份范围");
+    ErrorCode PUBLICATION_PUBLISHER_NOT_EXISTS = new ErrorCode(1_016_001_033, "出版社不存在");
+    ErrorCode PUBLICATION_PUBLISHER_NAME_EXISTS = new ErrorCode(1_016_001_034, "出版社名称已存在");
+    ErrorCode PUBLICATION_TYPE_NOT_EXISTS = new ErrorCode(1_016_001_035, "刊物类型不存在");
+    ErrorCode PUBLICATION_TYPE_NAME_EXISTS = new ErrorCode(1_016_001_036, "刊物类型名称已存在");
 
     ErrorCode STUDENT_NOT_EXISTS = new ErrorCode(1_017_001_001, "学生不存在");
     ErrorCode STUDENT_PARENT_NOT_EXISTS = new ErrorCode(1_017_001_002, "家长会员不存在");

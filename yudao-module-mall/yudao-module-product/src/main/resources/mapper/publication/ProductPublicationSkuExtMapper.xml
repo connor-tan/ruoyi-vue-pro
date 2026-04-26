@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuExtMapper">
+
+    <insert id="upsert">
+        INSERT INTO product_publication_sku_ext (
+            sku_id, target_period, volume_label, edition_label, isbn, remark, deleted
+        )
+        VALUES (
+            #{ext.skuId}, #{ext.targetPeriod}, #{ext.volumeLabel}, #{ext.editionLabel}, #{ext.isbn},
+            #{ext.remark}, b'0'
+        )
+        ON DUPLICATE KEY UPDATE
+            target_period = VALUES(target_period),
+            volume_label = VALUES(volume_label),
+            edition_label = VALUES(edition_label),
+            isbn = VALUES(isbn),
+            remark = VALUES(remark),
+            deleted = b'0',
+            update_time = NOW()
+    </insert>
+
+    <delete id="deleteBySkuIdsPhysically">
+        DELETE FROM product_publication_sku_ext
+        WHERE sku_id IN
+        <foreach collection="skuIds" item="skuId" open="(" separator="," close=")">
+            #{skuId}
+        </foreach>
+    </delete>
+
+</mapper>

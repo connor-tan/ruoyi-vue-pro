@@ -40,8 +40,8 @@ public interface MesProRouteProcessMapper extends BaseMapperX<MesProRouteProcess
                 .eq(MesProRouteProcessDO::getKeyFlag, true));
     }
 
-    default void deleteByRouteId(Long routeId) {
-        delete(new LambdaQueryWrapperX<MesProRouteProcessDO>()
+    default int deleteByRouteId(Long routeId) {
+        return delete(new LambdaQueryWrapperX<MesProRouteProcessDO>()
                 .eq(MesProRouteProcessDO::getRouteId, routeId));
     }
 

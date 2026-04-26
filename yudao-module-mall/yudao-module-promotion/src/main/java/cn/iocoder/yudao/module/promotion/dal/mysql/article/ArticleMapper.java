@@ -47,8 +47,8 @@ public interface ArticleMapper extends BaseMapperX<ArticleDO> {
                 .eqIfPresent(ArticleDO::getCategoryId, pageReqVO.getCategoryId()));
     }
 
-    default void updateBrowseCount(Long id) {
-        update(null, new LambdaUpdateWrapper<ArticleDO>()
+    default int updateBrowseCount(Long id) {
+        return update(null, new LambdaUpdateWrapper<ArticleDO>()
                 .eq(ArticleDO::getId, id)
                 .setSql("browse_count = browse_count + 1"));
     }

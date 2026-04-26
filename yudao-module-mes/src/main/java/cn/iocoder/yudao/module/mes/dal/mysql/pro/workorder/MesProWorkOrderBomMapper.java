@@ -27,8 +27,8 @@ public interface MesProWorkOrderBomMapper extends BaseMapperX<MesProWorkOrderBom
         return selectList(MesProWorkOrderBomDO::getWorkOrderId, workOrderId);
     }
 
-    default void deleteByWorkOrderId(Long workOrderId) {
-        delete(MesProWorkOrderBomDO::getWorkOrderId, workOrderId);
+    default int deleteByWorkOrderId(Long workOrderId) {
+        return delete(MesProWorkOrderBomDO::getWorkOrderId, workOrderId);
     }
 
 }

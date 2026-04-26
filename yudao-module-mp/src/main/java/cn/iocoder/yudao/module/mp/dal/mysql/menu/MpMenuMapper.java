@@ -19,7 +19,7 @@ public interface MpMenuMapper extends BaseMapperX<MpMenuDO> {
         return selectList(MpMenuDO::getAccountId, accountId);
     }
 
-    default void deleteByAccountId(Long accountId) {
-        delete(new LambdaQueryWrapperX<MpMenuDO>().eq(MpMenuDO::getAccountId, accountId));
+    default int deleteByAccountId(Long accountId) {
+        return delete(new LambdaQueryWrapperX<MpMenuDO>().eq(MpMenuDO::getAccountId, accountId));
     }
 }

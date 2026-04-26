@@ -57,8 +57,8 @@ public interface AiKnowledgeSegmentMapper extends BaseMapperX<AiKnowledgeSegment
         return selectJoinList(AiKnowledgeSegmentProcessRespVO.class, wrapper);
     }
 
-    default void updateRetrievalCountIncrByIds(List<Long> ids) {
-        update(new LambdaUpdateWrapper<AiKnowledgeSegmentDO>()
+    default int updateRetrievalCountIncrByIds(List<Long> ids) {
+        return update(new LambdaUpdateWrapper<AiKnowledgeSegmentDO>()
                 .setSql(" retrieval_count = retrieval_count + 1")
                 .in(AiKnowledgeSegmentDO::getId, ids));
     }

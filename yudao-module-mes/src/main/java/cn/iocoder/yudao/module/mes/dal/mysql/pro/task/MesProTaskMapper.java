@@ -56,11 +56,11 @@ public interface MesProTaskMapper extends BaseMapperX<MesProTaskDO> {
                 .orderByDesc(MesProTaskDO::getId));
     }
 
-    default void updateProducedQuantity(Long id,
+    default int updateProducedQuantity(Long id,
                                         BigDecimal incrProducedQuantity,
                                         BigDecimal incrQualifyQuantity,
                                         BigDecimal incrUnqualifyQuantity) {
-        update(null, new LambdaUpdateWrapper<MesProTaskDO>()
+        return update(null, new LambdaUpdateWrapper<MesProTaskDO>()
                 .eq(MesProTaskDO::getId, id)
                 .setSql("produced_quantity = IFNULL(produced_quantity, 0) + " + incrProducedQuantity)
                 .setSql("qualify_quantity = IFNULL(qualify_quantity, 0) + " + incrQualifyQuantity)

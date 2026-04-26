@@ -6,8 +6,8 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -83,7 +83,6 @@ public interface SchoolClassMapper extends BaseMapperX<SchoolClassDO> {
         return deleteBatch(SchoolClassDO::getSchoolId, schoolIds);
     }
 
-    @Delete("DELETE FROM edu_school_class WHERE id = #{id}")
-    int deletePhysicallyById(Long id);
+    int deletePhysicallyById(@Param("id") Long id);
 
 }

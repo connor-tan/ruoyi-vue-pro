@@ -25,8 +25,8 @@ public interface MesWmSalesNoticeLineMapper extends BaseMapperX<MesWmSalesNotice
         return selectList(MesWmSalesNoticeLineDO::getNoticeId, noticeId);
     }
 
-    default void deleteByNoticeId(Long noticeId) {
-        delete(MesWmSalesNoticeLineDO::getNoticeId, noticeId);
+    default int deleteByNoticeId(Long noticeId) {
+        return delete(MesWmSalesNoticeLineDO::getNoticeId, noticeId);
     }
 
 }

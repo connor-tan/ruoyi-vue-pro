@@ -26,8 +26,8 @@ public interface BannerMapper extends BaseMapperX<BannerDO> {
                 .orderByDesc(BannerDO::getSort));
     }
 
-    default void updateBrowseCount(Long id) {
-        update(null, new LambdaUpdateWrapper<BannerDO>()
+    default int updateBrowseCount(Long id) {
+        return update(null, new LambdaUpdateWrapper<BannerDO>()
                 .eq(BannerDO::getId, id)
                 .setSql("browse_count = browse_count + 1"));
     }

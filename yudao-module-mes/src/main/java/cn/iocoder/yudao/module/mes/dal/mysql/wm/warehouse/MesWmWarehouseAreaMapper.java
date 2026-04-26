@@ -61,8 +61,8 @@ public interface MesWmWarehouseAreaMapper extends BaseMapperX<MesWmWarehouseArea
     /**
      * 批量更新指定库区下所有库位
      */
-    default void updateByLocationId(Long locationId, MesWmWarehouseAreaDO updateObj) {
-        update(updateObj, new LambdaQueryWrapperX<MesWmWarehouseAreaDO>()
+    default int updateByLocationId(Long locationId, MesWmWarehouseAreaDO updateObj) {
+        return update(updateObj, new LambdaQueryWrapperX<MesWmWarehouseAreaDO>()
                 .eq(MesWmWarehouseAreaDO::getLocationId, locationId));
     }
 

@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.mp.controller.admin.account.vo.MpAccountPageReqVO;
 import cn.iocoder.yudao.module.mp.dal.dataobject.account.MpAccountDO;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
 
@@ -25,7 +25,6 @@ public interface MpAccountMapper extends BaseMapperX<MpAccountDO> {
         return selectOne(MpAccountDO::getAppId, appId);
     }
 
-    @Select("SELECT COUNT(*) FROM mp_account WHERE update_time > #{maxUpdateTime}")
-    Long selectCountByUpdateTimeGt(LocalDateTime maxUpdateTime);
+    Long selectCountByUpdateTimeGt(@Param("maxUpdateTime") LocalDateTime maxUpdateTime);
 
 }

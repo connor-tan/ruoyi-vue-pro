@@ -11,6 +11,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
+import cn.iocoder.yudao.framework.ip.core.utils.AreaUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.number.MoneyUtils;
 import cn.iocoder.yudao.module.member.api.address.MemberAddressApi;
@@ -25,15 +26,25 @@ import cn.iocoder.yudao.module.pay.enums.order.PayOrderStatusEnum;
 import cn.iocoder.yudao.module.pay.enums.refund.PayRefundStatusEnum;
 import cn.iocoder.yudao.module.product.api.comment.ProductCommentApi;
 import cn.iocoder.yudao.module.product.api.comment.dto.ProductCommentCreateReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
+import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
+import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
 import cn.iocoder.yudao.module.promotion.api.combination.CombinationRecordApi;
 import cn.iocoder.yudao.module.promotion.api.combination.dto.CombinationRecordRespDTO;
 import cn.iocoder.yudao.module.promotion.enums.combination.CombinationRecordStatusEnum;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
+import cn.iocoder.yudao.module.subscription.api.order.SubscriptionOrderEligibilityApi;
+import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
+import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityRespDTO;
 import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderDeliveryReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderRemarkReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderStationDeliveryReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderUpdateAddressReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderUpdatePriceReqVO;
+import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderDeliveryRespVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderCreateReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementRespVO;
@@ -43,7 +54,9 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryPickUpStoreDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
+import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderDeliveryMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderItemMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderMapper;
 import cn.iocoder.yudao.module.trade.dal.redis.no.TradeNoRedisDAO;
@@ -64,6 +77,8 @@ import cn.iocoder.yudao.module.trade.service.price.bo.TradePriceCalculateRespBO;
 import cn.iocoder.yudao.module.trade.service.price.calculator.TradePriceCalculatorHelper;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -71,7 +86,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -95,6 +114,8 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
 
     @Resource
     private TradeOrderMapper tradeOrderMapper;
+    @Resource
+    private TradeOrderDeliveryMapper tradeOrderDeliveryMapper;
     @Resource
     private TradeOrderItemMapper tradeOrderItemMapper;
     @Resource
@@ -121,6 +142,12 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     @Resource
     private ProductCommentApi productCommentApi;
     @Resource
+    private ProductSkuApi productSkuApi;
+    @Resource
+    private ProductSpuApi productSpuApi;
+    @Resource
+    private SubscriptionOrderEligibilityApi subscriptionOrderEligibilityApi;
+    @Resource
     public SocialClientApi socialClientApi;
     @Resource
     public PayRefundApi payRefundApi;
@@ -142,9 +169,12 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
 
         // 2. 计算价格
         TradePriceCalculateRespBO calculateRespBO = calculatePrice(userId, settlementReqVO);
+        DeliveryBuildResult deliveryBuildResult = buildDeliveryBuildResult(calculateRespBO, address, false);
+        applyPreviewDeliveryIdsToOrderItems(calculateRespBO, deliveryBuildResult);
 
         // 3. 拼接返回
-        return TradeOrderConvert.INSTANCE.convert(calculateRespBO, address);
+        return TradeOrderConvert.INSTANCE.convert(calculateRespBO, address,
+                buildSettlementDeliveries(deliveryBuildResult));
     }
 
     /**
@@ -169,15 +199,220 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
      * @return 订单价格
      */
     private TradePriceCalculateRespBO calculatePrice(Long userId, AppTradeOrderSettlementReqVO settlementReqVO) {
-        // 1. 如果来自购物车，则获得购物车的商品
+        PreparedCalculateRequest prepared = prepareCalculateRequest(userId, settlementReqVO);
+        return calculatePrice(prepared, settlementReqVO);
+    }
+
+    private PreparedCalculateRequest prepareCalculateRequest(Long userId, AppTradeOrderSettlementReqVO settlementReqVO) {
         List<CartDO> cartList = cartService.getCartList(userId,
                 convertSet(settlementReqVO.getItems(), AppTradeOrderSettlementReqVO.Item::getCartId));
-
-        // 2. 计算价格
-        TradePriceCalculateReqBO calculateReqBO = TradeOrderConvert.INSTANCE.convert(userId, settlementReqVO, cartList);
-        calculateReqBO.getItems().forEach(item -> Assert.isTrue(item.getSelected(), // 防御性编程，保证都是选中的
+        TradePriceCalculateReqBO baseReqBO = TradeOrderConvert.INSTANCE.convert(userId, settlementReqVO, cartList);
+        baseReqBO.getItems().forEach(item -> Assert.isTrue(Boolean.TRUE.equals(item.getSelected()),
                 "商品({}) 未设置为选中", item.getSkuId()));
-        return tradePriceService.calculateOrderPrice(calculateReqBO);
+
+        Map<Long, ProductSkuRespDTO> skuMap = productSkuApi.getSkuMap(
+                convertSet(baseReqBO.getItems(), TradePriceCalculateReqBO.Item::getSkuId));
+        Map<Long, ProductSpuRespDTO> spuMap = productSpuApi.getSpuMap(
+                convertSet(skuMap.values(), ProductSkuRespDTO::getSpuId));
+        Map<String, DeliveryGroupDraft> groupMap = new LinkedHashMap<>();
+        Map<Long, Integer> studentDeliveryTypeMap = new HashMap<>();
+        Map<SubscriptionPurchaseKey, Integer> publicationPurchaseCountMap = new HashMap<>();
+        boolean publicationPresent = false;
+        for (int i = 0; i < baseReqBO.getItems().size(); i++) {
+            TradePriceCalculateReqBO.Item item = baseReqBO.getItems().get(i);
+            ProductSkuRespDTO sku = skuMap.get(item.getSkuId());
+            Assert.notNull(sku, "商品 SKU({}) 不存在", item.getSkuId());
+            ProductSpuRespDTO spu = spuMap.get(sku.getSpuId());
+            Assert.notNull(spu, "商品 SPU({}) 不存在", sku.getSpuId());
+
+            Integer deliveryType = item.getDeliveryType() != null ? item.getDeliveryType() : baseReqBO.getDeliveryType();
+            if (deliveryType == null) {
+                throw exception(ORDER_ITEM_DELIVERY_TYPE_REQUIRED);
+            }
+            String bizScene = spu.getBizScene();
+            item.setDeliveryType(deliveryType);
+
+            if (BizSceneEnum.isPublication(bizScene)) {
+                publicationPresent = true;
+                Long studentId = item.getSubscriptionStudentId();
+                if (studentId == null) {
+                    throw exception(ORDER_PUBLICATION_STUDENT_REQUIRED);
+                }
+                Long offerSkuId = resolveSubscriptionOfferSkuId(item);
+                if (offerSkuId == null) {
+                    throw exception(ORDER_PUBLICATION_OFFER_SKU_REQUIRED);
+                }
+                Integer accumulatedCount = accumulatePublicationPurchaseCount(publicationPurchaseCountMap, studentId,
+                        offerSkuId, item.getCount());
+                SubscriptionOrderEligibilityRespDTO eligibility = subscriptionOrderEligibilityApi.validateOrder(
+                        new SubscriptionOrderEligibilityReqDTO()
+                                .setUserId(userId)
+                                .setStudentId(studentId)
+                                .setOfferSkuId(offerSkuId)
+                                .setSkuId(item.getSkuId())
+                                .setCount(accumulatedCount));
+                if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())
+                        && !Objects.equals(deliveryType, DeliveryTypeEnum.STATION.getType())) {
+                    throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
+                }
+                Integer existedDeliveryType = studentDeliveryTypeMap.putIfAbsent(eligibility.getStudentId(), deliveryType);
+                if (existedDeliveryType != null && !Objects.equals(existedDeliveryType, deliveryType)) {
+                    throw exception(ORDER_PUBLICATION_MULTI_DELIVERY_FOR_STUDENT);
+                }
+                item.setSubscriptionStudentId(eligibility.getStudentId())
+                        .setSubscriptionStudentNameSnapshot(eligibility.getStudentNameSnapshot())
+                        .setSubscriptionSchoolId(eligibility.getSchoolId())
+                        .setSubscriptionSchoolNameSnapshot(eligibility.getSchoolNameSnapshot())
+                        .setSubscriptionClassId(eligibility.getClassId())
+                        .setSubscriptionClassNameSnapshot(eligibility.getClassNameSnapshot())
+                        .setSubscriptionGradeCatalogId(eligibility.getGradeCatalogId())
+                        .setSubscriptionGradeNameSnapshot(eligibility.getGradeNameSnapshot())
+                        .setSubscriptionStationId(eligibility.getStationId())
+                        .setSubscriptionStationNameSnapshot(eligibility.getStationNameSnapshot())
+                        .setSubscriptionStationAddressSnapshot(eligibility.getStationAddressSnapshot())
+                        .setSubscriptionContactName(eligibility.getContactName())
+                        .setSubscriptionContactMobile(eligibility.getContactMobile())
+                        .setSubscriptionWindowId(eligibility.getWindowId())
+                        .setSubscriptionWindowNameSnapshot(eligibility.getWindowNameSnapshot())
+                        .setSubscriptionTargetYearStart(eligibility.getTargetYearStart())
+                        .setSubscriptionTargetYearEnd(eligibility.getTargetYearEnd())
+                        .setSubscriptionTargetPeriod(eligibility.getTargetPeriod())
+                        .setSubscriptionOfferId(eligibility.getOfferId())
+                        .setSubscriptionOfferSkuId(eligibility.getOfferSkuId())
+                        .setSubscriptionVisibilityReason(eligibility.getVisibilityReason())
+                        .setSubscriptionMatchedRuleId(eligibility.getMatchedRuleId())
+                        .setSubscriptionGradeApplicabilityOverride(eligibility.getGradeApplicabilityOverride());
+                if (Objects.equals(deliveryType, DeliveryTypeEnum.STATION.getType()) && eligibility.getStationId() == null) {
+                    throw exception(ORDER_SCHOOL_STATION_NOT_CONFIGURED);
+                }
+                String groupKey = buildPublicationGroupKey(eligibility.getStudentId(), deliveryType);
+                DeliveryGroupDraft group = groupMap.computeIfAbsent(groupKey, ignore -> DeliveryGroupDraft.forPublication(eligibility, deliveryType));
+                group.getItemIndexes().add(i);
+                continue;
+            }
+
+            if (item.getSubscriptionStudentId() != null || resolveSubscriptionOfferSkuId(item) != null) {
+                throw exception(ORDER_NORMAL_STUDENT_NOT_ALLOWED);
+            }
+            if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())
+                    && !Objects.equals(deliveryType, DeliveryTypeEnum.PICK_UP.getType())) {
+                throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
+            }
+            String groupKey = buildNormalGroupKey(deliveryType);
+            DeliveryGroupDraft group = groupMap.computeIfAbsent(groupKey, ignore -> DeliveryGroupDraft.forNormal(deliveryType));
+            group.getItemIndexes().add(i);
+        }
+        return new PreparedCalculateRequest(baseReqBO, new ArrayList<>(groupMap.values()), publicationPresent);
+    }
+
+    Integer accumulatePublicationPurchaseCount(Map<SubscriptionPurchaseKey, Integer> purchaseCountMap, Long studentId,
+                                               Long offerSkuId, Integer count) {
+        return purchaseCountMap.merge(new SubscriptionPurchaseKey(studentId, offerSkuId), count, Integer::sum);
+    }
+
+    private Long resolveSubscriptionOfferSkuId(TradePriceCalculateReqBO.Item item) {
+        return item.getSubscriptionOfferSkuId() != null ? item.getSubscriptionOfferSkuId()
+                : item.getSubscriptionWindowSkuId();
+    }
+
+    private TradePriceCalculateRespBO calculatePrice(PreparedCalculateRequest prepared,
+                                                     AppTradeOrderSettlementReqVO settlementReqVO) {
+        if ((prepared.publicationPresent() || prepared.groupDrafts().size() > 1)
+                && hasComplexMarketing(settlementReqVO)) {
+            throw exception(ORDER_SPLIT_MARKETING_NOT_SUPPORTED);
+        }
+
+        List<TradePriceCalculateRespBO> groupResults = new ArrayList<>(prepared.groupDrafts().size());
+        for (DeliveryGroupDraft groupDraft : prepared.groupDrafts()) {
+            TradePriceCalculateReqBO groupReqBO = buildGroupCalculateReqBO(prepared.baseReqBO(), groupDraft, settlementReqVO);
+            groupResults.add(tradePriceService.calculateOrderPrice(groupReqBO));
+        }
+        return mergeGroupCalculateResult(prepared, groupResults);
+    }
+
+    private boolean hasComplexMarketing(AppTradeOrderSettlementReqVO settlementReqVO) {
+        return settlementReqVO.getCouponId() != null
+                || Boolean.TRUE.equals(settlementReqVO.getPointStatus())
+                || settlementReqVO.getSeckillActivityId() != null
+                || settlementReqVO.getCombinationActivityId() != null
+                || settlementReqVO.getCombinationHeadId() != null
+                || settlementReqVO.getBargainRecordId() != null
+                || settlementReqVO.getPointActivityId() != null;
+    }
+
+    private TradePriceCalculateReqBO buildGroupCalculateReqBO(TradePriceCalculateReqBO baseReqBO,
+                                                              DeliveryGroupDraft groupDraft,
+                                                              AppTradeOrderSettlementReqVO settlementReqVO) {
+        TradePriceCalculateReqBO groupReqBO = new TradePriceCalculateReqBO()
+                .setUserId(baseReqBO.getUserId())
+                .setPointStatus(baseReqBO.getPointStatus())
+                .setCouponId(baseReqBO.getCouponId())
+                .setDeliveryType(groupDraft.getDeliveryType())
+                .setSeckillActivityId(baseReqBO.getSeckillActivityId())
+                .setBargainRecordId(baseReqBO.getBargainRecordId())
+                .setCombinationActivityId(baseReqBO.getCombinationActivityId())
+                .setCombinationHeadId(baseReqBO.getCombinationHeadId())
+                .setPointActivityId(baseReqBO.getPointActivityId())
+                .setItems(new ArrayList<>(groupDraft.getItemIndexes().size()));
+        if (Objects.equals(groupDraft.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+            groupReqBO.setAddressId(settlementReqVO.getAddressId());
+        } else if (Objects.equals(groupDraft.getDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
+            groupReqBO.setPickUpStoreId(settlementReqVO.getPickUpStoreId());
+        }
+        for (Integer itemIndex : groupDraft.getItemIndexes()) {
+            groupReqBO.getItems().add(baseReqBO.getItems().get(itemIndex));
+        }
+        return groupReqBO;
+    }
+
+    private TradePriceCalculateRespBO mergeGroupCalculateResult(PreparedCalculateRequest prepared,
+                                                                List<TradePriceCalculateRespBO> groupResults) {
+        TradePriceCalculateRespBO merged = new TradePriceCalculateRespBO();
+        merged.setType(groupResults.isEmpty() ? null : groupResults.get(0).getType());
+        merged.setPrice(new TradePriceCalculateRespBO.Price()
+                .setTotalPrice(0).setDiscountPrice(0).setDeliveryPrice(0)
+                .setCouponPrice(0).setPointPrice(0).setVipPrice(0).setPayPrice(0));
+        merged.setItems(new ArrayList<>(Collections.<TradePriceCalculateRespBO.OrderItem>nCopies(
+                prepared.baseReqBO().getItems().size(), null)));
+        merged.setPromotions(new ArrayList<>());
+        merged.setCoupons(prepared.groupDrafts().size() == 1 && !groupResults.isEmpty() ? groupResults.get(0).getCoupons() : Collections.emptyList());
+        merged.setCouponId(prepared.groupDrafts().size() == 1 && !groupResults.isEmpty() ? groupResults.get(0).getCouponId() : null);
+        merged.setTotalPoint(groupResults.isEmpty() ? 0 : groupResults.get(0).getTotalPoint());
+        merged.setUsePoint(groupResults.isEmpty() ? 0 : groupResults.get(0).getUsePoint());
+        merged.setGivePoint(0);
+        merged.setFreeDelivery(groupResults.stream().allMatch(resp -> Boolean.TRUE.equals(resp.getFreeDelivery())));
+        merged.setGiveCouponTemplateCounts(new LinkedHashMap<>());
+
+        for (int i = 0; i < prepared.groupDrafts().size(); i++) {
+            DeliveryGroupDraft groupDraft = prepared.groupDrafts().get(i);
+            TradePriceCalculateRespBO groupRespBO = groupResults.get(i);
+            mergePrice(merged.getPrice(), groupRespBO.getPrice());
+            merged.getPromotions().addAll(groupRespBO.getPromotions() == null ? Collections.emptyList() : groupRespBO.getPromotions());
+            merged.setGivePoint(merged.getGivePoint() + ObjectUtil.defaultIfNull(groupRespBO.getGivePoint(), 0));
+            mergeGiveCouponTemplateCounts(merged.getGiveCouponTemplateCounts(), groupRespBO.getGiveCouponTemplateCounts());
+            for (int itemIndex = 0; itemIndex < groupDraft.getItemIndexes().size(); itemIndex++) {
+                merged.getItems().set(groupDraft.getItemIndexes().get(itemIndex), groupRespBO.getItems().get(itemIndex));
+            }
+        }
+        merged.getItems().removeIf(Objects::isNull);
+        return merged;
+    }
+
+    private void mergePrice(TradePriceCalculateRespBO.Price target, TradePriceCalculateRespBO.Price source) {
+        target.setTotalPrice(target.getTotalPrice() + ObjectUtil.defaultIfNull(source.getTotalPrice(), 0));
+        target.setDiscountPrice(target.getDiscountPrice() + ObjectUtil.defaultIfNull(source.getDiscountPrice(), 0));
+        target.setDeliveryPrice(target.getDeliveryPrice() + ObjectUtil.defaultIfNull(source.getDeliveryPrice(), 0));
+        target.setCouponPrice(target.getCouponPrice() + ObjectUtil.defaultIfNull(source.getCouponPrice(), 0));
+        target.setPointPrice(target.getPointPrice() + ObjectUtil.defaultIfNull(source.getPointPrice(), 0));
+        target.setVipPrice(target.getVipPrice() + ObjectUtil.defaultIfNull(source.getVipPrice(), 0));
+        target.setPayPrice(target.getPayPrice() + ObjectUtil.defaultIfNull(source.getPayPrice(), 0));
+    }
+
+    private void mergeGiveCouponTemplateCounts(Map<Long, Integer> target, Map<Long, Integer> source) {
+        if (source == null || source.isEmpty()) {
+            return;
+        }
+        source.forEach((couponTemplateId, count) -> target.merge(couponTemplateId, count, Integer::sum));
     }
 
     @Override
@@ -185,16 +420,23 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.MEMBER_CREATE)
     public TradeOrderDO createOrder(Long userId, AppTradeOrderCreateReqVO createReqVO) {
         // 1.1 价格计算
-        TradePriceCalculateRespBO calculateRespBO = calculatePrice(userId, createReqVO);
+        PreparedCalculateRequest prepared = prepareCalculateRequest(userId, createReqVO);
+        TradePriceCalculateRespBO calculateRespBO = calculatePrice(prepared, createReqVO);
+        MemberAddressRespDTO address = getAddress(userId, createReqVO.getAddressId());
+        DeliveryBuildResult deliveryBuildResult = buildDeliveryBuildResult(calculateRespBO, address, true);
         // 1.2 构建订单
-        TradeOrderDO order = buildTradeOrder(userId, createReqVO, calculateRespBO);
-        List<TradeOrderItemDO> orderItems = buildTradeOrderItems(order, calculateRespBO);
+        TradeOrderDO order = buildTradeOrder(userId, createReqVO, calculateRespBO, deliveryBuildResult);
+        List<TradeOrderItemDO> previewOrderItems = buildTradeOrderItems(order, calculateRespBO);
 
         // 2. 订单创建前的逻辑
-        tradeOrderHandlers.forEach(handler -> handler.beforeOrderCreate(order, orderItems));
+        tradeOrderHandlers.forEach(handler -> handler.beforeOrderCreate(order, previewOrderItems));
 
         // 3. 保存订单
         tradeOrderMapper.insert(order);
+        List<TradeOrderDeliveryDO> orderDeliveries = buildTradeOrderDeliveries(order, deliveryBuildResult);
+        orderDeliveries.forEach(tradeOrderDeliveryMapper::insert);
+        applyDeliveryIdsToOrderItems(calculateRespBO, deliveryBuildResult);
+        List<TradeOrderItemDO> orderItems = buildTradeOrderItems(order, calculateRespBO);
         orderItems.forEach(orderItem -> orderItem.setOrderId(order.getId()));
         tradeOrderItemMapper.insertBatch(orderItems);
 
@@ -204,7 +446,8 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     }
 
     private TradeOrderDO buildTradeOrder(Long userId, AppTradeOrderCreateReqVO createReqVO,
-                                         TradePriceCalculateRespBO calculateRespBO) {
+                                         TradePriceCalculateRespBO calculateRespBO,
+                                         DeliveryBuildResult deliveryBuildResult) {
         TradeOrderDO order = TradeOrderConvert.INSTANCE.convert(userId, createReqVO, calculateRespBO);
         order.setType(calculateRespBO.getType());
         order.setNo(tradeNoRedisDAO.generate(TradeNoRedisDAO.TRADE_ORDER_NO_PREFIX));
@@ -218,15 +461,16 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         order.setAdjustPrice(0).setPayStatus(false);
         order.setRefundStatus(TradeOrderRefundStatusEnum.NONE.getStatus()).setRefundPrice(0);
         // 物流信息
-        order.setDeliveryType(createReqVO.getDeliveryType());
-        if (Objects.equals(createReqVO.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
-            MemberAddressRespDTO address = addressApi.getAddress(createReqVO.getAddressId(), userId);
-            Assert.notNull(address, "地址({}) 不能为空", createReqVO.getAddressId()); // 价格计算时，已经计算
+        order.setDeliveryType(deliveryBuildResult.summaryDeliveryType());
+        DeliveryGroupDraft expressGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.EXPRESS.getType());
+        if (expressGroup != null && expressGroup.getAddress() != null) {
+            MemberAddressRespDTO address = expressGroup.getAddress();
             order.setReceiverName(address.getName()).setReceiverMobile(address.getMobile())
                     .setReceiverAreaId(address.getAreaId()).setReceiverDetailAddress(address.getDetailAddress());
-        } else if (Objects.equals(createReqVO.getDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
+        } else if (Objects.equals(deliveryBuildResult.summaryDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
             order.setReceiverName(createReqVO.getReceiverName()).setReceiverMobile(createReqVO.getReceiverMobile());
             order.setPickUpVerifyCode(RandomUtil.randomNumbers(8)); // 随机一个核销码，长度为 8 位
+            order.setPickUpStoreId(createReqVO.getPickUpStoreId());
         }
         return order;
     }
@@ -234,6 +478,203 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     private List<TradeOrderItemDO> buildTradeOrderItems(TradeOrderDO tradeOrderDO,
                                                         TradePriceCalculateRespBO calculateRespBO) {
         return TradeOrderConvert.INSTANCE.convertList(tradeOrderDO, calculateRespBO);
+    }
+
+    private DeliveryBuildResult buildDeliveryBuildResult(TradePriceCalculateRespBO calculateRespBO,
+                                                         MemberAddressRespDTO address,
+                                                         boolean strictExpressAddress) {
+        List<TradePriceCalculateRespBO.OrderItem> orderItems = filterList(calculateRespBO.getItems(),
+                TradePriceCalculateRespBO.OrderItem::getSelected);
+        if (CollUtil.isEmpty(orderItems)) {
+            return new DeliveryBuildResult(Collections.emptyList(), null);
+        }
+        Map<String, DeliveryGroupDraft> planMap = new LinkedHashMap<>();
+        for (int i = 0; i < calculateRespBO.getItems().size(); i++) {
+            TradePriceCalculateRespBO.OrderItem item = calculateRespBO.getItems().get(i);
+            if (!Boolean.TRUE.equals(item.getSelected())) {
+                continue;
+            }
+            Integer resolvedDeliveryType = item.getResolvedDeliveryType();
+            if (resolvedDeliveryType == null) {
+                throw exception(ORDER_ITEM_DELIVERY_TYPE_REQUIRED);
+            }
+            String bizScene = item.getBizScene();
+            if (BizSceneEnum.isPublication(bizScene)) {
+                if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.STATION.getType())) {
+                    if (item.getSubscriptionStudentId() == null || item.getSubscriptionStationId() == null) {
+                        throw exception(ORDER_SCHOOL_STATION_NOT_CONFIGURED);
+                    }
+                    String key = buildPublicationGroupKey(item.getSubscriptionStudentId(), resolvedDeliveryType);
+                    DeliveryGroupDraft group = planMap.computeIfAbsent(key, ignore -> DeliveryGroupDraft.forPublicationItem(item));
+                    group.getItemIndexes().add(i);
+                    continue;
+                }
+                if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.EXPRESS.getType())) {
+                    if (strictExpressAddress) {
+                        Assert.notNull(address, "地址不能为空");
+                    }
+                    String key = buildPublicationGroupKey(item.getSubscriptionStudentId(), resolvedDeliveryType);
+                    DeliveryGroupDraft group = planMap.computeIfAbsent(key, ignore -> DeliveryGroupDraft.forPublicationItem(item));
+                    group.setAddress(address);
+                    group.getItemIndexes().add(i);
+                    continue;
+                }
+                throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
+            }
+            if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.EXPRESS.getType())) {
+                if (strictExpressAddress) {
+                    Assert.notNull(address, "地址不能为空");
+                }
+                String key = buildNormalGroupKey(resolvedDeliveryType);
+                DeliveryGroupDraft group = planMap.computeIfAbsent(key, ignore -> DeliveryGroupDraft.forNormal(resolvedDeliveryType));
+                group.setAddress(address);
+                group.getItemIndexes().add(i);
+                continue;
+            }
+            if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.PICK_UP.getType())) {
+                String key = buildNormalGroupKey(resolvedDeliveryType);
+                DeliveryGroupDraft group = planMap.computeIfAbsent(key, ignore -> DeliveryGroupDraft.forNormal(resolvedDeliveryType));
+                group.getItemIndexes().add(i);
+                continue;
+            }
+            throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
+        }
+        List<DeliveryGroupDraft> plans = new ArrayList<>(planMap.values());
+        plans.forEach(plan -> plan.setSourceItems(calculateRespBO.getItems()));
+        assignPreviewDeliveryIds(plans);
+        return new DeliveryBuildResult(plans, resolveSummaryDeliveryType(plans));
+    }
+
+    private String buildPublicationGroupKey(Long studentId, Integer deliveryType) {
+        return "publication:" + studentId + ":" + deliveryType;
+    }
+
+    private String buildNormalGroupKey(Integer deliveryType) {
+        return "normal:" + deliveryType;
+    }
+
+    private void assignPreviewDeliveryIds(List<DeliveryGroupDraft> plans) {
+        for (int i = 0; i < plans.size(); i++) {
+            plans.get(i).setPreviewDeliveryId(-1L * (i + 1));
+        }
+    }
+
+    private Integer resolveSummaryDeliveryType(List<DeliveryGroupDraft> plans) {
+        if (CollUtil.isEmpty(plans)) {
+            return null;
+        }
+        Set<Integer> deliveryTypes = convertSet(plans, DeliveryGroupDraft::getDeliveryType);
+        return deliveryTypes.size() == 1 ? plans.get(0).getDeliveryType() : DeliveryTypeEnum.MIXED.getType();
+    }
+
+    private List<AppTradeOrderDeliveryRespVO> buildSettlementDeliveries(DeliveryBuildResult deliveryBuildResult) {
+        return convertList(deliveryBuildResult.plans(), plan -> {
+            AppTradeOrderDeliveryRespVO respVO = new AppTradeOrderDeliveryRespVO()
+                    .setId(plan.getPreviewDeliveryId())
+                    .setBizScene(plan.getBizScene())
+                    .setDeliveryType(plan.getDeliveryType())
+                    .setProductCount(sumProductCount(plan))
+                    .setPayPrice(sumPayPrice(plan))
+                    .setDeliveryPrice(sumDeliveryPrice(plan))
+                    .setStudentId(plan.getStudentId())
+                    .setStudentNameSnapshot(plan.getStudentNameSnapshot())
+                    .setSchoolId(plan.getSchoolId())
+                    .setSchoolNameSnapshot(plan.getSchoolNameSnapshot())
+                    .setClassId(plan.getClassId())
+                    .setClassNameSnapshot(plan.getClassNameSnapshot())
+                    .setGradeCatalogId(plan.getGradeCatalogId())
+                    .setGradeNameSnapshot(plan.getGradeNameSnapshot())
+                    .setStationId(plan.getStationId())
+                    .setStationNameSnapshot(plan.getStationNameSnapshot())
+                    .setStationAddressSnapshot(plan.getStationAddressSnapshot())
+                    .setContactName(plan.getContactName())
+                    .setContactMobile(plan.getContactMobile());
+            if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType()) && plan.getAddress() != null) {
+                respVO.setReceiverName(plan.getAddress().getName())
+                        .setReceiverMobile(plan.getAddress().getMobile())
+                        .setReceiverAreaId(plan.getAddress().getAreaId())
+                        .setReceiverAreaName(AreaUtils.format(plan.getAddress().getAreaId()))
+                        .setReceiverDetailAddress(plan.getAddress().getDetailAddress());
+            }
+            return respVO;
+        });
+    }
+
+    private void applyPreviewDeliveryIdsToOrderItems(TradePriceCalculateRespBO calculateRespBO,
+                                                     DeliveryBuildResult deliveryBuildResult) {
+        for (DeliveryGroupDraft plan : deliveryBuildResult.plans()) {
+            if (plan.getPreviewDeliveryId() == null) {
+                continue;
+            }
+            for (Integer itemIndex : plan.getItemIndexes()) {
+                calculateRespBO.getItems().get(itemIndex).setDeliveryId(plan.getPreviewDeliveryId());
+            }
+        }
+    }
+
+    private List<TradeOrderDeliveryDO> buildTradeOrderDeliveries(TradeOrderDO order, DeliveryBuildResult deliveryBuildResult) {
+        return convertList(deliveryBuildResult.plans(), plan -> {
+            TradeOrderDeliveryDO delivery = new TradeOrderDeliveryDO()
+                    .setOrderId(order.getId())
+                    .setBizScene(plan.getBizScene())
+                    .setDeliveryType(plan.getDeliveryType())
+                    .setStatus(order.getStatus())
+                    .setProductCount(sumProductCount(plan))
+                    .setPayPrice(sumPayPrice(plan))
+                    .setDeliveryPrice(sumDeliveryPrice(plan))
+                    .setStudentId(plan.getStudentId())
+                    .setStudentNameSnapshot(plan.getStudentNameSnapshot())
+                    .setSchoolId(plan.getSchoolId())
+                    .setSchoolNameSnapshot(plan.getSchoolNameSnapshot())
+                    .setClassId(plan.getClassId())
+                    .setClassNameSnapshot(plan.getClassNameSnapshot())
+                    .setGradeCatalogId(plan.getGradeCatalogId())
+                    .setGradeNameSnapshot(plan.getGradeNameSnapshot())
+                    .setStationId(plan.getStationId())
+                    .setStationNameSnapshot(plan.getStationNameSnapshot())
+                    .setStationAddressSnapshot(plan.getStationAddressSnapshot())
+                    .setContactName(plan.getContactName())
+                    .setContactMobile(plan.getContactMobile());
+            if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType()) && plan.getAddress() != null) {
+                delivery.setReceiverName(plan.getAddress().getName())
+                        .setReceiverMobile(plan.getAddress().getMobile())
+                        .setReceiverAreaId(plan.getAddress().getAreaId().intValue())
+                        .setReceiverDetailAddress(plan.getAddress().getDetailAddress());
+            }
+            plan.setPersistedDelivery(delivery);
+            return delivery;
+        });
+    }
+
+    private void applyDeliveryIdsToOrderItems(TradePriceCalculateRespBO calculateRespBO,
+                                              DeliveryBuildResult deliveryBuildResult) {
+        for (DeliveryGroupDraft plan : deliveryBuildResult.plans()) {
+            if (plan.getPersistedDelivery() == null || plan.getPersistedDelivery().getId() == null) {
+                continue;
+            }
+            for (Integer itemIndex : plan.getItemIndexes()) {
+                calculateRespBO.getItems().get(itemIndex).setDeliveryId(plan.getPersistedDelivery().getId());
+            }
+        }
+    }
+
+    private int sumProductCount(DeliveryGroupDraft plan) {
+        return getSumValue(plan.getItemIndexes(),
+                index -> calculateOrderItem(plan, index).getCount(), Integer::sum);
+    }
+
+    private int sumPayPrice(DeliveryGroupDraft plan) {
+        return getSumValue(plan.getItemIndexes(),
+                index -> calculateOrderItem(plan, index).getPayPrice(), Integer::sum);
+    }
+
+    private int sumDeliveryPrice(DeliveryGroupDraft plan) {
+        return getSumValue(plan.getItemIndexes(),
+                index -> calculateOrderItem(plan, index).getDeliveryPrice(), Integer::sum);
+    }
+
+    private TradePriceCalculateRespBO.OrderItem calculateOrderItem(DeliveryGroupDraft plan, Integer index) {
+        return plan.getSourceItems().get(index);
     }
 
     /**
@@ -307,6 +748,7 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         if (updateCount == 0) {
             throw exception(ORDER_UPDATE_PAID_STATUS_NOT_UNPAID);
         }
+        updateDeliveryStatusWhenPaid(id);
 
         // 4. 执行 TradeOrderHandler 的后置处理
         List<TradeOrderItemDO> orderItems = tradeOrderItemMapper.selectListByOrderId(id);
@@ -373,46 +815,65 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     @Transactional(rollbackFor = Exception.class)
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.ADMIN_DELIVERY)
     public void deliveryOrder(TradeOrderDeliveryReqVO deliveryReqVO) {
-        // 1.1 校验并获得交易订单（可发货）
-        TradeOrderDO order = validateOrderDeliverable(deliveryReqVO.getId());
-        // 1.2 校验 deliveryType 是否为快递，是快递才可以发货
-        if (ObjectUtil.notEqual(order.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+        TradeOrderDeliveryDO delivery = resolveExpressDelivery(deliveryReqVO);
+        if (delivery == null) {
+            deliveryOrderLegacy(deliveryReqVO);
+            return;
+        }
+        TradeOrderDO order = validateOrderDeliverable(delivery.getOrderId());
+        if (ObjectUtil.notEqual(delivery.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
             throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS);
         }
 
-        // 2. 更新订单为已发货
-        TradeOrderDO updateOrderObj = new TradeOrderDO();
-        // 2.1 快递发货
+        TradeOrderDeliveryDO updateDeliveryObj = new TradeOrderDeliveryDO();
         DeliveryExpressDO express = null;
         if (ObjectUtil.notEqual(deliveryReqVO.getLogisticsId(), TradeOrderDO.LOGISTICS_ID_NULL)) {
             express = deliveryExpressService.validateDeliveryExpress(deliveryReqVO.getLogisticsId());
-            updateOrderObj.setLogisticsId(deliveryReqVO.getLogisticsId()).setLogisticsNo(deliveryReqVO.getLogisticsNo());
+            updateDeliveryObj.setLogisticsId(deliveryReqVO.getLogisticsId()).setLogisticsNo(deliveryReqVO.getLogisticsNo());
         } else {
-            // 2.2 无需发货
-            updateOrderObj.setLogisticsId(0L).setLogisticsNo("");
+            updateDeliveryObj.setLogisticsId(0L).setLogisticsNo("");
         }
-        // 执行更新
-        updateOrderObj.setStatus(TradeOrderStatusEnum.DELIVERED.getStatus()).setDeliveryTime(LocalDateTime.now());
-        int updateCount = tradeOrderMapper.updateByIdAndStatus(order.getId(), order.getStatus(), updateOrderObj);
+        updateDeliveryObj.setStatus(TradeOrderStatusEnum.DELIVERED.getStatus()).setDeliveryTime(LocalDateTime.now());
+        int updateCount = tradeOrderDeliveryMapper.updateByIdAndStatus(delivery.getId(), delivery.getStatus(), updateDeliveryObj);
         if (updateCount == 0) {
             throw exception(ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED);
         }
+        delivery.setLogisticsId(updateDeliveryObj.getLogisticsId()).setLogisticsNo(updateDeliveryObj.getLogisticsNo())
+                .setStatus(updateDeliveryObj.getStatus()).setDeliveryTime(updateDeliveryObj.getDeliveryTime());
+        TradeOrderDO refreshedOrder = refreshOrderStatusByDeliveries(order);
 
-        // 3. 记录订单日志
         TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.DELIVERED.getStatus(),
                 MapUtil.<String, Object>builder().put("expressName", express != null ? express.getName() : "")
                         .put("logisticsNo", express != null ? deliveryReqVO.getLogisticsNo() : "").build());
 
-        // 4.1 发送站内信
         tradeMessageService.sendMessageWhenDeliveryOrder(new TradeOrderMessageWhenDeliveryOrderReqBO()
                 .setOrderId(order.getId()).setUserId(order.getUserId()).setMessage(null));
-        // 4.2 发送订阅消息
-        getSelf().sendDeliveryOrderMessage(order, deliveryReqVO);
+        getSelf().sendDeliveryOrderMessage(refreshedOrder, deliveryReqVO);
 
-        // 5. 处理订单发货后逻辑
-        order.setLogisticsId(updateOrderObj.getLogisticsId()).setLogisticsNo(updateOrderObj.getLogisticsNo())
-                .setStatus(updateOrderObj.getStatus()).setDeliveryTime(updateOrderObj.getDeliveryTime());
-        tradeOrderHandlers.forEach(handler -> handler.afterDeliveryOrder(order));
+        refreshedOrder.setLogisticsId(updateDeliveryObj.getLogisticsId()).setLogisticsNo(updateDeliveryObj.getLogisticsNo())
+                .setDeliveryTime(updateDeliveryObj.getDeliveryTime());
+        tradeOrderHandlers.forEach(handler -> handler.afterDeliveryOrder(refreshedOrder));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.ADMIN_DELIVERY)
+    public void stationDeliveryOrder(TradeOrderStationDeliveryReqVO reqVO) {
+        TradeOrderDeliveryDO delivery = validateOrderDeliveryExists(reqVO.getDeliveryId());
+        if (!Objects.equals(delivery.getDeliveryType(), DeliveryTypeEnum.STATION.getType())) {
+            throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_STATION);
+        }
+        TradeOrderDO order = validateOrderDeliverable(delivery.getOrderId());
+        int updateCount = tradeOrderDeliveryMapper.updateByIdAndStatus(delivery.getId(), delivery.getStatus(),
+                new TradeOrderDeliveryDO().setStatus(TradeOrderStatusEnum.DELIVERED.getStatus())
+                        .setDeliveryTime(LocalDateTime.now()));
+        if (updateCount == 0) {
+            throw exception(ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED);
+        }
+        refreshOrderStatusByDeliveries(order);
+        TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.DELIVERED.getStatus(),
+                MapUtil.<String, Object>builder().put("stationName", delivery.getStationNameSnapshot())
+                        .put("schoolName", delivery.getSchoolNameSnapshot()).build());
     }
 
     @Async
@@ -460,15 +921,113 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         return order;
     }
 
+    private void updateDeliveryStatusWhenPaid(Long orderId) {
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(orderId);
+        for (TradeOrderDeliveryDO delivery : deliveries) {
+            if (TradeOrderStatusEnum.isUnpaid(delivery.getStatus())) {
+                tradeOrderDeliveryMapper.updateById(new TradeOrderDeliveryDO().setId(delivery.getId())
+                        .setStatus(TradeOrderStatusEnum.UNDELIVERED.getStatus()));
+            }
+        }
+    }
+
+    private TradeOrderDeliveryDO resolveExpressDelivery(TradeOrderDeliveryReqVO deliveryReqVO) {
+        if (deliveryReqVO.getDeliveryId() != null) {
+            return validateOrderDeliveryExists(deliveryReqVO.getDeliveryId());
+        }
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(deliveryReqVO.getId());
+        if (CollUtil.isEmpty(deliveries)) {
+            return null;
+        }
+        TradeOrderDeliveryDO expressDelivery = findDeliveryByType(deliveries, DeliveryTypeEnum.EXPRESS.getType());
+        if (expressDelivery == null) {
+            throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS);
+        }
+        return expressDelivery;
+    }
+
+    private void deliveryOrderLegacy(TradeOrderDeliveryReqVO deliveryReqVO) {
+        TradeOrderDO order = validateOrderDeliverable(deliveryReqVO.getId());
+        if (ObjectUtil.notEqual(order.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+            throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS);
+        }
+
+        TradeOrderDO updateOrderObj = new TradeOrderDO();
+        DeliveryExpressDO express = null;
+        if (ObjectUtil.notEqual(deliveryReqVO.getLogisticsId(), TradeOrderDO.LOGISTICS_ID_NULL)) {
+            express = deliveryExpressService.validateDeliveryExpress(deliveryReqVO.getLogisticsId());
+            updateOrderObj.setLogisticsId(deliveryReqVO.getLogisticsId()).setLogisticsNo(deliveryReqVO.getLogisticsNo());
+        } else {
+            updateOrderObj.setLogisticsId(0L).setLogisticsNo("");
+        }
+        updateOrderObj.setStatus(TradeOrderStatusEnum.DELIVERED.getStatus()).setDeliveryTime(LocalDateTime.now());
+        int updateCount = tradeOrderMapper.updateByIdAndStatus(order.getId(), order.getStatus(), updateOrderObj);
+        if (updateCount == 0) {
+            throw exception(ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED);
+        }
+
+        TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.DELIVERED.getStatus(),
+                MapUtil.<String, Object>builder().put("expressName", express != null ? express.getName() : "")
+                        .put("logisticsNo", express != null ? deliveryReqVO.getLogisticsNo() : "").build());
+
+        tradeMessageService.sendMessageWhenDeliveryOrder(new TradeOrderMessageWhenDeliveryOrderReqBO()
+                .setOrderId(order.getId()).setUserId(order.getUserId()).setMessage(null));
+        getSelf().sendDeliveryOrderMessage(order, deliveryReqVO);
+
+        order.setLogisticsId(updateOrderObj.getLogisticsId()).setLogisticsNo(updateOrderObj.getLogisticsNo())
+                .setStatus(updateOrderObj.getStatus()).setDeliveryTime(updateOrderObj.getDeliveryTime());
+        tradeOrderHandlers.forEach(handler -> handler.afterDeliveryOrder(order));
+    }
+
+    private TradeOrderDeliveryDO validateOrderDeliveryExists(Long deliveryId) {
+        TradeOrderDeliveryDO delivery = tradeOrderDeliveryMapper.selectById(deliveryId);
+        if (delivery == null) {
+            throw exception(ORDER_DELIVERY_NOT_FOUND);
+        }
+        return delivery;
+    }
+
+    private TradeOrderDeliveryDO findDeliveryByType(List<TradeOrderDeliveryDO> deliveries, Integer deliveryType) {
+        return deliveries.stream()
+                .filter(delivery -> Objects.equals(delivery.getDeliveryType(), deliveryType))
+                .findFirst()
+                .orElse(null);
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.MEMBER_RECEIVE)
     public void receiveOrderByMember(Long userId, Long id) {
         // 校验并获得交易订单（可收货）
         TradeOrderDO order = validateOrderReceivable(userId, id);
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(order.getId());
+        if (CollUtil.isEmpty(deliveries)) {
+            receiveOrder0(order);
+            return;
+        }
+        throw exception(ORDER_RECEIVE_FAIL_SPLIT_DELIVERY_REQUIRED);
+    }
 
-        // 收货订单
-        receiveOrder0(order);
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.MEMBER_RECEIVE)
+    public void receiveDeliveryByMember(Long userId, Long deliveryId) {
+        TradeOrderDeliveryDO delivery = validateOrderDeliveryExists(deliveryId);
+        TradeOrderDO order = tradeOrderMapper.selectByIdAndUserId(delivery.getOrderId(), userId);
+        if (order == null) {
+            throw exception(ORDER_RECEIVE_FAIL_DELIVERY_NOT_OWNED);
+        }
+        if (!TradeOrderStatusEnum.isDelivered(delivery.getStatus())) {
+            throw exception(ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED);
+        }
+        boolean changed = receiveDelivery0(order, delivery, true);
+        if (changed) {
+            TradeOrderDO refreshedOrder = refreshOrderStatusByDeliveries(order);
+            if (TradeOrderStatusEnum.isCompleted(refreshedOrder.getStatus())) {
+                TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.COMPLETED.getStatus());
+                tradeOrderHandlers.forEach(handler -> handler.afterReceiveOrder(refreshedOrder));
+            }
+        }
     }
 
     @Override
@@ -511,6 +1070,24 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
      * @param order 订单
      */
     private void receiveOrder0(TradeOrderDO order) {
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(order.getId());
+        if (CollUtil.isNotEmpty(deliveries)) {
+            List<TradeOrderDeliveryDO> deliveredList = filterList(deliveries,
+                    delivery -> TradeOrderStatusEnum.isDelivered(delivery.getStatus()));
+            boolean changed = false;
+            for (TradeOrderDeliveryDO delivery : deliveredList) {
+                changed |= receiveDelivery0(order, delivery, true);
+            }
+            if (!changed) {
+                return;
+            }
+            TradeOrderDO refreshedOrder = refreshOrderStatusByDeliveries(order);
+            if (TradeOrderStatusEnum.isCompleted(refreshedOrder.getStatus())) {
+                TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.COMPLETED.getStatus());
+                tradeOrderHandlers.forEach(handler -> handler.afterReceiveOrder(refreshedOrder));
+            }
+            return;
+        }
         // 1. 更新 TradeOrderDO 状态为已完成
         LocalDateTime receiveTime = LocalDateTime.now();
         int updateCount = tradeOrderMapper.updateByIdAndStatus(order.getId(), order.getStatus(),
@@ -525,6 +1102,70 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         // 3. 执行 TradeOrderHandler 后置处理
         order.setStatus(TradeOrderStatusEnum.COMPLETED.getStatus()).setReceiveTime(receiveTime);
         tradeOrderHandlers.forEach(handler -> handler.afterReceiveOrder(order));
+    }
+
+    private boolean receiveDelivery0(TradeOrderDO order, TradeOrderDeliveryDO delivery, boolean strictDeliveredStatus) {
+        if (TradeOrderStatusEnum.isCompleted(delivery.getStatus())) {
+            return false;
+        }
+        if (strictDeliveredStatus && !TradeOrderStatusEnum.isDelivered(delivery.getStatus())) {
+            throw exception(ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED);
+        }
+        LocalDateTime receiveTime = LocalDateTime.now();
+        int updateCount = tradeOrderDeliveryMapper.updateByIdAndStatus(delivery.getId(), delivery.getStatus(),
+                new TradeOrderDeliveryDO().setStatus(TradeOrderStatusEnum.COMPLETED.getStatus())
+                        .setReceiveTime(receiveTime));
+        if (updateCount == 0) {
+            throw exception(ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED);
+        }
+        delivery.setStatus(TradeOrderStatusEnum.COMPLETED.getStatus()).setReceiveTime(receiveTime);
+        return true;
+    }
+
+    private TradeOrderDO refreshOrderStatusByDeliveries(TradeOrderDO order) {
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(order.getId());
+        if (CollUtil.isEmpty(deliveries)) {
+            return order;
+        }
+        Integer orderStatus = calculateAggregateOrderStatus(deliveries);
+        TradeOrderDeliveryDO expressDelivery = findDeliveryByType(deliveries, DeliveryTypeEnum.EXPRESS.getType());
+        LocalDateTime deliveryTime = deliveries.stream().map(TradeOrderDeliveryDO::getDeliveryTime)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+        LocalDateTime receiveTime = deliveries.stream().map(TradeOrderDeliveryDO::getReceiveTime)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+        TradeOrderDO update = new TradeOrderDO().setId(order.getId()).setStatus(orderStatus).setDeliveryTime(deliveryTime);
+        if (TradeOrderStatusEnum.isCompleted(orderStatus)) {
+            update.setReceiveTime(receiveTime);
+        }
+        if (expressDelivery != null) {
+            update.setLogisticsId(expressDelivery.getLogisticsId()).setLogisticsNo(expressDelivery.getLogisticsNo())
+                    .setReceiverName(expressDelivery.getReceiverName()).setReceiverMobile(expressDelivery.getReceiverMobile())
+                    .setReceiverAreaId(expressDelivery.getReceiverAreaId())
+                    .setReceiverDetailAddress(expressDelivery.getReceiverDetailAddress());
+        }
+        tradeOrderMapper.updateById(update);
+        return tradeOrderMapper.selectById(order.getId());
+    }
+
+    private Integer calculateAggregateOrderStatus(List<TradeOrderDeliveryDO> deliveries) {
+        if (deliveries.stream().allMatch(delivery -> TradeOrderStatusEnum.isUnpaid(delivery.getStatus()))) {
+            return TradeOrderStatusEnum.UNPAID.getStatus();
+        }
+        if (deliveries.stream().allMatch(delivery -> TradeOrderStatusEnum.isCanceled(delivery.getStatus()))) {
+            return TradeOrderStatusEnum.CANCELED.getStatus();
+        }
+        if (deliveries.stream().allMatch(delivery -> TradeOrderStatusEnum.isCompleted(delivery.getStatus()))) {
+            return TradeOrderStatusEnum.COMPLETED.getStatus();
+        }
+        if (deliveries.stream().allMatch(delivery -> TradeOrderStatusEnum.isDelivered(delivery.getStatus())
+                || TradeOrderStatusEnum.isCompleted(delivery.getStatus()))) {
+            return TradeOrderStatusEnum.DELIVERED.getStatus();
+        }
+        return TradeOrderStatusEnum.UNDELIVERED.getStatus();
     }
 
     /**
@@ -631,6 +1272,14 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
                         .setCancelType(cancelType.getType()).setCancelTime(LocalDateTime.now()));
         if (updateCount == 0) {
             throw exception(ORDER_CANCEL_FAIL_STATUS_NOT_UNPAID);
+        }
+
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(order.getId());
+        for (TradeOrderDeliveryDO delivery : deliveries) {
+            if (TradeOrderStatusEnum.isUnpaid(delivery.getStatus())) {
+                tradeOrderDeliveryMapper.updateById(new TradeOrderDeliveryDO().setId(delivery.getId())
+                        .setStatus(TradeOrderStatusEnum.CANCELED.getStatus()));
+            }
         }
 
         // 2. 执行 TradeOrderHandler 的后置处理
@@ -748,8 +1397,17 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
             throw exception(ORDER_UPDATE_ADDRESS_FAIL_STATUS_NOT_DELIVERED);
         }
 
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(order.getId());
+        TradeOrderDeliveryDO expressDelivery = findDeliveryByType(deliveries, DeliveryTypeEnum.EXPRESS.getType());
+        if (expressDelivery == null) {
+            throw exception(ORDER_UPDATE_ADDRESS_FAIL_EXPRESS_DELIVERY_NOT_FOUND);
+        }
+
         // 更新
         tradeOrderMapper.updateById(TradeOrderConvert.INSTANCE.convert(reqVO));
+        tradeOrderDeliveryMapper.updateById(new TradeOrderDeliveryDO().setId(expressDelivery.getId())
+                .setReceiverName(reqVO.getReceiverName()).setReceiverMobile(reqVO.getReceiverMobile())
+                .setReceiverAreaId(reqVO.getReceiverAreaId()).setReceiverDetailAddress(reqVO.getReceiverDetailAddress()));
 
         // 记录订单日志
         TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), order.getStatus());
@@ -796,8 +1454,18 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
                 || !CollUtil.contains(deliveryPickUpStore.getVerifyUserIds(), userId)) {
             throw exception(ORDER_PICK_UP_FAIL_NOT_VERIFY_USER);
         }
-
-        receiveOrder0(order);
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderId(order.getId());
+        TradeOrderDeliveryDO pickUpDelivery = findDeliveryByType(deliveries, DeliveryTypeEnum.PICK_UP.getType());
+        if (pickUpDelivery == null) {
+            receiveOrder0(order);
+            return;
+        }
+        receiveDelivery0(order, pickUpDelivery, false);
+        TradeOrderDO refreshedOrder = refreshOrderStatusByDeliveries(order);
+        if (TradeOrderStatusEnum.isCompleted(refreshedOrder.getStatus())) {
+            TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.COMPLETED.getStatus());
+            tradeOrderHandlers.forEach(handler -> handler.afterReceiveOrder(refreshedOrder));
+        }
     }
 
     // =================== Order Item ===================
@@ -1036,6 +1704,119 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         // 2. 更新订单项评价状态
         tradeOrderItemMapper.updateById(new TradeOrderItemDO().setId(orderItem.getId()).setCommentStatus(Boolean.TRUE));
         return commentId;
+    }
+
+    @Data
+    @RequiredArgsConstructor
+    private static class DeliveryGroupDraft {
+
+        private final String key;
+
+        private final String bizScene;
+
+        private final Integer deliveryType;
+
+        private MemberAddressRespDTO address;
+
+        private final List<Integer> itemIndexes = new ArrayList<>();
+
+        private List<TradePriceCalculateRespBO.OrderItem> sourceItems;
+
+        private Long previewDeliveryId;
+
+        private TradeOrderDeliveryDO persistedDelivery;
+
+        private Long studentId;
+
+        private String studentNameSnapshot;
+
+        private Long schoolId;
+
+        private String schoolNameSnapshot;
+
+        private Long classId;
+
+        private String classNameSnapshot;
+
+        private Long gradeCatalogId;
+
+        private String gradeNameSnapshot;
+
+        private Long stationId;
+
+        private String stationNameSnapshot;
+
+        private String stationAddressSnapshot;
+
+        private String contactName;
+
+        private String contactMobile;
+
+        static DeliveryGroupDraft forNormal(Integer deliveryType) {
+            return new DeliveryGroupDraft(buildKey(BizSceneEnum.NORMAL.getCode(), null, deliveryType),
+                    BizSceneEnum.NORMAL.getCode(), deliveryType);
+        }
+
+        static DeliveryGroupDraft forPublication(SubscriptionOrderEligibilityRespDTO student, Integer deliveryType) {
+            DeliveryGroupDraft group = new DeliveryGroupDraft(buildKey(BizSceneEnum.PUBLICATION.getCode(),
+                    student.getStudentId(), deliveryType), BizSceneEnum.PUBLICATION.getCode(), deliveryType);
+            group.setStudentId(student.getStudentId());
+            group.setStudentNameSnapshot(student.getStudentNameSnapshot());
+            group.setSchoolId(student.getSchoolId());
+            group.setSchoolNameSnapshot(student.getSchoolNameSnapshot());
+            group.setClassId(student.getClassId());
+            group.setClassNameSnapshot(student.getClassNameSnapshot());
+            group.setGradeCatalogId(student.getGradeCatalogId());
+            group.setGradeNameSnapshot(student.getGradeNameSnapshot());
+            group.setStationId(student.getStationId());
+            group.setStationNameSnapshot(student.getStationNameSnapshot());
+            group.setStationAddressSnapshot(student.getStationAddressSnapshot());
+            group.setContactName(student.getContactName());
+            group.setContactMobile(student.getContactMobile());
+            return group;
+        }
+
+        static DeliveryGroupDraft forPublicationItem(TradePriceCalculateRespBO.OrderItem item) {
+            DeliveryGroupDraft group = new DeliveryGroupDraft(buildKey(BizSceneEnum.PUBLICATION.getCode(),
+                    item.getSubscriptionStudentId(), item.getResolvedDeliveryType()),
+                    BizSceneEnum.PUBLICATION.getCode(), item.getResolvedDeliveryType());
+            group.setStudentId(item.getSubscriptionStudentId());
+            group.setStudentNameSnapshot(item.getSubscriptionStudentNameSnapshot());
+            group.setSchoolId(item.getSubscriptionSchoolId());
+            group.setSchoolNameSnapshot(item.getSubscriptionSchoolNameSnapshot());
+            group.setClassId(item.getSubscriptionClassId());
+            group.setClassNameSnapshot(item.getSubscriptionClassNameSnapshot());
+            group.setGradeCatalogId(item.getSubscriptionGradeCatalogId());
+            group.setGradeNameSnapshot(item.getSubscriptionGradeNameSnapshot());
+            group.setStationId(item.getSubscriptionStationId());
+            group.setStationNameSnapshot(item.getSubscriptionStationNameSnapshot());
+            group.setStationAddressSnapshot(item.getSubscriptionStationAddressSnapshot());
+            group.setContactName(item.getSubscriptionContactName());
+            group.setContactMobile(item.getSubscriptionContactMobile());
+            return group;
+        }
+
+        private static String buildKey(String bizScene, Long studentId, Integer deliveryType) {
+            return bizScene + ":" + (studentId == null ? "none" : studentId) + ":" + deliveryType;
+        }
+    }
+
+    private record PreparedCalculateRequest(TradePriceCalculateReqBO baseReqBO,
+                                            List<DeliveryGroupDraft> groupDrafts,
+                                            boolean publicationPresent) {
+    }
+
+    record SubscriptionPurchaseKey(Long studentId, Long offerSkuId) {
+    }
+
+    private record DeliveryBuildResult(List<DeliveryGroupDraft> plans, Integer summaryDeliveryType) {
+
+        private DeliveryGroupDraft findByDeliveryType(Integer deliveryType) {
+            return plans.stream()
+                    .filter(plan -> Objects.equals(plan.getDeliveryType(), deliveryType))
+                    .findFirst()
+                    .orElse(null);
+        }
     }
 
     // =================== 营销相关的操作 ===================

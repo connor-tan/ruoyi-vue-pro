@@ -54,9 +54,9 @@ public interface IotOtaTaskRecordMapper extends BaseMapperX<IotOtaTaskRecordDO> 
                 .in(IotOtaTaskRecordDO::getStatus, whereStatuses));
     }
 
-    default void updateListByIdAndStatus(Collection<Long> ids, Collection<Integer> whereStatuses,
+    default int updateListByIdAndStatus(Collection<Long> ids, Collection<Integer> whereStatuses,
                                          IotOtaTaskRecordDO updateObj) {
-        update(updateObj, new LambdaUpdateWrapper<IotOtaTaskRecordDO>()
+        return update(updateObj, new LambdaUpdateWrapper<IotOtaTaskRecordDO>()
                 .in(IotOtaTaskRecordDO::getId, ids)
                 .in(IotOtaTaskRecordDO::getStatus, whereStatuses));
     }

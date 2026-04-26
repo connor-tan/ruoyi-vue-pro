@@ -22,12 +22,12 @@ public interface MesWmOutsourceIssueDetailMapper extends BaseMapperX<MesWmOutsou
         return selectList(MesWmOutsourceIssueDetailDO::getLineId, lineId);
     }
 
-    default void deleteByIssueId(Long issueId) {
-        delete(MesWmOutsourceIssueDetailDO::getIssueId, issueId);
+    default int deleteByIssueId(Long issueId) {
+        return delete(MesWmOutsourceIssueDetailDO::getIssueId, issueId);
     }
 
-    default void deleteByLineId(Long lineId) {
-        delete(MesWmOutsourceIssueDetailDO::getLineId, lineId);
+    default int deleteByLineId(Long lineId) {
+        return delete(MesWmOutsourceIssueDetailDO::getLineId, lineId);
     }
 
 }

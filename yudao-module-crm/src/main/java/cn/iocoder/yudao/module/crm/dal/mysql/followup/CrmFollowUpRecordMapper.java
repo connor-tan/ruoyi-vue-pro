@@ -25,8 +25,8 @@ public interface CrmFollowUpRecordMapper extends BaseMapperX<CrmFollowUpRecordDO
                 .orderByDesc(CrmFollowUpRecordDO::getId));
     }
 
-    default void deleteByBiz(Integer bizType, Long bizId) {
-        delete(new LambdaQueryWrapperX<CrmFollowUpRecordDO>()
+    default int deleteByBiz(Integer bizType, Long bizId) {
+        return delete(new LambdaQueryWrapperX<CrmFollowUpRecordDO>()
                 .eq(CrmFollowUpRecordDO::getBizType, bizType)
                 .eq(CrmFollowUpRecordDO::getBizId, bizId));
     }

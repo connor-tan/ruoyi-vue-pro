@@ -27,8 +27,8 @@ public interface MesWmStockTakingPlanParamMapper extends BaseMapperX<MesWmStockT
         return selectList(MesWmStockTakingPlanParamDO::getPlanId, planId);
     }
 
-    default void deleteByPlanId(Long planId) {
-        delete(MesWmStockTakingPlanParamDO::getPlanId, planId);
+    default int deleteByPlanId(Long planId) {
+        return delete(MesWmStockTakingPlanParamDO::getPlanId, planId);
     }
 
 }

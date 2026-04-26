@@ -9,4 +9,32 @@
         文档可见：https://www.iocoder.cn/MyBatis/x-plugins/
      -->
 
+    <select id="selectDistinctCurrentSchoolIds" resultType="java.lang.Long">
+        SELECT DISTINCT current_school_id
+        FROM edu_student
+        WHERE deleted = b'0'
+          AND current_school_id IS NOT NULL
+        ORDER BY current_school_id ASC
+    </select>
+
+    <select id="selectDistinctCurrentSchoolIdsByStatuses" resultType="java.lang.Long">
+        SELECT DISTINCT current_school_id
+        FROM edu_student
+        WHERE deleted = b'0'
+          AND current_school_id IS NOT NULL
+          AND status IN
+        <foreach collection="statuses" item="status" open="(" separator="," close=")">
+            #{status}
+        </foreach>
+        ORDER BY current_school_id ASC
+    </select>
+
+    <update id="updateStatusById">
+        UPDATE edu_student
+        SET status = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = b'0'
+    </update>
+
 </mapper>

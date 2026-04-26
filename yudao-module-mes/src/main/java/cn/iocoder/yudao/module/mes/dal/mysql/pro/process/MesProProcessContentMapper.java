@@ -21,8 +21,8 @@ public interface MesProProcessContentMapper extends BaseMapperX<MesProProcessCon
                 .orderByAsc(MesProProcessContentDO::getSort));
     }
 
-    default void deleteByProcessId(Long processId) {
-        delete(new LambdaQueryWrapperX<MesProProcessContentDO>()
+    default int deleteByProcessId(Long processId) {
+        return delete(new LambdaQueryWrapperX<MesProProcessContentDO>()
                 .eq(MesProProcessContentDO::getProcessId, processId));
     }
 

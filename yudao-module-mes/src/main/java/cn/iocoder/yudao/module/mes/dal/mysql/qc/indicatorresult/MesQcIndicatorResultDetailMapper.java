@@ -19,8 +19,8 @@ public interface MesQcIndicatorResultDetailMapper extends BaseMapperX<MesQcIndic
         return selectList(MesQcIndicatorResultDetailDO::getResultId, resultId);
     }
 
-    default void deleteByResultId(Long resultId) {
-        delete(new LambdaQueryWrapperX<MesQcIndicatorResultDetailDO>()
+    default int deleteByResultId(Long resultId) {
+        return delete(new LambdaQueryWrapperX<MesQcIndicatorResultDetailDO>()
                 .eq(MesQcIndicatorResultDetailDO::getResultId, resultId));
     }
 

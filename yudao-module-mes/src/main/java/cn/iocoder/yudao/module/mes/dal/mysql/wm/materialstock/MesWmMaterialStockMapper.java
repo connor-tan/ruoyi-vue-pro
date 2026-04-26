@@ -62,8 +62,8 @@ public interface MesWmMaterialStockMapper extends BaseMapperX<MesWmMaterialStock
         return selectByIds(ids);
     }
 
-    default void updateByIds(Collection<Long> ids, MesWmMaterialStockDO updateObj) {
-        update(updateObj, new LambdaUpdateWrapper<MesWmMaterialStockDO>()
+    default int updateByIds(Collection<Long> ids, MesWmMaterialStockDO updateObj) {
+        return update(updateObj, new LambdaUpdateWrapper<MesWmMaterialStockDO>()
                 .in(MesWmMaterialStockDO::getId, ids));
     }
 

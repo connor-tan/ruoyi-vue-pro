@@ -37,8 +37,8 @@ public interface MesMdProductBomMapper extends BaseMapperX<MesMdProductBomDO> {
         return selectList();
     }
 
-    default void deleteByItemId(Long itemId) {
-        delete(MesMdProductBomDO::getItemId, itemId);
+    default int deleteByItemId(Long itemId) {
+        return delete(MesMdProductBomDO::getItemId, itemId);
     }
 
 }

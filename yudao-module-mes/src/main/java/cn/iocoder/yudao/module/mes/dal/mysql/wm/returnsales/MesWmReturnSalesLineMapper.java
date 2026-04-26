@@ -29,8 +29,8 @@ public interface MesWmReturnSalesLineMapper extends BaseMapperX<MesWmReturnSales
                 .eq(MesWmReturnSalesLineDO::getReturnId, returnId));
     }
 
-    default void deleteByReturnId(Long returnId) {
-        delete(new LambdaQueryWrapperX<MesWmReturnSalesLineDO>()
+    default int deleteByReturnId(Long returnId) {
+        return delete(new LambdaQueryWrapperX<MesWmReturnSalesLineDO>()
                 .eq(MesWmReturnSalesLineDO::getReturnId, returnId));
     }
 

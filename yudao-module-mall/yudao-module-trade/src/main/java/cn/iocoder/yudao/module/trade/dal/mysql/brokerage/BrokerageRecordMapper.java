@@ -13,7 +13,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.github.yulichang.toolkit.MPJWrappers;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -78,31 +77,18 @@ public interface BrokerageRecordMapper extends BaseMapperX<BrokerageRecordDO> {
 //                    .groupBy(BrokerageRecordDO::getUserId));
     }
 
-    @Select("SELECT SUM(price) FROM trade_brokerage_record " +
-            "WHERE user_id = #{userId} AND biz_type = #{bizType} AND status = #{status} " +
-            "AND unfreeze_time BETWEEN #{beginTime} AND #{endTime} AND deleted = FALSE")
     Integer selectSummaryPriceByUserIdAndBizTypeAndCreateTimeBetween(@Param("userId") Long userId,
                                                                      @Param("bizType") Integer bizType,
                                                                      @Param("status") Integer status,
                                                                      @Param("beginTime") LocalDateTime beginTime,
                                                                      @Param("endTime") LocalDateTime endTime);
 
-    // TODO @芋艿：收敛掉 @Select 注解操作，统一成 MyBatis-Plus 的方式，或者 xml
-    @Select("SELECT user_id AS id, SUM(price) AS brokeragePrice FROM trade_brokerage_record " +
-            "WHERE biz_type = #{bizType} AND status = #{status} AND deleted = FALSE " +
-            "AND unfreeze_time BETWEEN #{beginTime} AND #{endTime} " +
-            "GROUP BY user_id " +
-            "ORDER BY brokeragePrice DESC")
     IPage<AppBrokerageUserRankByPriceRespVO> selectSummaryPricePageGroupByUserId(IPage<?> page,
                                                                                  @Param("bizType") Integer bizType,
                                                                                  @Param("status") Integer status,
                                                                                  @Param("beginTime") LocalDateTime beginTime,
                                                                                  @Param("endTime") LocalDateTime endTime);
 
-    @Select("SELECT COUNT(1) FROM trade_brokerage_record " +
-            "WHERE biz_type = #{bizType} AND status = #{status} AND deleted = FALSE " +
-            "AND unfreeze_time BETWEEN #{beginTime} AND #{endTime} " +
-            "GROUP BY user_id HAVING SUM(price) > #{brokeragePrice}")
     Integer selectCountByPriceGt(@Param("brokeragePrice") Integer brokeragePrice,
                                  @Param("bizType") Integer bizType,
                                  @Param("status") Integer status,

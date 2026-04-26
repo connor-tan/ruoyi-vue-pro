@@ -21,6 +21,25 @@ public interface CartMapper extends BaseMapperX<CartDO> {
                 CartDO::getSkuId, skuId);
     }
 
+    default CartDO selectByUserIdAndSkuIdAndStudentId(Long userId, Long skuId, Long studentId) {
+        return selectOne(new LambdaQueryWrapper<CartDO>()
+                .eq(CartDO::getUserId, userId)
+                .eq(CartDO::getSkuId, skuId)
+                .eq(studentId != null, CartDO::getSubscriptionStudentId, studentId)
+                .isNull(studentId == null, CartDO::getSubscriptionStudentId));
+    }
+
+    default CartDO selectByUserIdAndSkuIdAndStudentIdAndOfferSkuId(Long userId, Long skuId, Long studentId,
+                                                                   Long offerSkuId) {
+        return selectOne(new LambdaQueryWrapper<CartDO>()
+                .eq(CartDO::getUserId, userId)
+                .eq(CartDO::getSkuId, skuId)
+                .eq(studentId != null, CartDO::getSubscriptionStudentId, studentId)
+                .isNull(studentId == null, CartDO::getSubscriptionStudentId)
+                .eq(offerSkuId != null, CartDO::getSubscriptionOfferSkuId, offerSkuId)
+                .isNull(offerSkuId == null, CartDO::getSubscriptionOfferSkuId));
+    }
+
     default Integer selectSumByUserId(Long userId) {
         // SQL sum 查询
         List<Map<String, Object>> result = selectMaps(new QueryWrapper<CartDO>()
@@ -53,8 +72,8 @@ public interface CartMapper extends BaseMapperX<CartDO> {
                 .in(CartDO::getId, ids));
     }
 
-    default void updateByIds(Collection<Long> ids, Long userId, CartDO updateObj) {
-        update(updateObj, new LambdaQueryWrapper<CartDO>()
+    default int updateByIds(Collection<Long> ids, Long userId, CartDO updateObj) {
+        return update(updateObj, new LambdaQueryWrapper<CartDO>()
                 .in(CartDO::getId, ids)
                 .eq(CartDO::getUserId, userId));
     }

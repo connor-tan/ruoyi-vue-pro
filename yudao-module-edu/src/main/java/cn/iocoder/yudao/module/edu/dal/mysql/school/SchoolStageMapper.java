@@ -5,7 +5,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolStageDO;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -45,18 +44,8 @@ public interface SchoolStageMapper extends BaseMapperX<SchoolStageDO> {
                 .eq(SchoolStageDO::getStage, stage)), SchoolStageDO::getSchoolId);
     }
 
-    @Delete("DELETE FROM edu_school_stage WHERE school_id = #{schoolId}")
-    void deleteBySchoolId(@Param("schoolId") Long schoolId);
+    int deleteBySchoolId(@Param("schoolId") Long schoolId);
 
-    @Delete("""
-            <script>
-            DELETE FROM edu_school_stage
-            WHERE school_id IN
-            <foreach collection="schoolIds" item="schoolId" open="(" separator="," close=")">
-                #{schoolId}
-            </foreach>
-            </script>
-            """)
-    void deleteBySchoolIds(@Param("schoolIds") Collection<Long> schoolIds);
+    int deleteBySchoolIds(@Param("schoolIds") Collection<Long> schoolIds);
 
 }

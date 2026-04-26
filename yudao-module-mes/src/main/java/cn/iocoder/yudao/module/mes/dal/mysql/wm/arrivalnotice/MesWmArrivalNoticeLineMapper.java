@@ -25,8 +25,8 @@ public interface MesWmArrivalNoticeLineMapper extends BaseMapperX<MesWmArrivalNo
         return selectList(MesWmArrivalNoticeLineDO::getNoticeId, noticeId);
     }
 
-    default void deleteByNoticeId(Long noticeId) {
-        delete(MesWmArrivalNoticeLineDO::getNoticeId, noticeId);
+    default int deleteByNoticeId(Long noticeId) {
+        return delete(MesWmArrivalNoticeLineDO::getNoticeId, noticeId);
     }
 
     default List<MesWmArrivalNoticeLineDO> selectListByIqcPending(List<Long> noticeIds) {

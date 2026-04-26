@@ -25,8 +25,8 @@ public interface MesWmProductIssueLineMapper extends BaseMapperX<MesWmProductIss
         return selectList(MesWmProductIssueLineDO::getIssueId, issueId);
     }
 
-    default void deleteByIssueId(Long issueId) {
-        delete(MesWmProductIssueLineDO::getIssueId, issueId);
+    default int deleteByIssueId(Long issueId) {
+        return delete(MesWmProductIssueLineDO::getIssueId, issueId);
     }
 
 }

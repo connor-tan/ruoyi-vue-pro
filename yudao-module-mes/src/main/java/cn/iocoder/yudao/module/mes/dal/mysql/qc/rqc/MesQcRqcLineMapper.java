@@ -27,8 +27,8 @@ public interface MesQcRqcLineMapper extends BaseMapperX<MesQcRqcLineDO> {
         return selectList(MesQcRqcLineDO::getRqcId, rqcId);
     }
 
-    default void deleteByRqcId(Long rqcId) {
-        delete(new LambdaQueryWrapperX<MesQcRqcLineDO>()
+    default int deleteByRqcId(Long rqcId) {
+        return delete(new LambdaQueryWrapperX<MesQcRqcLineDO>()
                 .eq(MesQcRqcLineDO::getRqcId, rqcId));
     }
 

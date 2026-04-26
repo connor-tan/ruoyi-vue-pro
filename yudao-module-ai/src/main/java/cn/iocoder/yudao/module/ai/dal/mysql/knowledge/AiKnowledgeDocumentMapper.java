@@ -26,8 +26,8 @@ public interface AiKnowledgeDocumentMapper extends BaseMapperX<AiKnowledgeDocume
                 .orderByDesc(AiKnowledgeDocumentDO::getId));
     }
 
-    default void updateRetrievalCountIncr(Collection<Long> ids) {
-        update(new LambdaUpdateWrapper<AiKnowledgeDocumentDO>()
+    default int updateRetrievalCountIncr(Collection<Long> ids) {
+        return update(new LambdaUpdateWrapper<AiKnowledgeDocumentDO>()
                 .setSql(" retrieval_count = retrieval_count + 1")
                 .in(AiKnowledgeDocumentDO::getId, ids));
     }

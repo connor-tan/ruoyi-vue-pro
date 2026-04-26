@@ -4,18 +4,34 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
-import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
-import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
+import cn.iocoder.yudao.module.edu.api.gradecatalog.EduGradeCatalogApi;
+import cn.iocoder.yudao.module.edu.api.gradecatalog.dto.EduGradeCatalogRespDTO;
+import cn.iocoder.yudao.module.edu.api.publication.EduPublicationPublisherApi;
+import cn.iocoder.yudao.module.edu.api.publication.EduPublicationTypeApi;
+import cn.iocoder.yudao.module.edu.api.publication.dto.EduPublicationPublisherRespDTO;
+import cn.iocoder.yudao.module.edu.api.publication.dto.EduPublicationTypeRespDTO;
+import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuRespVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuRespVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
-import cn.iocoder.yudao.module.product.dal.dataobject.publication.*;
+import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
+import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSkuExtDO;
+import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSkuGradeRelDO;
+import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSpuExtDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
-import cn.iocoder.yudao.module.product.dal.mysql.publication.*;
+import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
+import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuExtMapper;
+import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuGradeRelMapper;
+import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSpuExtMapper;
+import cn.iocoder.yudao.module.product.dal.mysql.sku.ProductSkuMapper;
+import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
+import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationFulfillmentModeEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIdentifierRuleEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationTargetPeriodEnum;
+import cn.iocoder.yudao.module.system.api.dict.DictDataApi;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,10 +48,19 @@ import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.*;
 @Service
 public class ProductPublicationService {
 
+    private static final String DICT_TYPE_PUBLICATION_VOLUME = "edu_publication_volume";
+    private static final String DICT_TYPE_PUBLICATION_EDITION = "edu_publication_edition";
+
     @Resource
-    private ProductPublicationPublisherService publicationPublisherService;
+    private ProductSpuMapper productSpuMapper;
     @Resource
-    private ProductPublicationTypeService publicationTypeService;
+    private ProductSkuMapper productSkuMapper;
+    @Resource
+    private ProductCategoryService productCategoryService;
+    @Resource
+    private EduPublicationPublisherApi publicationPublisherApi;
+    @Resource
+    private EduPublicationTypeApi publicationTypeApi;
     @Resource
     private ProductPublicationSpuExtMapper publicationSpuExtMapper;
     @Resource
@@ -43,7 +68,110 @@ public class ProductPublicationService {
     @Resource
     private ProductPublicationSkuGradeRelMapper publicationSkuGradeRelMapper;
     @Resource
-    private GradeCatalogMapper gradeCatalogMapper;
+    private EduGradeCatalogApi gradeCatalogApi;
+    @Resource
+    private DictDataApi dictDataApi;
+
+    public ProductPublicationRespDTO getPublication(Long spuId) {
+        if (spuId == null) {
+            return null;
+        }
+        List<ProductPublicationRespDTO> publications = getPublicationList(Collections.singleton(spuId));
+        return CollUtil.isEmpty(publications) ? null : publications.get(0);
+    }
+
+    public List<ProductPublicationRespDTO> getPublicationList(Collection<Long> spuIds) {
+        if (CollUtil.isEmpty(spuIds)) {
+            return Collections.emptyList();
+        }
+        List<ProductSpuDO> spus = productSpuMapper.selectByIds(spuIds);
+        List<ProductSpuDO> publicationSpus = convertList(spus, item -> {
+            ProductCategoryDO category = productCategoryService.getCategory(item.getCategoryId());
+            return category != null && BizSceneEnum.isPublication(category.getBizScene()) ? item : null;
+        }).stream().filter(Objects::nonNull).toList();
+        if (CollUtil.isEmpty(publicationSpus)) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, ProductCategoryDO> categoryMap = convertMap(
+                convertList(publicationSpus, spu -> productCategoryService.getCategory(spu.getCategoryId())),
+                ProductCategoryDO::getId);
+        Map<Long, ProductPublicationSpuExtDO> spuExtMap = convertMap(
+                publicationSpuExtMapper.selectByIds(convertSet(publicationSpus, ProductSpuDO::getId)),
+                ProductPublicationSpuExtDO::getSpuId);
+        Set<Long> publisherIds = convertSet(spuExtMap.values(), ProductPublicationSpuExtDO::getPublisherId);
+        Set<Long> publicationTypeIds = convertSet(spuExtMap.values(), ProductPublicationSpuExtDO::getPublicationTypeId);
+        Map<Long, EduPublicationPublisherRespDTO> publisherMap = publicationPublisherApi.getPublicationPublisherMap(publisherIds);
+        Map<Long, EduPublicationTypeRespDTO> publicationTypeMap = publicationTypeApi.getPublicationTypeMap(publicationTypeIds);
+
+        List<ProductSkuDO> skuList = productSkuMapper.selectListBySpuId(convertSet(publicationSpus, ProductSpuDO::getId));
+        Map<Long, List<ProductSkuDO>> skuMap = convertMultiMap(skuList, ProductSkuDO::getSpuId);
+        Set<Long> skuIds = convertSet(skuList, ProductSkuDO::getId);
+        Map<Long, ProductPublicationSkuExtDO> skuExtMap = convertMap(
+                publicationSkuExtMapper.selectListBySkuIds(skuIds), ProductPublicationSkuExtDO::getSkuId);
+        Map<Long, List<ProductPublicationSkuGradeRelDO>> skuGradeMap = convertMultiMap(
+                publicationSkuGradeRelMapper.selectListBySkuIds(skuIds), ProductPublicationSkuGradeRelDO::getSkuId);
+        Set<Long> gradeCatalogIds = new LinkedHashSet<>();
+        skuGradeMap.values().forEach(items -> items.forEach(item -> gradeCatalogIds.add(item.getGradeCatalogId())));
+        Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap = gradeCatalogApi.getGradeCatalogMap(gradeCatalogIds);
+
+        return convertList(publicationSpus, spu -> buildPublicationResp(spu, categoryMap, spuExtMap, publisherMap,
+                publicationTypeMap, skuMap, skuExtMap, skuGradeMap, gradeCatalogMap));
+    }
+
+    private ProductPublicationRespDTO buildPublicationResp(
+            ProductSpuDO spu,
+            Map<Long, ProductCategoryDO> categoryMap,
+            Map<Long, ProductPublicationSpuExtDO> spuExtMap,
+            Map<Long, EduPublicationPublisherRespDTO> publisherMap,
+            Map<Long, EduPublicationTypeRespDTO> publicationTypeMap,
+            Map<Long, List<ProductSkuDO>> skuMap,
+            Map<Long, ProductPublicationSkuExtDO> skuExtMap,
+            Map<Long, List<ProductPublicationSkuGradeRelDO>> skuGradeMap,
+            Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap) {
+        ProductPublicationRespDTO dto = BeanUtils.toBean(spu, ProductPublicationRespDTO.class);
+        ProductCategoryDO category = categoryMap.get(spu.getCategoryId());
+        dto.setBizScene(category == null ? null : category.getBizScene());
+        dto.setCategoryName(category == null ? null : category.getName());
+
+        ProductPublicationSpuExtDO spuExt = spuExtMap.get(spu.getId());
+        if (spuExt != null) {
+            ProductPublicationRespDTO.PublicationSpuExtDTO spuExtDTO =
+                    BeanUtils.toBean(spuExt, ProductPublicationRespDTO.PublicationSpuExtDTO.class);
+            EduPublicationPublisherRespDTO publisher = publisherMap.get(spuExt.getPublisherId());
+            EduPublicationTypeRespDTO publicationType = publicationTypeMap.get(spuExt.getPublicationTypeId());
+            spuExtDTO.setPublisherName(publisher == null ? null : publisher.getName());
+            spuExtDTO.setPublicationTypeName(publicationType == null ? null : publicationType.getName());
+            spuExtDTO.setPublicationTypeIdentifierRule(publicationType == null ? null : publicationType.getIdentifierRule());
+            dto.setPublicationExt(spuExtDTO);
+        }
+
+        dto.setSkus(convertList(skuMap.get(spu.getId()), sku -> buildPublicationSkuResp(sku, skuExtMap, skuGradeMap,
+                gradeCatalogMap)));
+        return dto;
+    }
+
+    private ProductPublicationRespDTO.PublicationSkuDTO buildPublicationSkuResp(
+            ProductSkuDO sku,
+            Map<Long, ProductPublicationSkuExtDO> skuExtMap,
+            Map<Long, List<ProductPublicationSkuGradeRelDO>> skuGradeMap,
+            Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap) {
+        ProductPublicationRespDTO.PublicationSkuDTO skuDTO =
+                BeanUtils.toBean(sku, ProductPublicationRespDTO.PublicationSkuDTO.class);
+        ProductPublicationSkuExtDO skuExt = skuExtMap.get(sku.getId());
+        if (skuExt != null) {
+            skuDTO.setPublicationExt(BeanUtils.toBean(skuExt, ProductPublicationRespDTO.PublicationSkuExtDTO.class));
+        }
+        List<ProductPublicationSkuGradeRelDO> relList = skuGradeMap.get(sku.getId());
+        if (CollUtil.isNotEmpty(relList)) {
+            skuDTO.setApplicableGradeCatalogIds(convertList(relList, ProductPublicationSkuGradeRelDO::getGradeCatalogId));
+            skuDTO.setApplicableGradeNames(convertList(relList, rel -> {
+                EduGradeCatalogRespDTO gradeCatalog = gradeCatalogMap.get(rel.getGradeCatalogId());
+                return gradeCatalog == null ? null : gradeCatalog.getGradeName();
+            }));
+        }
+        return skuDTO;
+    }
 
     public void validatePublicationSaveReq(ProductSpuSaveReqVO reqVO) {
         if (reqVO.getPublicationExt() == null) {
@@ -59,13 +187,15 @@ public class ProductPublicationService {
         if (StrUtil.isBlank(ext.getIssueCycle())) {
             throw exception(PUBLICATION_ISSUE_CYCLE_REQUIRED);
         }
-        ProductPublicationPublisherDO publisher = publicationPublisherService.validateEnabled(ext.getPublisherId());
-        ProductPublicationTypeDO type = publicationTypeService.validateEnabled(ext.getPublicationTypeId());
+        EduPublicationPublisherRespDTO publisher = getEnabledPublicationPublisher(ext.getPublisherId());
+        EduPublicationTypeRespDTO type = getEnabledPublicationType(ext.getPublicationTypeId());
         List<ProductSkuSaveReqVO> skus = reqVO.getSkus();
         if (CollUtil.isEmpty(skus)) {
             throw exception(PUBLICATION_SKU_REQUIRED);
         }
         validateGradeCatalogIds(skus);
+        Set<String> volumeLabels = new LinkedHashSet<>();
+        Set<String> editionLabels = new LinkedHashSet<>();
         for (ProductSkuSaveReqVO sku : skus) {
             if (sku.getPublicationExt() == null) {
                 throw exception(PUBLICATION_SKU_EXT_REQUIRED);
@@ -74,21 +204,35 @@ public class ProductPublicationService {
                 throw exception(PUBLICATION_SKU_GRADE_REQUIRED);
             }
             sku.getPublicationExt().setTargetPeriod(PublicationTargetPeriodEnum.normalize(sku.getPublicationExt().getTargetPeriod()));
+            if (StrUtil.isNotBlank(sku.getPublicationExt().getVolumeLabel())) {
+                volumeLabels.add(sku.getPublicationExt().getVolumeLabel());
+            }
+            if (StrUtil.isNotBlank(sku.getPublicationExt().getEditionLabel())) {
+                editionLabels.add(sku.getPublicationExt().getEditionLabel());
+            }
             if (PublicationIdentifierRuleEnum.requiresSkuIsbn(type.getIdentifierRule())
                     && StrUtil.isBlank(sku.getPublicationExt().getIsbn())) {
                 throw exception(PUBLICATION_SKU_ISBN_REQUIRED);
             }
         }
+        validatePublicationSkuDictValues(volumeLabels, editionLabels);
         if (PublicationIdentifierRuleEnum.requiresTitleIdentifier(type.getIdentifierRule())
                 && StrUtil.isAllBlank(ext.getIssn(), ext.getCnCode(), ext.getPostDistributionCode())) {
             throw exception(PUBLICATION_TITLE_IDENTIFIER_REQUIRED);
         }
         ext.setFulfillmentMode(PublicationFulfillmentModeEnum.normalize(ext.getFulfillmentMode()));
         reqVO.setBrandId(null);
-        reqVO.setDeliveryTypes(null);
-        reqVO.setDeliveryTemplateId(null);
         reqVO.setGiveIntegral(reqVO.getGiveIntegral() == null ? 0 : reqVO.getGiveIntegral());
         reqVO.setSubCommissionType(Boolean.FALSE);
+    }
+
+    private void validatePublicationSkuDictValues(Set<String> volumeLabels, Set<String> editionLabels) {
+        if (CollUtil.isNotEmpty(volumeLabels)) {
+            dictDataApi.validateDictDataList(DICT_TYPE_PUBLICATION_VOLUME, volumeLabels);
+        }
+        if (CollUtil.isNotEmpty(editionLabels)) {
+            dictDataApi.validateDictDataList(DICT_TYPE_PUBLICATION_EDITION, editionLabels);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -97,11 +241,12 @@ public class ProductPublicationService {
         ProductSpuSaveReqVO.PublicationSpuExtSaveReqVO extReq = reqVO.getPublicationExt();
         ProductPublicationSpuExtDO extDO = BeanUtils.toBean(extReq, ProductPublicationSpuExtDO.class);
         extDO.setSpuId(spuId);
-        publicationSpuExtMapper.deleteById(spuId);
-        publicationSpuExtMapper.insert(extDO);
+        publicationSpuExtMapper.upsert(extDO);
 
-        publicationSkuExtMapper.deleteBatch(ProductPublicationSkuExtDO::getSkuId, cleanupSkuIds);
-        publicationSkuGradeRelMapper.deleteBatch(ProductPublicationSkuGradeRelDO::getSkuId, cleanupSkuIds);
+        if (CollUtil.isNotEmpty(cleanupSkuIds)) {
+            publicationSkuExtMapper.deleteBySkuIdsPhysically(cleanupSkuIds);
+            publicationSkuGradeRelMapper.deleteBySkuIdsPhysically(cleanupSkuIds);
+        }
         Map<Long, ProductSkuSaveReqVO> reqSkuMap = convertMap(reqVO.getSkus(), ProductSkuSaveReqVO::getId);
         for (int i = 0; i < savedSkus.size(); i++) {
             ProductSkuDO savedSku = savedSkus.get(i);
@@ -114,7 +259,7 @@ public class ProductPublicationService {
             }
             ProductPublicationSkuExtDO skuExtDO = BeanUtils.toBean(reqSku.getPublicationExt(), ProductPublicationSkuExtDO.class);
             skuExtDO.setSkuId(savedSku.getId());
-            publicationSkuExtMapper.insert(skuExtDO);
+            publicationSkuExtMapper.upsert(skuExtDO);
 
             List<ProductPublicationSkuGradeRelDO> gradeRelList = convertList(reqSku.getApplicableGradeCatalogIds(),
                     gradeCatalogId -> ProductPublicationSkuGradeRelDO.builder()
@@ -129,10 +274,10 @@ public class ProductPublicationService {
 
     @Transactional(rollbackFor = Exception.class)
     public void clearPublication(Long spuId, Collection<Long> skuIds) {
-        publicationSpuExtMapper.deleteById(spuId);
+        publicationSpuExtMapper.deleteBySpuIdPhysically(spuId);
         if (CollUtil.isNotEmpty(skuIds)) {
-            publicationSkuExtMapper.deleteBatch(ProductPublicationSkuExtDO::getSkuId, skuIds);
-            publicationSkuGradeRelMapper.deleteBatch(ProductPublicationSkuGradeRelDO::getSkuId, skuIds);
+            publicationSkuExtMapper.deleteBySkuIdsPhysically(skuIds);
+            publicationSkuGradeRelMapper.deleteBySkuIdsPhysically(skuIds);
         }
     }
 
@@ -141,8 +286,8 @@ public class ProductPublicationService {
         if (extDO == null) {
             return;
         }
-        ProductPublicationPublisherDO publisher = publicationPublisherService.validateExists(extDO.getPublisherId());
-        ProductPublicationTypeDO type = publicationTypeService.validateExists(extDO.getPublicationTypeId());
+        EduPublicationPublisherRespDTO publisher = getRequiredPublicationPublisher(extDO.getPublisherId());
+        EduPublicationTypeRespDTO type = getRequiredPublicationType(extDO.getPublicationTypeId());
         ProductSpuRespVO.PublicationSpuExtRespVO extRespVO = BeanUtils.toBean(extDO, ProductSpuRespVO.PublicationSpuExtRespVO.class);
         extRespVO.setPublisherName(publisher.getName());
         extRespVO.setPublicationTypeName(type.getName());
@@ -159,8 +304,7 @@ public class ProductPublicationService {
                 publicationSkuGradeRelMapper.selectListBySkuIds(skuIds), ProductPublicationSkuGradeRelDO::getSkuId);
         Set<Long> gradeCatalogIds = new LinkedHashSet<>();
         gradeRelMap.values().forEach(relList -> relList.forEach(rel -> gradeCatalogIds.add(rel.getGradeCatalogId())));
-        Map<Long, GradeCatalogDO> gradeCatalogMap = CollUtil.isEmpty(gradeCatalogIds) ? Collections.emptyMap()
-                : convertMap(gradeCatalogMapper.selectList(GradeCatalogDO::getId, gradeCatalogIds), GradeCatalogDO::getId);
+        Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap = gradeCatalogApi.getGradeCatalogMap(gradeCatalogIds);
         skuRespVOList.forEach(sku -> {
             ProductPublicationSkuExtDO skuExtDO = skuExtMap.get(sku.getId());
             if (skuExtDO != null) {
@@ -170,7 +314,7 @@ public class ProductPublicationService {
             if (CollUtil.isNotEmpty(relList)) {
                 sku.setApplicableGradeCatalogIds(convertList(relList, ProductPublicationSkuGradeRelDO::getGradeCatalogId));
                 sku.setApplicableGradeNames(convertList(relList, rel -> {
-                    GradeCatalogDO gradeCatalog = gradeCatalogMap.get(rel.getGradeCatalogId());
+                    EduGradeCatalogRespDTO gradeCatalog = gradeCatalogMap.get(rel.getGradeCatalogId());
                     return gradeCatalog == null ? null : gradeCatalog.getGradeName();
                 }));
             }
@@ -185,10 +329,42 @@ public class ProductPublicationService {
         if (CollUtil.isEmpty(gradeCatalogIds)) {
             throw exception(PUBLICATION_SKU_GRADE_REQUIRED);
         }
-        List<GradeCatalogDO> gradeCatalogList = gradeCatalogMapper.selectList(GradeCatalogDO::getId, gradeCatalogIds);
-        if (gradeCatalogList.size() != gradeCatalogIds.size()
-                || gradeCatalogList.stream().anyMatch(item -> !CommonStatusEnum.ENABLE.getStatus().equals(item.getStatus()))) {
+        Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap = gradeCatalogApi.getGradeCatalogMap(gradeCatalogIds);
+        if (gradeCatalogMap.size() != gradeCatalogIds.size()
+                || gradeCatalogMap.values().stream().anyMatch(item -> !CommonStatusEnum.ENABLE.getStatus().equals(item.getStatus()))) {
             throw exception(PUBLICATION_GRADE_CATALOG_NOT_EXISTS);
         }
+    }
+
+    private EduPublicationPublisherRespDTO getRequiredPublicationPublisher(Long publisherId) {
+        EduPublicationPublisherRespDTO publisher = publicationPublisherApi.getPublicationPublisher(publisherId);
+        if (publisher == null) {
+            throw exception(PUBLICATION_PUBLISHER_NOT_EXISTS);
+        }
+        return publisher;
+    }
+
+    private EduPublicationPublisherRespDTO getEnabledPublicationPublisher(Long publisherId) {
+        EduPublicationPublisherRespDTO publisher = getRequiredPublicationPublisher(publisherId);
+        if (!CommonStatusEnum.ENABLE.getStatus().equals(publisher.getStatus())) {
+            throw exception(PUBLICATION_PUBLISHER_NOT_EXISTS);
+        }
+        return publisher;
+    }
+
+    private EduPublicationTypeRespDTO getRequiredPublicationType(Long publicationTypeId) {
+        EduPublicationTypeRespDTO publicationType = publicationTypeApi.getPublicationType(publicationTypeId);
+        if (publicationType == null) {
+            throw exception(PUBLICATION_TYPE_NOT_EXISTS);
+        }
+        return publicationType;
+    }
+
+    private EduPublicationTypeRespDTO getEnabledPublicationType(Long publicationTypeId) {
+        EduPublicationTypeRespDTO publicationType = getRequiredPublicationType(publicationTypeId);
+        if (!CommonStatusEnum.ENABLE.getStatus().equals(publicationType.getStatus())) {
+            throw exception(PUBLICATION_TYPE_NOT_EXISTS);
+        }
+        return publicationType;
     }
 }

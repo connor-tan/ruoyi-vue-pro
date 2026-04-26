@@ -7,8 +7,6 @@ import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentPageReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
 
 import java.util.Collection;
 import java.util.List;
@@ -102,31 +100,10 @@ public interface StudentMapper extends BaseMapperX<StudentDO> {
                 .last("LIMIT " + limit));
     }
 
-    @Select("""
-            SELECT DISTINCT current_school_id
-            FROM edu_student
-            WHERE deleted = b'0'
-              AND current_school_id IS NOT NULL
-            ORDER BY current_school_id ASC
-            """)
     List<Long> selectDistinctCurrentSchoolIds();
 
-    @Select({
-            "<script>",
-            "SELECT DISTINCT current_school_id",
-            "FROM edu_student",
-            "WHERE deleted = b'0'",
-            "  AND current_school_id IS NOT NULL",
-            "  AND status IN",
-            "  <foreach collection='statuses' item='status' open='(' separator=',' close=')'>",
-            "    #{status}",
-            "  </foreach>",
-            "ORDER BY current_school_id ASC",
-            "</script>"
-    })
     List<Long> selectDistinctCurrentSchoolIdsByStatuses(@Param("statuses") Collection<Integer> statuses);
 
-    @Update("UPDATE edu_student SET status = #{status}, update_time = NOW() WHERE id = #{id} AND deleted = b'0'")
     int updateStatusById(@Param("id") Long id, @Param("status") Integer status);
 
 }

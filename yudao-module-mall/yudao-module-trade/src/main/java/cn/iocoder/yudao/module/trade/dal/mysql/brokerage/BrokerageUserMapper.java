@@ -15,7 +15,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -45,12 +44,12 @@ public interface BrokerageUserMapper extends BaseMapperX<BrokerageUserDO> {
      * @param id        用户编号
      * @param incrCount 增加佣金（正数）
      */
-    default void updatePriceIncr(Long id, Integer incrCount) {
+    default int updatePriceIncr(Long id, Integer incrCount) {
         Assert.isTrue(incrCount > 0);
         LambdaUpdateWrapper<BrokerageUserDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<BrokerageUserDO>()
                 .setSql(" brokerage_price = brokerage_price + " + incrCount)
                 .eq(BrokerageUserDO::getId, id);
-        update(null, lambdaUpdateWrapper);
+        return update(null, lambdaUpdateWrapper);
     }
 
     /**
@@ -75,12 +74,12 @@ public interface BrokerageUserMapper extends BaseMapperX<BrokerageUserDO> {
      * @param id        用户编号
      * @param incrCount 增加冻结佣金（正数）
      */
-    default void updateFrozenPriceIncr(Long id, Integer incrCount) {
+    default int updateFrozenPriceIncr(Long id, Integer incrCount) {
         Assert.isTrue(incrCount > 0);
         LambdaUpdateWrapper<BrokerageUserDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<BrokerageUserDO>()
                 .setSql(" frozen_price = frozen_price + " + incrCount)
                 .eq(BrokerageUserDO::getId, id);
-        update(null, lambdaUpdateWrapper);
+        return update(null, lambdaUpdateWrapper);
     }
 
     /**
@@ -90,12 +89,12 @@ public interface BrokerageUserMapper extends BaseMapperX<BrokerageUserDO> {
      * @param id        用户编号
      * @param incrCount 减少冻结佣金（负数）
      */
-    default void updateFrozenPriceDecr(Long id, Integer incrCount) {
+    default int updateFrozenPriceDecr(Long id, Integer incrCount) {
         Assert.isTrue(incrCount < 0);
         LambdaUpdateWrapper<BrokerageUserDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<BrokerageUserDO>()
                 .setSql(" frozen_price = frozen_price + " + incrCount) // 负数，所以使用 + 号
                 .eq(BrokerageUserDO::getId, id);
-        update(null, lambdaUpdateWrapper);
+        return update(null, lambdaUpdateWrapper);
     }
 
     /**
@@ -115,23 +114,18 @@ public interface BrokerageUserMapper extends BaseMapperX<BrokerageUserDO> {
         return update(null, lambdaUpdateWrapper);
     }
 
-    default void updateBindUserIdAndBindUserTimeToNull(Long id) {
-        update(null, new LambdaUpdateWrapper<BrokerageUserDO>()
+    default int updateBindUserIdAndBindUserTimeToNull(Long id) {
+        return update(null, new LambdaUpdateWrapper<BrokerageUserDO>()
                 .eq(BrokerageUserDO::getId, id)
                 .set(BrokerageUserDO::getBindUserId, null).set(BrokerageUserDO::getBindUserTime, null));
     }
 
-    default void updateEnabledFalseAndBrokerageTimeToNull(Long id) {
-        update(null, new LambdaUpdateWrapper<BrokerageUserDO>()
+    default int updateEnabledFalseAndBrokerageTimeToNull(Long id) {
+        return update(null, new LambdaUpdateWrapper<BrokerageUserDO>()
                 .eq(BrokerageUserDO::getId, id)
                 .set(BrokerageUserDO::getBrokerageEnabled, false).set(BrokerageUserDO::getBrokerageTime, null));
     }
 
-    @Select("SELECT bind_user_id AS id, COUNT(1) AS brokerageUserCount FROM trade_brokerage_user " +
-            "WHERE bind_user_id IS NOT NULL AND deleted = FALSE " +
-            "AND bind_user_time BETWEEN #{beginTime} AND #{endTime} " +
-            "GROUP BY bind_user_id " +
-            "ORDER BY brokerageUserCount DESC")
     IPage<AppBrokerageUserRankByUserCountRespVO> selectCountPageGroupByBindUserId(Page<?> page,
                                                                                   @Param("beginTime") LocalDateTime beginTime,
                                                                                   @Param("endTime") LocalDateTime endTime);

@@ -1,10 +1,15 @@
 package cn.iocoder.yudao.module.trade.service.cart;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.module.edu.api.student.EduStudentApi;
+import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentOrderContextRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
 import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
 import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
+import cn.iocoder.yudao.module.subscription.api.order.SubscriptionOrderEligibilityApi;
+import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
 import cn.iocoder.yudao.module.trade.controller.app.cart.vo.*;
 import cn.iocoder.yudao.module.trade.convert.cart.TradeCartConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
@@ -21,6 +26,9 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_STOCK_NOT_ENOUGH;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.CARD_ITEM_NOT_FOUND;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_NORMAL_STUDENT_NOT_ALLOWED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_OFFER_SKU_REQUIRED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_STUDENT_REQUIRED;
 import static java.util.Collections.emptyList;
 
 /**
@@ -41,24 +49,37 @@ public class CartServiceImpl implements CartService {
     private ProductSpuApi productSpuApi;
     @Resource
     private ProductSkuApi productSkuApi;
+    @Resource
+    private EduStudentApi eduStudentApi;
+    @Resource
+    private SubscriptionOrderEligibilityApi subscriptionOrderEligibilityApi;
 
     @Override
     public Long addCart(Long userId, AppCartAddReqVO addReqVO) {
-        // 查询 TradeCartDO
-        CartDO cart = cartMapper.selectByUserIdAndSkuId(userId, addReqVO.getSkuId());
         // 校验 SKU
         Integer count = addReqVO.getCount();
         ProductSkuRespDTO sku = checkProductSku(addReqVO.getSkuId(), count);
+        ProductSpuRespDTO spu = productSpuApi.getSpu(sku.getSpuId());
+        Long offerSkuId = resolveOfferSkuId(addReqVO.getOfferSkuId(), addReqVO.getWindowSkuId());
+        CartDO cart = cartMapper.selectByUserIdAndSkuIdAndStudentIdAndOfferSkuId(userId, addReqVO.getSkuId(),
+                addReqVO.getStudentId(), offerSkuId);
+        Long studentId = validateCartContext(userId, addReqVO.getStudentId(), offerSkuId, addReqVO.getSkuId(),
+                cart == null ? count : cart.getCount() + count, spu);
 
         // 情况一：存在，则进行数量更新
         if (cart != null) {
             cartMapper.updateById(new CartDO().setId(cart.getId()).setSelected(true)
-                    .setCount(cart.getCount() + count));
+                    .setCount(cart.getCount() + count)
+                    .setSubscriptionWindowSkuId(addReqVO.getWindowSkuId())
+                    .setSubscriptionOfferSkuId(offerSkuId));
             return cart.getId();
         // 情况二：不存在，则进行插入
         } else {
             cart = new CartDO().setUserId(userId).setSelected(true)
-                    .setSpuId(sku.getSpuId()).setSkuId(sku.getId()).setCount(count);
+                    .setSpuId(sku.getSpuId()).setSkuId(sku.getId()).setCount(count)
+                    .setSubscriptionStudentId(studentId)
+                    .setSubscriptionWindowSkuId(addReqVO.getWindowSkuId())
+                    .setSubscriptionOfferSkuId(offerSkuId);
             cartMapper.insert(cart);
         }
         return cart.getId();
@@ -72,7 +93,9 @@ public class CartServiceImpl implements CartService {
             throw exception(CARD_ITEM_NOT_FOUND);
         }
         // 校验商品 SKU
-        checkProductSku(cart.getSkuId(), updateReqVO.getCount());
+        ProductSkuRespDTO sku = checkProductSku(cart.getSkuId(), updateReqVO.getCount());
+        validateCartContext(userId, cart.getSubscriptionStudentId(), cart.getSubscriptionOfferSkuId(),
+                cart.getSkuId(), updateReqVO.getCount(), productSpuApi.getSpu(sku.getSpuId()));
 
         // 更新数量
         cartMapper.updateById(new CartDO().setId(cart.getId())
@@ -96,13 +119,17 @@ public class CartServiceImpl implements CartService {
         cartMapper.deleteById(oldCart.getId());
 
         // 第二步：添加新的购物项
-        CartDO newCart = cartMapper.selectByUserIdAndSkuId(userId, resetReqVO.getSkuId());
+        CartDO newCart = cartMapper.selectByUserIdAndSkuIdAndStudentIdAndOfferSkuId(userId, resetReqVO.getSkuId(),
+                oldCart.getSubscriptionStudentId(), oldCart.getSubscriptionOfferSkuId());
         if (newCart != null) {
             updateCartCount(userId, new AppCartUpdateCountReqVO()
                     .setId(newCart.getId()).setCount(resetReqVO.getCount()));
         } else {
             addCart(userId, new AppCartAddReqVO().setSkuId(resetReqVO.getSkuId())
-                    .setCount(resetReqVO.getCount()));
+                    .setCount(resetReqVO.getCount())
+                    .setStudentId(oldCart.getSubscriptionStudentId())
+                    .setWindowSkuId(oldCart.getSubscriptionWindowSkuId())
+                    .setOfferSkuId(oldCart.getSubscriptionOfferSkuId()));
         }
     }
 
@@ -137,7 +164,8 @@ public class CartServiceImpl implements CartService {
         carts.sort(Comparator.comparing(CartDO::getId).reversed());
         // 如果未空，则返回空结果
         if (CollUtil.isEmpty(carts)) {
-            return new AppCartListRespVO().setValidList(emptyList())
+            return new AppCartListRespVO().setGroups(emptyList())
+                    .setValidList(emptyList())
                     .setInvalidList(emptyList());
         }
 
@@ -149,8 +177,38 @@ public class CartServiceImpl implements CartService {
         // 为什么不是 SKU 被删除呢？因为 SKU 被删除时，还可以通过 SPU 选择其它 SKU
         deleteCartIfSpuDeleted(carts, spus);
 
-        // 拼接数据
-        return TradeCartConvert.INSTANCE.convertList(carts, spus, skus);
+        // 查询学生快照并拼接数据
+        Map<Long, EduStudentOrderContextRespDTO> studentMap = eduStudentApi.getOrderStudentContextMap(userId,
+                convertSet(carts, CartDO::getSubscriptionStudentId, Objects::nonNull));
+        return TradeCartConvert.INSTANCE.convertList(carts, spus, skus, studentMap);
+    }
+
+    private Long validateCartContext(Long userId, Long studentId, Long offerSkuId, Long skuId, Integer count,
+                                     ProductSpuRespDTO spu) {
+        boolean publication = spu != null && BizSceneEnum.isPublication(spu.getBizScene());
+        if (publication) {
+            if (studentId == null) {
+                throw exception(ORDER_PUBLICATION_STUDENT_REQUIRED);
+            }
+            if (offerSkuId == null) {
+                throw exception(ORDER_PUBLICATION_OFFER_SKU_REQUIRED);
+            }
+            subscriptionOrderEligibilityApi.validateOrder(new SubscriptionOrderEligibilityReqDTO()
+                    .setUserId(userId)
+                    .setStudentId(studentId)
+                    .setOfferSkuId(offerSkuId)
+                    .setSkuId(skuId)
+                    .setCount(count));
+            return studentId;
+        }
+        if (studentId != null || offerSkuId != null) {
+            throw exception(ORDER_NORMAL_STUDENT_NOT_ALLOWED);
+        }
+        return null;
+    }
+
+    private Long resolveOfferSkuId(Long offerSkuId, Long legacyWindowSkuId) {
+        return offerSkuId != null ? offerSkuId : legacyWindowSkuId;
     }
 
     @Override

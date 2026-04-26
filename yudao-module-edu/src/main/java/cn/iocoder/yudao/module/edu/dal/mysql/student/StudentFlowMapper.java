@@ -7,7 +7,6 @@ import cn.iocoder.yudao.module.edu.controller.admin.student.vo.promotion.Student
 import cn.iocoder.yudao.module.edu.dal.dataobject.student.StudentFlowDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Update;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -56,17 +55,6 @@ public interface StudentFlowMapper extends BaseMapperX<StudentFlowDO> {
                 .in(StudentFlowDO::getStudentId, studentIds));
     }
 
-    @Update({
-            "<script>",
-            "UPDATE edu_student_flow",
-            "SET status = #{status}, update_time = NOW()",
-            "WHERE deleted = b'0'",
-            "AND batch_id IN",
-            "<foreach collection='batchIds' item='batchId' open='(' separator=',' close=')'>",
-            "#{batchId}",
-            "</foreach>",
-            "</script>"
-    })
     int updateStatusByBatchIds(@Param("batchIds") Collection<Long> batchIds, @Param("status") Integer status);
 
     default PageResult<StudentFlowDO> selectPage(StudentFlowPageReqVO reqVO, Collection<Long> studentIds,

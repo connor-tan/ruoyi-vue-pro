@@ -37,8 +37,8 @@ public interface MesMdProductSipMapper extends BaseMapperX<MesMdProductSipDO> {
                 .neIfPresent(MesMdProductSipDO::getId, excludeId));
     }
 
-    default void deleteByItemId(Long itemId) {
-        delete(MesMdProductSipDO::getItemId, itemId);
+    default int deleteByItemId(Long itemId) {
+        return delete(MesMdProductSipDO::getItemId, itemId);
     }
 
 }

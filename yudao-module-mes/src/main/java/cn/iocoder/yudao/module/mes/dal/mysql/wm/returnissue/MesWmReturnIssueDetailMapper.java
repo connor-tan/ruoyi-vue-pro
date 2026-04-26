@@ -20,12 +20,12 @@ public interface MesWmReturnIssueDetailMapper extends BaseMapperX<MesWmReturnIss
         return selectList(MesWmReturnIssueDetailDO::getIssueId, issueId);
     }
 
-    default void deleteByIssueId(Long issueId) {
-        delete(MesWmReturnIssueDetailDO::getIssueId, issueId);
+    default int deleteByIssueId(Long issueId) {
+        return delete(MesWmReturnIssueDetailDO::getIssueId, issueId);
     }
 
-    default void deleteByLineId(Long lineId) {
-        delete(MesWmReturnIssueDetailDO::getLineId, lineId);
+    default int deleteByLineId(Long lineId) {
+        return delete(MesWmReturnIssueDetailDO::getLineId, lineId);
     }
 
 }

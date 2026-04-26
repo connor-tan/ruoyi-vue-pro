@@ -23,8 +23,8 @@ public interface MesDvCheckPlanSubjectMapper extends BaseMapperX<MesDvCheckPlanS
         return selectCount(MesDvCheckPlanSubjectDO::getPlanId, planId);
     }
 
-    default void deleteByPlanId(Long planId) {
-        delete(new LambdaQueryWrapperX<MesDvCheckPlanSubjectDO>()
+    default int deleteByPlanId(Long planId) {
+        return delete(new LambdaQueryWrapperX<MesDvCheckPlanSubjectDO>()
                 .eq(MesDvCheckPlanSubjectDO::getPlanId, planId));
     }
 

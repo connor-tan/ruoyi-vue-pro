@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper">
+
+    <resultMap id="ProductSpuDOResultMap"
+               type="cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO"
+               autoMapping="true">
+        <id column="id" property="id"/>
+        <result column="slider_pic_urls" property="sliderPicUrls"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <result column="delivery_types" property="deliveryTypes"
+                typeHandler="cn.iocoder.yudao.framework.mybatis.core.type.IntegerListTypeHandler"/>
+    </resultMap>
+
+    <select id="selectByIdIncludeDeleted" resultMap="ProductSpuDOResultMap">
+        SELECT *
+        FROM product_spu
+        WHERE id = #{id}
+    </select>
+
+</mapper>

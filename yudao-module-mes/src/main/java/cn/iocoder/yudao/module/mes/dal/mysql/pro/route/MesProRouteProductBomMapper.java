@@ -29,13 +29,13 @@ public interface MesProRouteProductBomMapper extends BaseMapperX<MesProRouteProd
                 .eq(MesProRouteProductBomDO::getProductId, productId));
     }
 
-    default void deleteByRouteId(Long routeId) {
-        delete(new LambdaQueryWrapperX<MesProRouteProductBomDO>()
+    default int deleteByRouteId(Long routeId) {
+        return delete(new LambdaQueryWrapperX<MesProRouteProductBomDO>()
                 .eq(MesProRouteProductBomDO::getRouteId, routeId));
     }
 
-    default void deleteByRouteIdAndProductId(Long routeId, Long productId) {
-        delete(new LambdaQueryWrapperX<MesProRouteProductBomDO>()
+    default int deleteByRouteIdAndProductId(Long routeId, Long productId) {
+        return delete(new LambdaQueryWrapperX<MesProRouteProductBomDO>()
                 .eq(MesProRouteProductBomDO::getRouteId, routeId)
                 .eq(MesProRouteProductBomDO::getProductId, productId));
     }

@@ -25,8 +25,8 @@ public interface MesWmReturnVendorLineMapper extends BaseMapperX<MesWmReturnVend
         return selectList(MesWmReturnVendorLineDO::getReturnId, returnId);
     }
 
-    default void deleteByReturnId(Long returnId) {
-        delete(MesWmReturnVendorLineDO::getReturnId, returnId);
+    default int deleteByReturnId(Long returnId) {
+        return delete(MesWmReturnVendorLineDO::getReturnId, returnId);
     }
 
 }

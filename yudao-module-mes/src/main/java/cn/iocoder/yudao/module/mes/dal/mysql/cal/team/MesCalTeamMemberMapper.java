@@ -36,8 +36,8 @@ public interface MesCalTeamMemberMapper extends BaseMapperX<MesCalTeamMemberDO> 
         return selectOne(MesCalTeamMemberDO::getUserId, userId);
     }
 
-    default void deleteByTeamId(Long teamId) {
-        delete(MesCalTeamMemberDO::getTeamId, teamId);
+    default int deleteByTeamId(Long teamId) {
+        return delete(MesCalTeamMemberDO::getTeamId, teamId);
     }
 
 }

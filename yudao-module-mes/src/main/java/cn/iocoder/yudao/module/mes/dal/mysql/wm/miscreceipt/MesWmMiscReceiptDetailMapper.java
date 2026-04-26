@@ -20,12 +20,12 @@ public interface MesWmMiscReceiptDetailMapper extends BaseMapperX<MesWmMiscRecei
         return selectList(MesWmMiscReceiptDetailDO::getReceiptId, receiptId);
     }
 
-    default void deleteByReceiptId(Long receiptId) {
-        delete(MesWmMiscReceiptDetailDO::getReceiptId, receiptId);
+    default int deleteByReceiptId(Long receiptId) {
+        return delete(MesWmMiscReceiptDetailDO::getReceiptId, receiptId);
     }
 
-    default void deleteByLineId(Long lineId) {
-        delete(MesWmMiscReceiptDetailDO::getLineId, lineId);
+    default int deleteByLineId(Long lineId) {
+        return delete(MesWmMiscReceiptDetailDO::getLineId, lineId);
     }
 
 }

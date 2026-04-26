@@ -18,6 +18,11 @@ public class TradeOrderDetailRespVO extends TradeOrderBaseVO {
     private List<Item> items;
 
     /**
+     * 配送组列表
+     */
+    private List<TradeOrderDeliveryRespVO> deliveries;
+
+    /**
      * 下单用户信息
      */
     private MemberUserRespVO user;

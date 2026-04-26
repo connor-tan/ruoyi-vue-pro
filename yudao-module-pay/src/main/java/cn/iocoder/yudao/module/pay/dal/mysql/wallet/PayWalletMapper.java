@@ -74,11 +74,11 @@ public interface PayWalletMapper extends BaseMapperX<PayWalletDO> {
      * @param id 钱包 id
      * @param price 钱包金额
      */
-    default void updateWhenAdd(Long id, Integer price) {
+    default int updateWhenAdd(Long id, Integer price) {
         LambdaUpdateWrapper<PayWalletDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<PayWalletDO>()
              .setSql(" balance = balance + " + price)
              .eq(PayWalletDO::getId, id);
-        update(null, lambdaUpdateWrapper);
+        return update(null, lambdaUpdateWrapper);
     }
 
     /**

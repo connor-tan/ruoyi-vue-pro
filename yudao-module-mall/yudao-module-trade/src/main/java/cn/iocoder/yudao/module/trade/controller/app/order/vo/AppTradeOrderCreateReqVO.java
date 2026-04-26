@@ -16,7 +16,10 @@ public class AppTradeOrderCreateReqVO extends AppTradeOrderSettlementReqVO {
     @AssertTrue(message = "配送方式不能为空")
     @JsonIgnore
     public boolean isDeliveryTypeNotNull() {
-        return getDeliveryType() != null;
+        if (getDeliveryType() != null) {
+            return true;
+        }
+        return getItems() != null && getItems().stream().allMatch(item -> item.getDeliveryType() != null);
     }
 
 }

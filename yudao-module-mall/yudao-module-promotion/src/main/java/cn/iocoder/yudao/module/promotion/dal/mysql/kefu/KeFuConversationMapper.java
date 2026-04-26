@@ -22,8 +22,8 @@ public interface KeFuConversationMapper extends BaseMapperX<KeFuConversationDO> 
                 .orderByDesc(KeFuConversationDO::getCreateTime));
     }
 
-    default void updateAdminUnreadMessageCountIncrement(Long id) {
-        update(new LambdaUpdateWrapper<KeFuConversationDO>()
+    default int updateAdminUnreadMessageCountIncrement(Long id) {
+        return update(new LambdaUpdateWrapper<KeFuConversationDO>()
                 .eq(KeFuConversationDO::getId, id)
                 .setSql("admin_unread_message_count = admin_unread_message_count + 1"));
     }

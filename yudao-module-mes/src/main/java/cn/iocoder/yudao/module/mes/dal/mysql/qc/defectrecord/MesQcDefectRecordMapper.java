@@ -31,8 +31,8 @@ public interface MesQcDefectRecordMapper extends BaseMapperX<MesQcDefectRecordDO
                 .eq(MesQcDefectRecordDO::getQcId, qcId));
     }
 
-    default void deleteByQcTypeAndQcId(Integer qcType, Long qcId) {
-        delete(new LambdaQueryWrapperX<MesQcDefectRecordDO>()
+    default int deleteByQcTypeAndQcId(Integer qcType, Long qcId) {
+        return delete(new LambdaQueryWrapperX<MesQcDefectRecordDO>()
                 .eq(MesQcDefectRecordDO::getQcType, qcType)
                 .eq(MesQcDefectRecordDO::getQcId, qcId));
     }

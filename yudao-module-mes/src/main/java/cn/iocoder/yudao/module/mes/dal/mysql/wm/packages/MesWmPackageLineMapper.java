@@ -21,8 +21,8 @@ public interface MesWmPackageLineMapper extends BaseMapperX<MesWmPackageLineDO> 
                 .orderByDesc(MesWmPackageLineDO::getId));
     }
 
-    default void deleteByPackageId(Long packageId) {
-        delete(MesWmPackageLineDO::getPackageId, packageId);
+    default int deleteByPackageId(Long packageId) {
+        return delete(MesWmPackageLineDO::getPackageId, packageId);
     }
 
 }

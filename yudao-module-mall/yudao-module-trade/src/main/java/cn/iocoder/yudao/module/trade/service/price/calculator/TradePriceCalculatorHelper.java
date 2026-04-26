@@ -60,8 +60,34 @@ public class TradePriceCalculatorHelper {
                     .setWeight(sku.getWeight()).setVolume(sku.getVolume());
             // spu 信息
             orderItem.setSpuName(spu.getName()).setCategoryId(spu.getCategoryId())
+                    .setBizScene(spu.getBizScene())
                     .setDeliveryTypes(spu.getDeliveryTypes()).setDeliveryTemplateId(spu.getDeliveryTemplateId())
                     .setGivePoint(spu.getGiveIntegral()).setUsePoint(0);
+            orderItem.setResolvedDeliveryType(item.getDeliveryType())
+                    .setSubscriptionStudentId(item.getSubscriptionStudentId())
+                    .setSubscriptionStudentNameSnapshot(item.getSubscriptionStudentNameSnapshot())
+                    .setSubscriptionSchoolId(item.getSubscriptionSchoolId())
+                    .setSubscriptionSchoolNameSnapshot(item.getSubscriptionSchoolNameSnapshot())
+                    .setSubscriptionClassId(item.getSubscriptionClassId())
+                    .setSubscriptionClassNameSnapshot(item.getSubscriptionClassNameSnapshot())
+                    .setSubscriptionGradeCatalogId(item.getSubscriptionGradeCatalogId())
+                    .setSubscriptionGradeNameSnapshot(item.getSubscriptionGradeNameSnapshot())
+                    .setSubscriptionStationId(item.getSubscriptionStationId())
+                    .setSubscriptionStationNameSnapshot(item.getSubscriptionStationNameSnapshot())
+                    .setSubscriptionStationAddressSnapshot(item.getSubscriptionStationAddressSnapshot())
+                    .setSubscriptionContactName(item.getSubscriptionContactName())
+                    .setSubscriptionContactMobile(item.getSubscriptionContactMobile())
+                    .setSubscriptionWindowSkuId(item.getSubscriptionWindowSkuId())
+                    .setSubscriptionWindowId(item.getSubscriptionWindowId())
+                    .setSubscriptionWindowNameSnapshot(item.getSubscriptionWindowNameSnapshot())
+                    .setSubscriptionTargetYearStart(item.getSubscriptionTargetYearStart())
+                    .setSubscriptionTargetYearEnd(item.getSubscriptionTargetYearEnd())
+                    .setSubscriptionTargetPeriod(item.getSubscriptionTargetPeriod())
+                    .setSubscriptionOfferId(item.getSubscriptionOfferId())
+                    .setSubscriptionOfferSkuId(item.getSubscriptionOfferSkuId())
+                    .setSubscriptionVisibilityReason(item.getSubscriptionVisibilityReason())
+                    .setSubscriptionMatchedRuleId(item.getSubscriptionMatchedRuleId())
+                    .setSubscriptionGradeApplicabilityOverride(item.getSubscriptionGradeApplicabilityOverride());
             if (StrUtil.isBlank(orderItem.getPicUrl())) {
                 orderItem.setPicUrl(spu.getPicUrl());
             }
