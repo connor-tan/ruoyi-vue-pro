@@ -75,14 +75,12 @@ public interface SchoolClassMapper extends BaseMapperX<SchoolClassDO> {
         return selectCount(SchoolClassDO::getSchoolYearId, schoolYearId);
     }
 
-    default int deleteBySchoolId(Long schoolId) {
-        return delete(SchoolClassDO::getSchoolId, schoolId);
-    }
-
-    default int deleteBySchoolIds(List<Long> schoolIds) {
-        return deleteBatch(SchoolClassDO::getSchoolId, schoolIds);
-    }
-
     int deletePhysicallyById(@Param("id") Long id);
+
+    int deletePhysicallyByIds(@Param("ids") Collection<Long> ids);
+
+    int deletePhysicallyBySchoolId(@Param("schoolId") Long schoolId);
+
+    int deletePhysicallyBySchoolIds(@Param("schoolIds") Collection<Long> schoolIds);
 
 }

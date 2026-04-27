@@ -32,7 +32,7 @@ class SubscriptionWindowServiceTest {
     @Mock
     private EduYearCatalogApi yearCatalogApi;
     @InjectMocks
-    private SubscriptionWindowService windowService;
+    private SubscriptionWindowServiceImpl windowService;
 
     @Test
     void createWindow_shouldRejectEnabledTimeOverlap() {

@@ -705,7 +705,7 @@ public class StudentServiceImpl implements StudentService {
             studentClassMapper.updateBatch(classDiffList.get(1));
         }
         if (CollUtil.isNotEmpty(classDiffList.get(2))) {
-            studentClassMapper.deleteByIds(convertList(classDiffList.get(2), StudentClassDO::getId));
+            studentClassMapper.deletePhysicallyByIds(convertList(classDiffList.get(2), StudentClassDO::getId));
         }
     }
 
@@ -722,11 +722,11 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private void deleteStudentClassByStudentId(Long studentId) {
-        studentClassMapper.deleteByStudentId(studentId);
+        studentClassMapper.deletePhysicallyByStudentId(studentId);
     }
 
     private void deleteStudentClassByStudentIds(List<Long> studentIds) {
-        studentClassMapper.deleteByStudentIds(studentIds);
+        studentClassMapper.deletePhysicallyByStudentIds(studentIds);
     }
 
 }

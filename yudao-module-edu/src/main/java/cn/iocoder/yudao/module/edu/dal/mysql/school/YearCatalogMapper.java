@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.admin.yearcatalog.vo.YearCatalogPageReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -34,4 +35,6 @@ public interface YearCatalogMapper extends BaseMapperX<YearCatalogDO> {
                 .eq(YearCatalogDO::getYearStart, yearStart)
                 .eq(YearCatalogDO::getYearEnd, yearEnd));
     }
+
+    int deletePhysicallyById(@Param("id") Long id);
 }

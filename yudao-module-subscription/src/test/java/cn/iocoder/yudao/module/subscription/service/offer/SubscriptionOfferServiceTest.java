@@ -1,11 +1,17 @@
 package cn.iocoder.yudao.module.subscription.service.offer;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.edu.api.gradecatalog.EduGradeCatalogApi;
+import cn.iocoder.yudao.module.edu.api.gradecatalog.dto.EduGradeCatalogRespDTO;
 import cn.iocoder.yudao.module.product.api.publication.ProductPublicationApi;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
+import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
+import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferAvailablePageReqVO;
+import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferAvailableRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferBatchCreateReqVO;
+import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferBatchCreateRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferSaveReqVO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferDO;
@@ -22,10 +28,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
 import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.OFFER_ANCHOR_IMMUTABLE;
-import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.OFFER_NO_MATCHED_SKU;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,10 +60,10 @@ class SubscriptionOfferServiceTest {
     @Mock
     private EduGradeCatalogApi gradeCatalogApi;
     @InjectMocks
-    private SubscriptionOfferService offerService;
+    private SubscriptionOfferServiceImpl offerService;
 
     @Test
-    void batchCreateOffer_shouldRejectWhenNoMatchedEnabledSku() {
+    void batchCreateOffer_shouldSkipWhenNoMatchedEnabledSku() {
         SubscriptionOfferBatchCreateReqVO reqVO = new SubscriptionOfferBatchCreateReqVO();
         reqVO.setWindowId(WINDOW_ID);
         reqVO.setProductSpuIds(List.of(PRODUCT_SPU_ID));
@@ -65,8 +71,11 @@ class SubscriptionOfferServiceTest {
         when(windowService.validateWindowExists(WINDOW_ID)).thenReturn(window());
         when(productPublicationApi.getPublicationList(reqVO.getProductSpuIds())).thenReturn(List.of(publication));
 
-        assertServiceException(() -> offerService.batchCreateOffer(reqVO), OFFER_NO_MATCHED_SKU);
+        SubscriptionOfferBatchCreateRespVO result = offerService.batchCreateOffer(reqVO);
 
+        assertEquals(0, result.getCreatedOfferCount());
+        assertEquals(1, result.getSkippedCount());
+        assertEquals(PRODUCT_SPU_ID, result.getSkippedItems().get(0).getProductSpuId());
         verify(offerMapper, never()).insert(any(SubscriptionWindowOfferDO.class));
         verify(offerSkuMapper, never()).insertBatch(anyList());
     }
@@ -86,9 +95,11 @@ class SubscriptionOfferServiceTest {
         }).when(offerMapper).insert(any(SubscriptionWindowOfferDO.class));
         ArgumentCaptor<List<SubscriptionWindowOfferSkuDO>> captor = ArgumentCaptor.forClass(List.class);
 
-        List<Long> ids = offerService.batchCreateOffer(reqVO);
+        SubscriptionOfferBatchCreateRespVO result = offerService.batchCreateOffer(reqVO);
 
-        assertEquals(List.of(OFFER_ID), ids);
+        assertEquals(List.of(OFFER_ID), result.getCreatedOfferIds());
+        assertEquals(1, result.getCreatedOfferCount());
+        assertEquals(1, result.getCreatedOfferSkuCount());
         verify(offerSkuMapper).insertBatch(captor.capture());
         assertEquals(OFFER_ID, captor.getValue().get(0).getOfferId());
         assertEquals(PRODUCT_SKU_ID, captor.getValue().get(0).getProductSkuId());
@@ -129,6 +140,37 @@ class SubscriptionOfferServiceTest {
         assertEquals(CommonStatusEnum.DISABLE.getStatus(), updateObj.getStatus());
     }
 
+    @Test
+    void getAvailablePage_shouldReturnCanAddPublicationWithMatchedGrade() {
+        SubscriptionOfferAvailablePageReqVO reqVO = new SubscriptionOfferAvailablePageReqVO();
+        reqVO.setWindowId(WINDOW_ID);
+        reqVO.setPageNo(1);
+        reqVO.setPageSize(10);
+        reqVO.setGradeCatalogId(1L);
+        SubscriptionOfferAvailableRespVO available = new SubscriptionOfferAvailableRespVO();
+        available.setProductSpuId(PRODUCT_SPU_ID);
+        available.setProductName("测试刊物");
+        available.setCandidateStatus("CAN_ADD");
+        available.setMatchedGradeCatalogIdText("1");
+        when(windowService.validateWindowExists(WINDOW_ID)).thenReturn(window());
+        when(offerMapper.selectAvailableCandidates(eq(reqVO), eq(TARGET_PERIOD), eq(0), eq(10)))
+                .thenReturn(List.of(available));
+        when(offerMapper.selectAvailableCandidateCount(eq(reqVO), eq(TARGET_PERIOD))).thenReturn(1L);
+        EduGradeCatalogRespDTO grade = new EduGradeCatalogRespDTO();
+        grade.setId(1L);
+        grade.setGradeName("一年级");
+        when(gradeCatalogApi.getGradeCatalogMap(any())).thenReturn(Map.of(1L, grade));
+
+        PageResult<SubscriptionOfferAvailableRespVO> pageResult = offerService.getAvailablePage(reqVO);
+
+        assertEquals(1, pageResult.getTotal());
+        SubscriptionOfferAvailableRespVO candidate = pageResult.getList().get(0);
+        assertEquals(PRODUCT_SPU_ID, candidate.getProductSpuId());
+        assertEquals("CAN_ADD", candidate.getCandidateStatus());
+        assertEquals(List.of(1L), candidate.getMatchedGradeCatalogIds());
+        assertEquals(List.of("一年级"), candidate.getMatchedGradeNames());
+    }
+
     private SubscriptionWindowDO window() {
         return SubscriptionWindowDO.builder()
                 .id(WINDOW_ID)
@@ -150,13 +192,16 @@ class SubscriptionOfferServiceTest {
     private ProductPublicationRespDTO publication(String targetPeriod, Integer skuStatus) {
         ProductPublicationRespDTO publication = new ProductPublicationRespDTO();
         publication.setId(PRODUCT_SPU_ID);
+        publication.setName("测试刊物");
         publication.setBizScene(BizSceneEnum.PUBLICATION.getCode());
+        publication.setStatus(ProductSpuStatusEnum.ENABLE.getStatus());
         ProductPublicationRespDTO.PublicationSkuExtDTO skuExt = new ProductPublicationRespDTO.PublicationSkuExtDTO();
         skuExt.setTargetPeriod(targetPeriod);
         ProductPublicationRespDTO.PublicationSkuDTO sku = new ProductPublicationRespDTO.PublicationSkuDTO();
         sku.setId(PRODUCT_SKU_ID);
         sku.setStatus(skuStatus);
         sku.setPublicationExt(skuExt);
+        sku.setApplicableGradeCatalogIds(List.of(1L));
         publication.setSkus(List.of(sku));
         return publication;
     }

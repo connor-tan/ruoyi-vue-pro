@@ -7,6 +7,7 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -48,12 +49,10 @@ public interface SchoolGradeMapper extends BaseMapperX<SchoolGradeDO> {
                 .eq(SchoolGradeDO::getGradeCatalogId, gradeCatalogId));
     }
 
-    default int deleteBySchoolId(Long schoolId) {
-        return delete(SchoolGradeDO::getSchoolId, schoolId);
-    }
+    int deletePhysicallyById(@Param("id") Long id);
 
-    default int deleteBySchoolIds(List<Long> schoolIds) {
-        return deleteBatch(SchoolGradeDO::getSchoolId, schoolIds);
-    }
+    int deletePhysicallyBySchoolId(@Param("schoolId") Long schoolId);
+
+    int deletePhysicallyBySchoolIds(@Param("schoolIds") Collection<Long> schoolIds);
 
 }

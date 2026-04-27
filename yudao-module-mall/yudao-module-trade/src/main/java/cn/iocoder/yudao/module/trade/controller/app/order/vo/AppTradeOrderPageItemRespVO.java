@@ -45,6 +45,12 @@ public class AppTradeOrderPageItemRespVO {
     @Schema(description = "配送方式", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer deliveryType;
 
+    @Schema(description = "是否存在配送组", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
+    private Boolean hasDeliveries;
+
+    @Schema(description = "配送组摘要")
+    private List<AppTradeOrderDeliveryRespVO> deliveries;
+
     /**
      * 订单项数组
      */

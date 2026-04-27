@@ -64,8 +64,9 @@ CREATE TABLE IF NOT EXISTS subscription_window_offer (
   update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   deleted bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   tenant_id bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  active_product_spu_id bigint GENERATED ALWAYS AS (IF(deleted = b'0', product_spu_id, NULL)) STORED COMMENT '未删除刊物商品 SPU 唯一键辅助列',
   PRIMARY KEY (id),
-  UNIQUE KEY uk_subscription_offer_product (window_id, product_spu_id, deleted),
+  UNIQUE KEY uk_subscription_offer_product (tenant_id, window_id, active_product_spu_id),
   KEY idx_subscription_offer_window (window_id, status, sort)
 ) COMMENT='订刊窗口刊物';
 
@@ -83,8 +84,9 @@ CREATE TABLE IF NOT EXISTS subscription_window_offer_sku (
   update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   deleted bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   tenant_id bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  active_product_sku_id bigint GENERATED ALWAYS AS (IF(deleted = b'0', product_sku_id, NULL)) STORED COMMENT '未删除商品 SKU 唯一键辅助列',
   PRIMARY KEY (id),
-  UNIQUE KEY uk_subscription_offer_sku_product (offer_id, product_sku_id, deleted),
+  UNIQUE KEY uk_subscription_offer_sku_product (tenant_id, offer_id, active_product_sku_id),
   KEY idx_subscription_offer_sku_offer (offer_id, status, sort),
   KEY idx_subscription_offer_sku_product (product_sku_id)
 ) COMMENT='订刊窗口刊物 SKU';
@@ -99,10 +101,81 @@ CREATE TABLE IF NOT EXISTS subscription_window_offer_grade_rel (
   update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   deleted bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
   tenant_id bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  active_grade_catalog_id bigint GENERATED ALWAYS AS (IF(deleted = b'0', grade_catalog_id, NULL)) STORED COMMENT '未删除年级目录唯一键辅助列',
   PRIMARY KEY (id),
-  UNIQUE KEY uk_subscription_offer_grade (offer_id, grade_catalog_id, deleted),
+  UNIQUE KEY uk_subscription_offer_grade (tenant_id, offer_id, active_grade_catalog_id),
   KEY idx_subscription_offer_grade_grade (grade_catalog_id)
 ) COMMENT='订刊窗口刊物年级收窄';
+
+-- 订刊窗口刊物软删除唯一键修正：只约束未删除记录，允许同一窗口刊物多次移除后保留历史记录
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscription_window_offer' AND COLUMN_NAME = 'active_product_spu_id'
+  ),
+  'SELECT 1',
+  "ALTER TABLE subscription_window_offer ADD COLUMN active_product_spu_id bigint GENERATED ALWAYS AS (IF(deleted = b'0', product_spu_id, NULL)) STORED COMMENT '未删除刊物商品 SPU 唯一键辅助列' AFTER tenant_id"
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscription_window_offer' AND INDEX_NAME = 'uk_subscription_offer_product'
+  ),
+  'ALTER TABLE subscription_window_offer DROP INDEX uk_subscription_offer_product',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+ALTER TABLE subscription_window_offer
+  ADD UNIQUE KEY uk_subscription_offer_product (tenant_id, window_id, active_product_spu_id);
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscription_window_offer_sku' AND COLUMN_NAME = 'active_product_sku_id'
+  ),
+  'SELECT 1',
+  "ALTER TABLE subscription_window_offer_sku ADD COLUMN active_product_sku_id bigint GENERATED ALWAYS AS (IF(deleted = b'0', product_sku_id, NULL)) STORED COMMENT '未删除商品 SKU 唯一键辅助列' AFTER tenant_id"
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscription_window_offer_sku' AND INDEX_NAME = 'uk_subscription_offer_sku_product'
+  ),
+  'ALTER TABLE subscription_window_offer_sku DROP INDEX uk_subscription_offer_sku_product',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+ALTER TABLE subscription_window_offer_sku
+  ADD UNIQUE KEY uk_subscription_offer_sku_product (tenant_id, offer_id, active_product_sku_id);
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscription_window_offer_grade_rel' AND COLUMN_NAME = 'active_grade_catalog_id'
+  ),
+  'SELECT 1',
+  "ALTER TABLE subscription_window_offer_grade_rel ADD COLUMN active_grade_catalog_id bigint GENERATED ALWAYS AS (IF(deleted = b'0', grade_catalog_id, NULL)) STORED COMMENT '未删除年级目录唯一键辅助列' AFTER tenant_id"
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscription_window_offer_grade_rel' AND INDEX_NAME = 'uk_subscription_offer_grade'
+  ),
+  'ALTER TABLE subscription_window_offer_grade_rel DROP INDEX uk_subscription_offer_grade',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+ALTER TABLE subscription_window_offer_grade_rel
+  ADD UNIQUE KEY uk_subscription_offer_grade (tenant_id, offer_id, active_grade_catalog_id);
 
 CREATE TABLE IF NOT EXISTS subscription_rule (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '编号',
@@ -147,7 +220,7 @@ SET @sql = IF(
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_cart' AND COLUMN_NAME = 'subscription_offer_sku_id'
   ),
   'SELECT 1',
-  "ALTER TABLE trade_cart ADD COLUMN subscription_offer_sku_id bigint DEFAULT NULL COMMENT '订刊窗口 SKU 编号（offerSku）' AFTER subscription_window_sku_id"
+  "ALTER TABLE trade_cart ADD COLUMN subscription_offer_sku_id bigint DEFAULT NULL COMMENT '订刊窗口 SKU 编号（offerSku）' AFTER subscription_student_id"
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
@@ -167,7 +240,7 @@ SET @sql = IF(
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_order_item' AND COLUMN_NAME = 'subscription_offer_id'
   ),
   'SELECT 1',
-  "ALTER TABLE trade_order_item ADD COLUMN subscription_offer_id bigint DEFAULT NULL COMMENT '订刊窗口刊物编号（offer）' AFTER subscription_window_sku_id"
+  "ALTER TABLE trade_order_item ADD COLUMN subscription_offer_id bigint DEFAULT NULL COMMENT '订刊窗口刊物编号（offer）' AFTER subscription_student_id"
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
@@ -178,6 +251,36 @@ SET @sql = IF(
   ),
   'SELECT 1',
   "ALTER TABLE trade_order_item ADD COLUMN subscription_offer_sku_id bigint DEFAULT NULL COMMENT '订刊窗口 SKU 编号（offerSku）' AFTER subscription_offer_id"
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_cart' AND COLUMN_NAME = 'subscription_window_sku_id'
+  ),
+  'ALTER TABLE trade_cart DROP COLUMN subscription_window_sku_id',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_order_item' AND COLUMN_NAME = 'subscription_window_spu_id'
+  ),
+  'ALTER TABLE trade_order_item DROP COLUMN subscription_window_spu_id',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_order_item' AND COLUMN_NAME = 'subscription_window_sku_id'
+  ),
+  'ALTER TABLE trade_order_item DROP COLUMN subscription_window_sku_id',
+  'SELECT 1'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 

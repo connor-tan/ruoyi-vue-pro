@@ -72,7 +72,7 @@ public class YearCatalogServiceImpl implements YearCatalogService {
         if (countUsage(id) > 0) {
             throw exception(YEAR_CATALOG_IN_USE);
         }
-        yearCatalogMapper.deleteById(id);
+        yearCatalogMapper.deletePhysicallyById(id);
     }
 
     @Override

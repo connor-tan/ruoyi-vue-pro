@@ -46,9 +46,9 @@ class SubscriptionOfferSkuServiceTest {
     @Mock
     private ProductPublicationApi productPublicationApi;
     @Mock
-    private SubscriptionOfferSkuAvailabilityService offerSkuAvailabilityService;
+    private SubscriptionOfferSkuAvailabilityValidator offerSkuAvailabilityValidator;
     @InjectMocks
-    private SubscriptionOfferSkuService offerSkuService;
+    private SubscriptionOfferSkuServiceImpl offerSkuService;
 
     @Test
     void saveOfferSku_shouldRejectCrossOfferUpdate() {

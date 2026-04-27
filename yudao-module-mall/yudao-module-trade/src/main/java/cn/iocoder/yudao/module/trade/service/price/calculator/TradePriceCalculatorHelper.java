@@ -77,7 +77,6 @@ public class TradePriceCalculatorHelper {
                     .setSubscriptionStationAddressSnapshot(item.getSubscriptionStationAddressSnapshot())
                     .setSubscriptionContactName(item.getSubscriptionContactName())
                     .setSubscriptionContactMobile(item.getSubscriptionContactMobile())
-                    .setSubscriptionWindowSkuId(item.getSubscriptionWindowSkuId())
                     .setSubscriptionWindowId(item.getSubscriptionWindowId())
                     .setSubscriptionWindowNameSnapshot(item.getSubscriptionWindowNameSnapshot())
                     .setSubscriptionTargetYearStart(item.getSubscriptionTargetYearStart())

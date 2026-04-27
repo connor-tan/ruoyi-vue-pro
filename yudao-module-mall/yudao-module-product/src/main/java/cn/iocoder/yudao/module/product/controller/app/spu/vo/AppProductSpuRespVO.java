@@ -21,6 +21,9 @@ public class AppProductSpuRespVO {
     @Schema(description = "分类编号", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long categoryId;
 
+    @Schema(description = "业务场景", requiredMode = Schema.RequiredMode.REQUIRED, example = "PUBLICATION")
+    private String bizScene;
+
     @Schema(description = "商品封面图", requiredMode = Schema.RequiredMode.REQUIRED)
     private String picUrl;
 

@@ -60,7 +60,7 @@ public class CartServiceImpl implements CartService {
         Integer count = addReqVO.getCount();
         ProductSkuRespDTO sku = checkProductSku(addReqVO.getSkuId(), count);
         ProductSpuRespDTO spu = productSpuApi.getSpu(sku.getSpuId());
-        Long offerSkuId = resolveOfferSkuId(addReqVO.getOfferSkuId(), addReqVO.getWindowSkuId());
+        Long offerSkuId = addReqVO.getOfferSkuId();
         CartDO cart = cartMapper.selectByUserIdAndSkuIdAndStudentIdAndOfferSkuId(userId, addReqVO.getSkuId(),
                 addReqVO.getStudentId(), offerSkuId);
         Long studentId = validateCartContext(userId, addReqVO.getStudentId(), offerSkuId, addReqVO.getSkuId(),
@@ -70,7 +70,6 @@ public class CartServiceImpl implements CartService {
         if (cart != null) {
             cartMapper.updateById(new CartDO().setId(cart.getId()).setSelected(true)
                     .setCount(cart.getCount() + count)
-                    .setSubscriptionWindowSkuId(addReqVO.getWindowSkuId())
                     .setSubscriptionOfferSkuId(offerSkuId));
             return cart.getId();
         // 情况二：不存在，则进行插入
@@ -78,7 +77,6 @@ public class CartServiceImpl implements CartService {
             cart = new CartDO().setUserId(userId).setSelected(true)
                     .setSpuId(sku.getSpuId()).setSkuId(sku.getId()).setCount(count)
                     .setSubscriptionStudentId(studentId)
-                    .setSubscriptionWindowSkuId(addReqVO.getWindowSkuId())
                     .setSubscriptionOfferSkuId(offerSkuId);
             cartMapper.insert(cart);
         }
@@ -128,7 +126,6 @@ public class CartServiceImpl implements CartService {
             addCart(userId, new AppCartAddReqVO().setSkuId(resetReqVO.getSkuId())
                     .setCount(resetReqVO.getCount())
                     .setStudentId(oldCart.getSubscriptionStudentId())
-                    .setWindowSkuId(oldCart.getSubscriptionWindowSkuId())
                     .setOfferSkuId(oldCart.getSubscriptionOfferSkuId()));
         }
     }
@@ -205,10 +202,6 @@ public class CartServiceImpl implements CartService {
             throw exception(ORDER_NORMAL_STUDENT_NOT_ALLOWED);
         }
         return null;
-    }
-
-    private Long resolveOfferSkuId(Long offerSkuId, Long legacyWindowSkuId) {
-        return offerSkuId != null ? offerSkuId : legacyWindowSkuId;
     }
 
     @Override

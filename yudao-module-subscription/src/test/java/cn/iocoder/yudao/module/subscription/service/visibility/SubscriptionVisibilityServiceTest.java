@@ -59,7 +59,7 @@ class SubscriptionVisibilityServiceTest {
     @Mock
     private ProductPublicationApi productPublicationApi;
     @InjectMocks
-    private SubscriptionVisibilityService visibilityService;
+    private SubscriptionVisibilityServiceImpl visibilityService;
 
     @Test
     void calculate_shouldReturnBaseVisibleSku_whenStudentGradeMatchesSkuGrade() {

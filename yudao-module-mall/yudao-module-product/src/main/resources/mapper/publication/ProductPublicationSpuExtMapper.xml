@@ -2,6 +2,45 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSpuExtMapper">
 
+    <select id="selectSpuIdsByQuery" resultType="java.lang.Long">
+        SELECT ext.spu_id
+        FROM product_publication_spu_ext ext
+                 INNER JOIN product_spu spu
+                            ON spu.id = ext.spu_id
+                                AND spu.deleted = b'0'
+                 INNER JOIN product_category category
+                            ON category.id = spu.category_id
+                                AND category.deleted = b'0'
+                                AND category.biz_scene = 'PUBLICATION'
+        <if test="req != null and req.gradeCatalogId != null">
+                 INNER JOIN product_sku sku
+                            ON sku.spu_id = spu.id
+                                AND sku.deleted = b'0'
+                 INNER JOIN product_publication_sku_grade_rel grade_rel
+                            ON grade_rel.sku_id = sku.id
+                                AND grade_rel.deleted = b'0'
+                                AND grade_rel.grade_catalog_id = #{req.gradeCatalogId}
+        </if>
+        WHERE ext.deleted = b'0'
+        <if test="req != null and req.publisherId != null">
+          AND ext.publisher_id = #{req.publisherId}
+        </if>
+        <if test="req != null and req.publicationTypeId != null">
+          AND ext.publication_type_id = #{req.publicationTypeId}
+        </if>
+        <if test="req != null and req.issueCycle != null and req.issueCycle != ''">
+          AND ext.issue_cycle = #{req.issueCycle}
+        </if>
+        <if test="req != null and req.productName != null and req.productName != ''">
+          AND spu.name LIKE CONCAT('%', #{req.productName}, '%')
+        </if>
+        <if test="req != null and req.categoryId != null">
+          AND spu.category_id = #{req.categoryId}
+        </if>
+        GROUP BY ext.spu_id
+        ORDER BY MAX(spu.sort) DESC, ext.spu_id DESC
+    </select>
+
     <insert id="upsert">
         INSERT INTO product_publication_spu_ext (
             spu_id, publisher_id, publication_type_id, issue_cycle, issn, cn_code, post_distribution_code,

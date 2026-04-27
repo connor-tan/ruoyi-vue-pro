@@ -2,10 +2,7 @@ package cn.iocoder.yudao.module.subscription.controller.admin.offer;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
-import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferBatchCreateReqVO;
-import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferPageReqVO;
-import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferRespVO;
-import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferSaveReqVO;
+import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.*;
 import cn.iocoder.yudao.module.subscription.service.offer.SubscriptionOfferService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,8 +12,6 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
@@ -32,8 +27,17 @@ public class SubscriptionOfferController {
     @PostMapping("/batch-create")
     @Operation(summary = "批量添加窗口刊物")
     @PreAuthorize("@ss.hasPermission('subscription:offer:create')")
-    public CommonResult<List<Long>> batchCreate(@Valid @RequestBody SubscriptionOfferBatchCreateReqVO reqVO) {
+    public CommonResult<SubscriptionOfferBatchCreateRespVO> batchCreate(
+            @Valid @RequestBody SubscriptionOfferBatchCreateReqVO reqVO) {
         return success(offerService.batchCreateOffer(reqVO));
+    }
+
+    @PostMapping("/batch-create-by-query")
+    @Operation(summary = "按筛选条件批量添加窗口刊物")
+    @PreAuthorize("@ss.hasPermission('subscription:offer:create')")
+    public CommonResult<SubscriptionOfferBatchCreateRespVO> batchCreateByQuery(
+            @Valid @RequestBody SubscriptionOfferBatchCreateByQueryReqVO reqVO) {
+        return success(offerService.batchCreateByQuery(reqVO));
     }
 
     @PutMapping("/update")
@@ -66,6 +70,14 @@ public class SubscriptionOfferController {
     @PreAuthorize("@ss.hasPermission('subscription:offer:query')")
     public CommonResult<PageResult<SubscriptionOfferRespVO>> page(@Valid SubscriptionOfferPageReqVO reqVO) {
         return success(offerService.getOfferPage(reqVO));
+    }
+
+    @GetMapping("/available-page")
+    @Operation(summary = "窗口刊物候选分页")
+    @PreAuthorize("@ss.hasPermission('subscription:offer:query')")
+    public CommonResult<PageResult<SubscriptionOfferAvailableRespVO>> availablePage(
+            @Valid SubscriptionOfferAvailablePageReqVO reqVO) {
+        return success(offerService.getAvailablePage(reqVO));
     }
 
 }

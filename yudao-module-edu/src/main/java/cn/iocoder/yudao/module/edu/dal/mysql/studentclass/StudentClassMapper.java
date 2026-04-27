@@ -165,15 +165,13 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
                 .in(StudentClassDO::getClassId, classIds));
     }
 
-    default int deleteByStudentId(Long studentId) {
-        return delete(StudentClassDO::getStudentId, studentId);
-    }
-
-    default int deleteByStudentIds(List<Long> studentIds) {
-        return deleteBatch(StudentClassDO::getStudentId, studentIds);
-    }
-
     int deletePhysicallyById(@Param("id") Long id);
+
+    int deletePhysicallyByIds(@Param("ids") Collection<Long> ids);
+
+    int deletePhysicallyByStudentId(@Param("studentId") Long studentId);
+
+    int deletePhysicallyByStudentIds(@Param("studentIds") Collection<Long> studentIds);
 
     int restoreEndDateById(@Param("id") Long id);
 

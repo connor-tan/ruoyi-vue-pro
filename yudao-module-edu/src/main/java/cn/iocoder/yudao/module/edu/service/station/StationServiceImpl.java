@@ -73,7 +73,7 @@ public class StationServiceImpl implements StationService {
     public void deleteStation(Long id) {
         validateStationExists(id);
         validateStationUnused(id);
-        stationMapper.deleteById(id);
+        stationMapper.deletePhysicallyById(id);
     }
 
     @Override

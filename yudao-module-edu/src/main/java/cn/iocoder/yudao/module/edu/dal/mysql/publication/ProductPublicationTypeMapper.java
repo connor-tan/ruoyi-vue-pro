@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.admin.publicationtype.vo.ProductPublicationTypePageReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.publication.ProductPublicationTypeDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -31,4 +32,6 @@ public interface ProductPublicationTypeMapper extends BaseMapperX<ProductPublica
                 .orderByAsc(ProductPublicationTypeDO::getSort)
                 .orderByDesc(ProductPublicationTypeDO::getId));
     }
+
+    int deletePhysicallyById(@Param("id") Long id);
 }

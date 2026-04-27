@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.product.api.publication;
 
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
+import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationQueryReqDTO;
 
 import java.util.Collection;
 import java.util.List;
@@ -25,5 +26,13 @@ public interface ProductPublicationApi {
      * @return 刊物商品列表
      */
     List<ProductPublicationRespDTO> getPublicationList(Collection<Long> spuIds);
+
+    /**
+     * 查询刊物商品列表
+     *
+     * @param reqDTO 查询条件
+     * @return 刊物商品列表
+     */
+    List<ProductPublicationRespDTO> getPublicationList(ProductPublicationQueryReqDTO reqDTO);
 
 }

@@ -135,8 +135,11 @@ public class AppTradeOrderController {
         // 查询订单项
         List<TradeOrderItemDO> orderItems = tradeOrderQueryService.getOrderItemListByOrderId(
                 convertSet(pageResult.getList(), TradeOrderDO::getId));
+        // 查询配送组：App 列表需要据此隐藏整单确认收货，改走配送组确认
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderQueryService.getOrderDeliveryListByOrderId(
+                convertSet(pageResult.getList(), TradeOrderDO::getId));
         // 最终组合
-        return success(TradeOrderConvert.INSTANCE.convertPage02(pageResult, orderItems));
+        return success(TradeOrderConvert.INSTANCE.convertPage02(pageResult, orderItems, deliveries));
     }
 
     @GetMapping("/get-count")

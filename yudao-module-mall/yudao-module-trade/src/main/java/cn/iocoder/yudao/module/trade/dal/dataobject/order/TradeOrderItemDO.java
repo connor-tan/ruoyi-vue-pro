@@ -232,20 +232,6 @@ public class TradeOrderItemDO extends BaseDO {
      */
     private String subscriptionTargetPeriod;
     /**
-     * 订刊窗口刊物编号
-     *
-     * @deprecated 新模型使用 {@link #subscriptionOfferId}
-     */
-    @Deprecated
-    private Long subscriptionWindowSpuId;
-    /**
-     * 订刊窗口 SKU 编号
-     *
-     * @deprecated 新模型使用 {@link #subscriptionOfferSkuId}
-     */
-    @Deprecated
-    private Long subscriptionWindowSkuId;
-    /**
      * 订刊窗口刊物编号（offer）
      */
     private Long subscriptionOfferId;

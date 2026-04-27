@@ -257,7 +257,7 @@ public class SchoolServiceImpl implements SchoolService {
     public void deleteSchoolGrade(Long id) {
         validateSchoolGradeExists(id);
         validateSchoolGradeUnused(id);
-        schoolGradeMapper.deleteById(id);
+        schoolGradeMapper.deletePhysicallyById(id);
     }
 
     @Override
@@ -314,11 +314,11 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     private void deleteSchoolGradeBySchoolId(Long schoolId) {
-        schoolGradeMapper.deleteBySchoolId(schoolId);
+        schoolGradeMapper.deletePhysicallyBySchoolId(schoolId);
     }
 
     private void deleteSchoolGradeBySchoolIds(List<Long> schoolIds) {
-        schoolGradeMapper.deleteBySchoolIds(schoolIds);
+        schoolGradeMapper.deletePhysicallyBySchoolIds(schoolIds);
     }
 
     // ==================== 子表（学年） ====================
@@ -359,7 +359,7 @@ public class SchoolServiceImpl implements SchoolService {
     public void deleteSchoolYear(Long id) {
         validateSchoolYearExists(id);
         validateSchoolYearUnused(id);
-        schoolYearMapper.deleteById(id);
+        schoolYearMapper.deletePhysicallyById(id);
     }
 
     @Override
@@ -419,11 +419,11 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     private void deleteSchoolYearBySchoolId(Long schoolId) {
-        schoolYearMapper.deleteBySchoolId(schoolId);
+        schoolYearMapper.deletePhysicallyBySchoolId(schoolId);
     }
 
     private void deleteSchoolYearBySchoolIds(List<Long> schoolIds) {
-        schoolYearMapper.deleteBySchoolIds(schoolIds);
+        schoolYearMapper.deletePhysicallyBySchoolIds(schoolIds);
     }
 
     // ==================== 子表（班级） ====================
@@ -472,7 +472,7 @@ public class SchoolServiceImpl implements SchoolService {
     public void deleteSchoolClass(Long id) {
         validateSchoolClassExists(id);
         validateSchoolClassUnused(id);
-        schoolClassMapper.deleteById(id);
+        schoolClassMapper.deletePhysicallyById(id);
     }
 
     @Override
@@ -485,7 +485,7 @@ public class SchoolServiceImpl implements SchoolService {
             return;
         }
         validateSchoolClassUnused(existedClassIds);
-        schoolClassMapper.deleteByIds(existedClassIds);
+        schoolClassMapper.deletePhysicallyByIds(existedClassIds);
     }
 
     @Override
@@ -674,11 +674,11 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     private void deleteSchoolClassBySchoolId(Long schoolId) {
-        schoolClassMapper.deleteBySchoolId(schoolId);
+        schoolClassMapper.deletePhysicallyBySchoolId(schoolId);
     }
 
     private void deleteSchoolClassBySchoolIds(List<Long> schoolIds) {
-        schoolClassMapper.deleteBySchoolIds(schoolIds);
+        schoolClassMapper.deletePhysicallyBySchoolIds(schoolIds);
     }
 
     private GradeCatalogDO validateGradeCatalogEnabled(Long id) {

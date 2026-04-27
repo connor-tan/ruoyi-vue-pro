@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.admin.station.vo.StationPageReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -35,4 +36,6 @@ public interface StationMapper extends BaseMapperX<StationDO> {
                 .orderByAsc(StationDO::getSort)
                 .orderByDesc(StationDO::getId));
     }
+
+    int deletePhysicallyById(@Param("id") Long id);
 }

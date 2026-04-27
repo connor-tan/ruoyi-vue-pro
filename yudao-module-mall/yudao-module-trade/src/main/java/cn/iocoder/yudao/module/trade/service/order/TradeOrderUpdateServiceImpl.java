@@ -311,8 +311,7 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     }
 
     private Long resolveSubscriptionOfferSkuId(TradePriceCalculateReqBO.Item item) {
-        return item.getSubscriptionOfferSkuId() != null ? item.getSubscriptionOfferSkuId()
-                : item.getSubscriptionWindowSkuId();
+        return item.getSubscriptionOfferSkuId();
     }
 
     private TradePriceCalculateRespBO calculatePrice(PreparedCalculateRequest prepared,

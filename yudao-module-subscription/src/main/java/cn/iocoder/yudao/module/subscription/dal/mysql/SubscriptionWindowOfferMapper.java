@@ -3,9 +3,12 @@ package cn.iocoder.yudao.module.subscription.dal.mysql;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferAvailablePageReqVO;
+import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferAvailableRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferPageReqVO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -13,6 +16,14 @@ import java.util.List;
 
 @Mapper
 public interface SubscriptionWindowOfferMapper extends BaseMapperX<SubscriptionWindowOfferDO> {
+
+    List<SubscriptionOfferAvailableRespVO> selectAvailableCandidates(@Param("req") SubscriptionOfferAvailablePageReqVO reqVO,
+                                                                     @Param("targetPeriod") String targetPeriod,
+                                                                     @Param("offset") Integer offset,
+                                                                     @Param("limit") Integer limit);
+
+    Long selectAvailableCandidateCount(@Param("req") SubscriptionOfferAvailablePageReqVO reqVO,
+                                       @Param("targetPeriod") String targetPeriod);
 
     default PageResult<SubscriptionWindowOfferDO> selectPage(SubscriptionOfferPageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<SubscriptionWindowOfferDO>()

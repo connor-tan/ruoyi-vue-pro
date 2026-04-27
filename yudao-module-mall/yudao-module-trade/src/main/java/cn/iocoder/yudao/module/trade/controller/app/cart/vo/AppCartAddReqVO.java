@@ -21,10 +21,6 @@ public class AppCartAddReqVO {
     @Schema(description = "订刊学生编号", example = "2048")
     private Long studentId;
 
-    @Deprecated
-    @Schema(description = "订刊窗口 SKU 编号（历史兼容字段，新链路使用 offerSkuId）", example = "4096")
-    private Long windowSkuId;
-
     @Schema(description = "订刊窗口 SKU 编号（offerSku）", example = "4096")
     private Long offerSkuId;
 

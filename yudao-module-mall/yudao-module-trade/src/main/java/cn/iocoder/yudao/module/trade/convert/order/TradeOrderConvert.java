@@ -161,16 +161,26 @@ public interface TradeOrderConvert {
     MemberUserRespVO convert(MemberUserRespDTO bean);
 
     default PageResult<AppTradeOrderPageItemRespVO> convertPage02(PageResult<TradeOrderDO> pageResult,
-                                                                  List<TradeOrderItemDO> orderItems) {
+                                                                  List<TradeOrderItemDO> orderItems,
+                                                                  List<TradeOrderDeliveryDO> deliveries) {
         Map<Long, List<TradeOrderItemDO>> orderItemMap = convertMultiMap(orderItems, TradeOrderItemDO::getOrderId);
+        Map<Long, List<TradeOrderDeliveryDO>> deliveryMap = convertMultiMap(deliveries, TradeOrderDeliveryDO::getOrderId);
         // 转化 List
         List<AppTradeOrderPageItemRespVO> orderVOs = CollectionUtils.convertList(pageResult.getList(), order -> {
             List<TradeOrderItemDO> xOrderItems = orderItemMap.get(order.getId());
-            return convert02(order, xOrderItems);
+            List<TradeOrderDeliveryDO> xDeliveries = deliveryMap.getOrDefault(order.getId(), List.of());
+            AppTradeOrderPageItemRespVO orderVO = convert02(order, xOrderItems);
+            orderVO.setHasDeliveries(!xDeliveries.isEmpty());
+            orderVO.setDeliveries(CollectionUtils.convertList(xDeliveries, this::convert04));
+            return orderVO;
         });
         return new PageResult<>(orderVOs, pageResult.getTotal());
     }
 
+    @Mappings({
+            @Mapping(target = "hasDeliveries", ignore = true),
+            @Mapping(target = "deliveries", ignore = true)
+    })
     AppTradeOrderPageItemRespVO convert02(TradeOrderDO order, List<TradeOrderItemDO> items);
 
     AppProductPropertyValueDetailRespVO convert02(ProductPropertyValueDetailRespDTO bean);
@@ -236,15 +246,12 @@ public interface TradeOrderConvert {
             if (item.getSkuId() != null) {
                 Long subscriptionStudentId = item.getStudentId() != null ? item.getStudentId()
                         : cart != null ? cart.getSubscriptionStudentId() : null;
-                Long subscriptionWindowSkuId = item.getWindowSkuId() != null ? item.getWindowSkuId()
-                        : cart != null ? cart.getSubscriptionWindowSkuId() : null;
                 Long subscriptionOfferSkuId = item.getOfferSkuId() != null ? item.getOfferSkuId()
-                        : cart != null ? cart.getSubscriptionOfferSkuId() : subscriptionWindowSkuId;
+                        : cart != null ? cart.getSubscriptionOfferSkuId() : null;
                 reqBO.getItems().add(new TradePriceCalculateReqBO.Item().setSkuId(item.getSkuId()).setCount(item.getCount())
                         .setCartId(item.getCartId()).setSelected(true)
                         .setDeliveryType(item.getDeliveryType() != null ? item.getDeliveryType() : settlementReqVO.getDeliveryType())
                         .setSubscriptionStudentId(subscriptionStudentId)
-                        .setSubscriptionWindowSkuId(subscriptionWindowSkuId)
                         .setSubscriptionOfferSkuId(subscriptionOfferSkuId)); // true 的原因，下单一定选中
                 continue;
             }
@@ -256,10 +263,8 @@ public interface TradeOrderConvert {
                     .setCartId(item.getCartId()).setSelected(true)
                     .setDeliveryType(item.getDeliveryType() != null ? item.getDeliveryType() : settlementReqVO.getDeliveryType())
                     .setSubscriptionStudentId(item.getStudentId() != null ? item.getStudentId() : cart.getSubscriptionStudentId())
-                    .setSubscriptionWindowSkuId(item.getWindowSkuId() != null ? item.getWindowSkuId() : cart.getSubscriptionWindowSkuId())
                     .setSubscriptionOfferSkuId(item.getOfferSkuId() != null ? item.getOfferSkuId()
-                            : cart.getSubscriptionOfferSkuId() != null ? cart.getSubscriptionOfferSkuId()
-                            : item.getWindowSkuId() != null ? item.getWindowSkuId() : cart.getSubscriptionWindowSkuId())); // true 的原因，下单一定选中
+                            : cart.getSubscriptionOfferSkuId())); // true 的原因，下单一定选中
         }
         return reqBO;
     }

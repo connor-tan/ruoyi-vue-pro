@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.product.api.publication;
 
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
+import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationQueryReqDTO;
 import cn.iocoder.yudao.module.product.service.publication.ProductPublicationService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,11 @@ public class ProductPublicationApiImpl implements ProductPublicationApi {
     @Override
     public List<ProductPublicationRespDTO> getPublicationList(Collection<Long> spuIds) {
         return productPublicationService.getPublicationList(spuIds);
+    }
+
+    @Override
+    public List<ProductPublicationRespDTO> getPublicationList(ProductPublicationQueryReqDTO reqDTO) {
+        return productPublicationService.getPublicationList(reqDTO);
     }
 
 }

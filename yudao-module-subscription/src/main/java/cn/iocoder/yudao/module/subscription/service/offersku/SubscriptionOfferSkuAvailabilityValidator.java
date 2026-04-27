@@ -26,7 +26,7 @@ import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.WIND
 
 @Service
 @Validated
-public class SubscriptionOfferSkuAvailabilityService {
+public class SubscriptionOfferSkuAvailabilityValidator {
 
     @Resource
     private SubscriptionWindowOfferMapper offerMapper;

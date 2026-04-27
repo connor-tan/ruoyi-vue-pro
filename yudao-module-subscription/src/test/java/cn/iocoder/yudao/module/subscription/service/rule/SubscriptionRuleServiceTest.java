@@ -55,7 +55,7 @@ class SubscriptionRuleServiceTest {
     @Mock
     private SubscriptionRuleConditionValueService conditionValueService;
     @InjectMocks
-    private SubscriptionRuleService ruleService;
+    private SubscriptionRuleServiceImpl ruleService;
 
     @Test
     void createRule_shouldRejectOfferOutsideWindow() {

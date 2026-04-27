@@ -194,14 +194,6 @@ public class TradePriceCalculateReqBO {
         private String subscriptionContactMobile;
 
         /**
-         * 订刊窗口 SKU 编号
-         *
-         * @deprecated 新模型使用 {@link #subscriptionOfferSkuId}
-         */
-        @Deprecated
-        private Long subscriptionWindowSkuId;
-
-        /**
          * 订刊窗口编号
          */
         private Long subscriptionWindowId;
