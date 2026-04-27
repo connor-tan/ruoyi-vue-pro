@@ -18,8 +18,8 @@ import cn.iocoder.yudao.module.trade.enums.aftersale.AfterSaleWayEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderItemAfterSaleStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderAfterSaleSyncService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -55,7 +55,7 @@ public class AfterSaleServiceTest extends BaseDbUnitTest {
     private AfterSaleLogMapper tradeAfterSaleLogMapper;
 
     @MockitoBean
-    private TradeOrderUpdateService tradeOrderUpdateService;
+    private TradeOrderAfterSaleSyncService tradeOrderAfterSaleSyncService;
     @Resource
     private TradeOrderQueryService tradeOrderQueryService;
 

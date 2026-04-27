@@ -5,8 +5,8 @@ import cn.iocoder.yudao.module.promotion.api.coupon.CouponApi;
 import cn.iocoder.yudao.module.promotion.api.coupon.dto.CouponUseReqDTO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderPromotionSyncService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -25,7 +25,7 @@ public class TradeCouponOrderHandler implements TradeOrderHandler {
 
     @Resource
     @Lazy // 延迟加载，避免循环依赖
-    private TradeOrderUpdateService orderUpdateService;
+    private TradeOrderPromotionSyncService orderPromotionSyncService;
     @Resource
     private TradeOrderQueryService orderQueryService;
 
@@ -53,7 +53,7 @@ public class TradeCouponOrderHandler implements TradeOrderHandler {
             if (CollUtil.isEmpty(couponIds)) {
                 return;
             }
-            orderUpdateService.updateOrderGiveCouponIds(order.getUserId(), order.getId(), couponIds);
+            orderPromotionSyncService.updateOrderGiveCouponIds(order.getUserId(), order.getId(), couponIds);
         } catch (Exception e) {
             log.error("[afterPayOrder][order({}) 赠送优惠券({})失败，需要手工补偿]", order.getId(), order.getGiveCouponTemplateCounts(), e);
         }

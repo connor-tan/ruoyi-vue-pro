@@ -38,8 +38,8 @@ import cn.iocoder.yudao.module.trade.framework.aftersale.core.annotations.AfterS
 import cn.iocoder.yudao.module.trade.framework.aftersale.core.utils.AfterSaleLogUtils;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
 import cn.iocoder.yudao.module.trade.service.delivery.DeliveryExpressService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderAfterSaleSyncService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -65,7 +65,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
 
     @Resource
     @Lazy // 延迟加载，避免循环依赖
-    private TradeOrderUpdateService tradeOrderUpdateService;
+    private TradeOrderAfterSaleSyncService tradeOrderAfterSaleSyncService;
     @Resource
     private TradeOrderQueryService tradeOrderQueryService;
     @Resource
@@ -182,7 +182,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         tradeAfterSaleMapper.insert(afterSale);
 
         // 更新交易订单项的售后状态
-        tradeOrderUpdateService.updateOrderItemWhenAfterSaleCreate(orderItem.getId(), afterSale.getId());
+        tradeOrderAfterSaleSyncService.updateOrderItemWhenAfterSaleCreate(orderItem.getId(), afterSale.getId());
 
         // 记录售后日志
         AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), null,
@@ -226,7 +226,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), afterSale.getStatus(), newStatus);
 
         // 更新交易订单项的售后状态为【未申请】
-        tradeOrderUpdateService.updateOrderItemWhenAfterSaleCancel(afterSale.getOrderItemId());
+        tradeOrderAfterSaleSyncService.updateOrderItemWhenAfterSaleCancel(afterSale.getOrderItemId());
     }
 
     /**
@@ -320,7 +320,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
                 MapUtil.of("reason", refuseReqVO.getRefuseMemo()));
 
         // 更新交易订单项的售后状态为【未申请】
-        tradeOrderUpdateService.updateOrderItemWhenAfterSaleCancel(afterSale.getOrderItemId());
+        tradeOrderAfterSaleSyncService.updateOrderItemWhenAfterSaleCancel(afterSale.getOrderItemId());
     }
 
     /**
@@ -406,7 +406,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
             AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), afterSale.getStatus(), AfterSaleStatusEnum.COMPLETE.getStatus());
 
             // 更新交易订单项的售后状态为【已完成】
-            tradeOrderUpdateService.updateOrderItemWhenAfterSaleSuccess(afterSale.getOrderItemId(), afterSale.getRefundPrice());
+            tradeOrderAfterSaleSyncService.updateOrderItemWhenAfterSaleSuccess(afterSale.getOrderItemId(), afterSale.getRefundPrice());
             // 【情况二：退款失败】
         } else if (PayRefundStatusEnum.isFailure(payRefund.getStatus())) {
             // 记录售后日志
@@ -475,7 +475,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
                 AfterSaleStatusEnum.BUYER_CANCEL.getStatus());
 
         // 更新交易订单项的售后状态为【未申请】
-        tradeOrderUpdateService.updateOrderItemWhenAfterSaleCancel(afterSale.getOrderItemId());
+        tradeOrderAfterSaleSyncService.updateOrderItemWhenAfterSaleCancel(afterSale.getOrderItemId());
     }
 
     @Override

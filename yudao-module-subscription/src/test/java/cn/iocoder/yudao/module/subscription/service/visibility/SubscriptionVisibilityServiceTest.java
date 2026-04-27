@@ -153,7 +153,7 @@ class SubscriptionVisibilityServiceTest {
         when(windowService.getWindow(WINDOW_ID)).thenReturn(window);
         when(windowService.isOpen(window)).thenReturn(true);
         when(eduStudentApi.getSubscriptionStudentContextMap(eq(1L), eq(Set.of(STUDENT_ID)), eq(2026), eq(2027),
-                eq(100L), eq("AUTO_TARGET_YEAR_GRADE"), eq("AUTO_TARGET_YEAR_GRADE"))).thenReturn(Map.of(STUDENT_ID, student()));
+                eq(100L))).thenReturn(Map.of(STUDENT_ID, student()));
         when(offerMapper.selectListByWindowId(WINDOW_ID)).thenReturn(List.of(offer()));
         when(productPublicationApi.getPublicationList(eq(Set.of(PRODUCT_SPU_ID)))).thenReturn(List.of(publication));
         when(offerSkuMapper.selectListByOfferIds(eq(Set.of(OFFER_ID)))).thenReturn(offerSkus);

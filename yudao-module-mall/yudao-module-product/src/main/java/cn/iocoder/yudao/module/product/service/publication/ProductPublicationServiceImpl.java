@@ -88,17 +88,19 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             return Collections.emptyList();
         }
         List<ProductSpuDO> spus = productSpuMapper.selectByIds(spuIds);
-        List<ProductSpuDO> publicationSpus = convertList(spus, item -> {
-            ProductCategoryDO category = productCategoryService.getCategory(item.getCategoryId());
-            return category != null && BizSceneEnum.isPublication(category.getBizScene()) ? item : null;
-        }).stream().filter(Objects::nonNull).toList();
+        Map<Long, ProductCategoryDO> categoryMap = convertMap(
+                productCategoryService.getCategoryList(convertSet(spus, ProductSpuDO::getCategoryId)),
+                ProductCategoryDO::getId);
+        List<ProductSpuDO> publicationSpus = spus.stream()
+                .filter(spu -> {
+                    ProductCategoryDO category = categoryMap.get(spu.getCategoryId());
+                    return category != null && BizSceneEnum.isPublication(category.getBizScene());
+                })
+                .toList();
         if (CollUtil.isEmpty(publicationSpus)) {
             return Collections.emptyList();
         }
 
-        Map<Long, ProductCategoryDO> categoryMap = convertMap(
-                convertList(publicationSpus, spu -> productCategoryService.getCategory(spu.getCategoryId())),
-                ProductCategoryDO::getId);
         Map<Long, ProductPublicationSpuExtDO> spuExtMap = convertMap(
                 publicationSpuExtMapper.selectByIds(convertSet(publicationSpus, ProductSpuDO::getId)),
                 ProductPublicationSpuExtDO::getSpuId);

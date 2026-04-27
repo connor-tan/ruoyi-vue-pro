@@ -413,7 +413,7 @@ CREATE TABLE IF NOT EXISTS product_publication_spu_ext (
   issn varchar(64) DEFAULT NULL COMMENT 'ISSN',
   cn_code varchar(64) DEFAULT NULL COMMENT 'CN 刊号',
   post_distribution_code varchar(64) DEFAULT NULL COMMENT '邮发代号',
-  fulfillment_mode varchar(64) NOT NULL DEFAULT 'SCHOOL_STATION' COMMENT '履约方式',
+  fulfillment_mode varchar(64) NOT NULL DEFAULT 'SCHOOL_STATION' COMMENT '技术保留字段：当前配送以商品配送方式和订单配送组为准',
   creator varchar(64) DEFAULT '' COMMENT '创建者',
   create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updater varchar(64) DEFAULT '' COMMENT '更新者',

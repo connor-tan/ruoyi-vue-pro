@@ -1,0 +1,80 @@
+name: yudao-mysql-replication
+
+services:
+  mysql-master:
+    image: mysql:8.4
+    container_name: yudao-mysql-master
+    restart: unless-stopped
+    ports:
+      - "${MASTER_PORT:-3307}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
+    command:
+      - --default-time-zone=+08:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-master-data:/var/lib/mysql
+      - ./master/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./master/init/ruoyi-vue-pro.sql:/docker-entrypoint-initdb.d/10-ruoyi-vue-pro.sql:ro
+    healthcheck:
+      test: mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD --silent
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  mysql-slave:
+    image: mysql:8.4
+    container_name: yudao-mysql-slave
+    restart: unless-stopped
+    ports:
+      - "${SLAVE_PORT:-3308}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
+    command:
+      - --default-time-zone=+08:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-slave-data:/var/lib/mysql
+      - ./slave/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    healthcheck:
+      test: mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD --silent
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  mysql-replica-init:
+    image: mysql:8.4
+    container_name: yudao-mysql-replica-init
+    restart: "no"
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      mysql-slave:
+        condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MASTER_HOST: mysql-master
+      MASTER_PORT: 3306
+      SLAVE_HOST: mysql-slave
+      SLAVE_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ruoyi-vue-pro}
+      REPLICATION_USER: ${REPLICATION_USER:-repl}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-repl123456}
+      REPLICA_RESEED_ON_INIT: ${REPLICA_RESEED_ON_INIT:-true}
+    volumes:
+      - ./scripts/setup-replica.sh:/scripts/setup-replica.sh:ro
+    entrypoint:
+      - /bin/bash
+      - /scripts/setup-replica.sh
+
+volumes:
+  mysql-master-data:
+    driver: local
+  mysql-slave-data:
+    driver: local

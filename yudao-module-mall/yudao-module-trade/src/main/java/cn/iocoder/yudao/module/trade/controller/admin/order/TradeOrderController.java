@@ -11,9 +11,11 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderLogDO;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderAdminAdjustService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderFulfillmentService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderLogService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderReceiveService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,7 +43,11 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
 public class TradeOrderController {
 
     @Resource
-    private TradeOrderUpdateService tradeOrderUpdateService;
+    private TradeOrderFulfillmentService tradeOrderFulfillmentService;
+    @Resource
+    private TradeOrderAdminAdjustService tradeOrderAdminAdjustService;
+    @Resource
+    private TradeOrderReceiveService tradeOrderReceiveService;
     @Resource
     private TradeOrderQueryService tradeOrderQueryService;
     @Resource
@@ -113,7 +119,7 @@ public class TradeOrderController {
     @Operation(summary = "订单发货")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> deliveryOrder(@RequestBody TradeOrderDeliveryReqVO deliveryReqVO) {
-        tradeOrderUpdateService.deliveryOrder(deliveryReqVO);
+        tradeOrderFulfillmentService.deliveryOrder(deliveryReqVO);
         return success(true);
     }
 
@@ -121,7 +127,7 @@ public class TradeOrderController {
     @Operation(summary = "站点配送发放")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> stationDeliveryOrder(@RequestBody TradeOrderStationDeliveryReqVO reqVO) {
-        tradeOrderUpdateService.stationDeliveryOrder(reqVO);
+        tradeOrderFulfillmentService.stationDeliveryOrder(reqVO);
         return success(true);
     }
 
@@ -129,7 +135,7 @@ public class TradeOrderController {
     @Operation(summary = "订单备注")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> updateOrderRemark(@RequestBody TradeOrderRemarkReqVO reqVO) {
-        tradeOrderUpdateService.updateOrderRemark(reqVO);
+        tradeOrderAdminAdjustService.updateOrderRemark(reqVO);
         return success(true);
     }
 
@@ -137,7 +143,7 @@ public class TradeOrderController {
     @Operation(summary = "订单调价")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> updateOrderPrice(@RequestBody TradeOrderUpdatePriceReqVO reqVO) {
-        tradeOrderUpdateService.updateOrderPrice(reqVO);
+        tradeOrderAdminAdjustService.updateOrderPrice(reqVO);
         return success(true);
     }
 
@@ -145,7 +151,7 @@ public class TradeOrderController {
     @Operation(summary = "修改订单收货地址")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> updateOrderAddress(@RequestBody TradeOrderUpdateAddressReqVO reqVO) {
-        tradeOrderUpdateService.updateOrderAddress(reqVO);
+        tradeOrderAdminAdjustService.updateOrderAddress(reqVO);
         return success(true);
     }
 
@@ -154,7 +160,7 @@ public class TradeOrderController {
     @Parameter(name = "id", description = "交易订单编号")
     @PreAuthorize("@ss.hasPermission('trade:order:pick-up')")
     public CommonResult<Boolean> pickUpOrderById(@RequestParam("id") Long id) {
-        tradeOrderUpdateService.pickUpOrderByAdmin(getLoginUserId(), id);
+        tradeOrderReceiveService.pickUpOrderByAdmin(getLoginUserId(), id);
         return success(true);
     }
 
@@ -163,7 +169,7 @@ public class TradeOrderController {
     @Parameter(name = "pickUpVerifyCode", description = "自提核销码")
     @PreAuthorize("@ss.hasPermission('trade:order:pick-up')")
     public CommonResult<Boolean> pickUpOrderByVerifyCode(@RequestParam("pickUpVerifyCode") String pickUpVerifyCode) {
-        tradeOrderUpdateService.pickUpOrderByAdmin(getLoginUserId(), pickUpVerifyCode);
+        tradeOrderReceiveService.pickUpOrderByAdmin(getLoginUserId(), pickUpVerifyCode);
         return success(true);
     }
 
@@ -172,7 +178,7 @@ public class TradeOrderController {
     @Parameter(name = "pickUpVerifyCode", description = "自提核销码")
     @PreAuthorize("@ss.hasPermission('trade:order:query')")
     public CommonResult<TradeOrderDetailRespVO> getByPickUpVerifyCode(@RequestParam("pickUpVerifyCode") String pickUpVerifyCode) {
-        TradeOrderDO tradeOrder = tradeOrderUpdateService.getByPickUpVerifyCode(pickUpVerifyCode);
+        TradeOrderDO tradeOrder = tradeOrderReceiveService.getByPickUpVerifyCode(pickUpVerifyCode);
         return success(TradeOrderConvert.INSTANCE.convert2(tradeOrder, null));
     }
 

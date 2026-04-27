@@ -13,11 +13,13 @@ import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettle
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.service.cart.CartService;
+import cn.iocoder.yudao.module.trade.service.order.support.TradeOrderDeliveryGroupSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
@@ -31,7 +33,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class TradeOrderUpdateServiceImplTest {
+class TradeOrderCheckoutServiceImplTest {
 
     private static final long USER_ID = 1L;
     private static final long STUDENT_ID = 10L;
@@ -49,8 +51,10 @@ class TradeOrderUpdateServiceImplTest {
     private SubscriptionOrderEligibilityApi subscriptionOrderEligibilityApi;
     @Mock
     private MemberAddressApi addressApi;
+    @Spy
+    private TradeOrderDeliveryGroupSupport deliveryGroupSupport = new TradeOrderDeliveryGroupSupport();
     @InjectMocks
-    private TradeOrderUpdateServiceImpl tradeOrderUpdateService;
+    private TradeOrderCheckoutServiceImpl tradeOrderCheckoutService;
 
     @Test
     void settlementOrder_shouldAggregateSameStudentOfferSkuBeforeEligibilityCheck() {
@@ -67,7 +71,7 @@ class TradeOrderUpdateServiceImplTest {
         });
 
         assertThrows(IllegalStateException.class,
-                () -> tradeOrderUpdateService.settlementOrder(USER_ID, settlementReq()));
+                () -> tradeOrderCheckoutService.settlementOrder(USER_ID, settlementReq()));
 
         ArgumentCaptor<SubscriptionOrderEligibilityReqDTO> captor =
                 ArgumentCaptor.forClass(SubscriptionOrderEligibilityReqDTO.class);

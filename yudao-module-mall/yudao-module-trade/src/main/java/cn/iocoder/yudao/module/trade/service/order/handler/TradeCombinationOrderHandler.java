@@ -10,8 +10,8 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderPromotionSyncService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -32,7 +32,7 @@ public class TradeCombinationOrderHandler implements TradeOrderHandler {
 
     @Resource
     @Lazy // 延迟加载，避免循环依赖
-    private TradeOrderUpdateService orderUpdateService;
+    private TradeOrderPromotionSyncService orderPromotionSyncService;
     @Resource
     private TradeOrderQueryService orderQueryService;
 
@@ -76,7 +76,7 @@ public class TradeCombinationOrderHandler implements TradeOrderHandler {
 
         // 3. 更新拼团相关信息到订单。为什么几个字段都要更新？
         // 原因是：如果创建订单时自己是团长的情况下 combinationHeadId 是为 null 的，设置团长编号这个操作时在订单是否后创建拼团记录时才设置的。
-        orderUpdateService.updateOrderCombinationInfo(order.getId(), order.getCombinationActivityId(),
+        orderPromotionSyncService.updateOrderCombinationInfo(order.getId(), order.getCombinationActivityId(),
                 combinationRecord.getCombinationRecordId(), combinationRecord.getCombinationHeadId());
     }
 
@@ -94,4 +94,3 @@ public class TradeCombinationOrderHandler implements TradeOrderHandler {
     }
 
 }
-

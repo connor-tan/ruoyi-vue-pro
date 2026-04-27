@@ -88,9 +88,7 @@ public interface StudentService {
             Collection<Long> studentIds,
             Integer targetYearStart,
             Integer targetYearEnd,
-            Long targetYearCatalogId,
-            String gradeCalcRule,
-            String gradeResolveMode);
+            Long targetYearCatalogId);
 
     // ==================== 子表（学生班级区间记录） ====================
 

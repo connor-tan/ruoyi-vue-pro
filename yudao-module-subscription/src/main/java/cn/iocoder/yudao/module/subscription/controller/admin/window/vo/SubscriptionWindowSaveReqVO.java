@@ -43,10 +43,6 @@ public class SubscriptionWindowSaveReqVO {
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime endTime;
 
-    private String gradeCalcRule;
-
-    private String gradeResolveMode;
-
     @NotNull(message = "状态不能为空")
     private Integer status;
 

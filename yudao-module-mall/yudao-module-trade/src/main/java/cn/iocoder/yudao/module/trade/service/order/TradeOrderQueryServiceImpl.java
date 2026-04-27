@@ -26,6 +26,7 @@ import cn.iocoder.yudao.module.trade.framework.delivery.core.client.ExpressClien
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackQueryReqDTO;
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackRespDTO;
 import cn.iocoder.yudao.module.trade.service.delivery.DeliveryExpressService;
+import cn.iocoder.yudao.module.trade.service.order.support.TradeOrderDeliveryAccessSupport;
 import jakarta.annotation.Resource;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,8 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
 
     @Resource
     private MemberUserApi memberUserApi;
+    @Resource
+    private TradeOrderDeliveryAccessSupport deliveryAccessSupport;
 
     // =================== Order ===================
 
@@ -169,6 +172,13 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
     }
 
     @Override
+    public List<ExpressTrackRespDTO> getDeliveryExpressTrackList(Long deliveryId, Long userId) {
+        TradeOrderDeliveryDO delivery = deliveryAccessSupport.validateDeliveryExists(deliveryId);
+        deliveryAccessSupport.validateDeliveryOrderOwned(delivery, userId, ORDER_NOT_FOUND);
+        return getExpressTrackList(delivery);
+    }
+
+    @Override
     public List<ExpressTrackRespDTO> getExpressTrackList(Long id) {
         // 查询订单
         TradeOrderDO order = tradeOrderMapper.selectById(id);
@@ -208,6 +218,23 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
         }
         // 查询物流轨迹
         return getSelf().getExpressTrackList(express.getCode(), order.getLogisticsNo(), order.getReceiverMobile());
+    }
+
+    /**
+     * 获得订单配送组的物流轨迹
+     *
+     * @param delivery 配送组
+     * @return 物流轨迹
+     */
+    private List<ExpressTrackRespDTO> getExpressTrackList(TradeOrderDeliveryDO delivery) {
+        if (delivery.getLogisticsId() == null || StrUtil.isBlank(delivery.getLogisticsNo())) {
+            return Collections.emptyList();
+        }
+        DeliveryExpressDO express = deliveryExpressService.getDeliveryExpress(delivery.getLogisticsId());
+        if (express == null) {
+            throw exception(EXPRESS_NOT_EXISTS);
+        }
+        return getSelf().getExpressTrackList(express.getCode(), delivery.getLogisticsNo(), delivery.getReceiverMobile());
     }
 
     /**

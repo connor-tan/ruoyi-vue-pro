@@ -29,11 +29,9 @@ public class EduStudentApiImpl implements EduStudentApi {
             Collection<Long> studentIds,
             Integer targetYearStart,
             Integer targetYearEnd,
-            Long targetYearCatalogId,
-            String gradeCalcRule,
-            String gradeResolveMode) {
+            Long targetYearCatalogId) {
         return studentService.getSubscriptionStudentContextMap(parentUserId, studentIds, targetYearStart, targetYearEnd,
-                targetYearCatalogId, gradeCalcRule, gradeResolveMode);
+                targetYearCatalogId);
     }
 
 }

@@ -15,8 +15,8 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.service.aftersale.AfterSaleLogService;
 import cn.iocoder.yudao.module.trade.service.aftersale.AfterSaleService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderPaymentService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,7 +48,7 @@ public class AfterSaleController {
     @Resource
     private TradeOrderQueryService tradeOrderQueryService;
     @Resource
-    private TradeOrderUpdateService tradeOrderUpdateService;
+    private TradeOrderPaymentService tradeOrderPaymentService;
     @Resource
     private AfterSaleLogService afterSaleLogService;
     @Resource
@@ -142,7 +142,7 @@ public class AfterSaleController {
         log.info("[updateAfterRefund][notifyReqDTO({})]", notifyReqDTO);
         if (StrUtil.startWithAny(notifyReqDTO.getMerchantRefundId(), "order-")) {
             Long orderId = Long.parseLong(StrUtil.subAfter(notifyReqDTO.getMerchantRefundId(), "order-", true));
-            tradeOrderUpdateService.updatePaidOrderRefunded(orderId, notifyReqDTO.getPayRefundId());
+            tradeOrderPaymentService.updatePaidOrderRefunded(orderId, notifyReqDTO.getPayRefundId());
         } else {
             afterSaleService.updateAfterSaleRefunded(
                     Long.parseLong(notifyReqDTO.getMerchantRefundId()),

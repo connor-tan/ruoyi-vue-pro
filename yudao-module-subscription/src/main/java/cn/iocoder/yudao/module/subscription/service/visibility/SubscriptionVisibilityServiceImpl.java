@@ -57,7 +57,7 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
 
         EduStudentSubscriptionContextRespDTO student = eduStudentApi.getSubscriptionStudentContextMap(userId,
                         Collections.singleton(studentId), window.getTargetYearStart(), window.getTargetYearEnd(),
-                        window.getTargetYearCatalogId(), window.getGradeCalcRule(), window.getGradeResolveMode())
+                        window.getTargetYearCatalogId())
                 .get(studentId);
         result.setStudent(student);
         if (student == null || student.getBlockedReason() != null) {

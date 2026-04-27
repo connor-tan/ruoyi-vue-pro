@@ -232,9 +232,7 @@ public class StudentServiceImpl implements StudentService {
             Collection<Long> studentIds,
             Integer targetYearStart,
             Integer targetYearEnd,
-            Long targetYearCatalogId,
-            String gradeCalcRule,
-            String gradeResolveMode) {
+            Long targetYearCatalogId) {
         if (CollUtil.isEmpty(studentIds)) {
             return Collections.emptyMap();
         }

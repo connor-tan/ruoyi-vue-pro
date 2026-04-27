@@ -24,8 +24,6 @@ public class SubscriptionWindowRespVO {
     private LocalDateTime startTime;
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime endTime;
-    private String gradeCalcRule;
-    private String gradeResolveMode;
     private String gradePolicyName;
     private Integer status;
     private String remark;

@@ -46,6 +46,14 @@ public interface ProductCategoryService {
     ProductCategoryDO getCategory(Long id);
 
     /**
+     * 批量获得商品分类。
+     *
+     * @param ids 编号数组
+     * @return 商品分类列表
+     */
+    List<ProductCategoryDO> getCategoryList(Collection<Long> ids);
+
+    /**
      * 校验商品分类
      *
      * @param id 分类编号

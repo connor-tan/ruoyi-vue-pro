@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.trade.job.order;
 
 import cn.iocoder.yudao.framework.quartz.core.handler.JobHandler;
 import cn.iocoder.yudao.framework.tenant.core.job.TenantJob;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderReceiveService;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.Resource;
@@ -16,12 +16,12 @@ import jakarta.annotation.Resource;
 public class TradeOrderAutoReceiveJob implements JobHandler {
 
     @Resource
-    private TradeOrderUpdateService tradeOrderUpdateService;
+    private TradeOrderReceiveService tradeOrderReceiveService;
 
     @Override
     @TenantJob
     public String execute(String param) {
-        int count = tradeOrderUpdateService.receiveOrderBySystem();
+        int count = tradeOrderReceiveService.receiveOrderBySystem();
         return String.format("自动收货 %s 个", count);
     }
 

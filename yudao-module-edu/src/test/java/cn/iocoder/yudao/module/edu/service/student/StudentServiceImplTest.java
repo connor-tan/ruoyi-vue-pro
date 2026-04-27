@@ -152,7 +152,7 @@ class StudentServiceImplTest {
         when(gradeCatalogMapper.selectById(42L)).thenReturn(gradeCatalog(42L, "二年级", 2));
 
         Map<Long, EduStudentSubscriptionContextRespDTO> result = service.getSubscriptionStudentContextMap(
-                9L, List.of(1L), 2026, 2027, 100L, "CURRENT_GRADE", "CURRENT_CHAIN");
+                9L, List.of(1L), 2026, 2027, 100L);
 
         EduStudentSubscriptionContextRespDTO context = result.get(1L);
         assertEquals(42L, context.getGradeCatalogId());
@@ -182,7 +182,7 @@ class StudentServiceImplTest {
         when(schoolGradeMapper.selectBySchoolIdAndGradeCatalogId(11L, 41L)).thenReturn(schoolGrade(31L, 41L));
 
         Map<Long, EduStudentSubscriptionContextRespDTO> result = service.getSubscriptionStudentContextMap(
-                9L, List.of(1L), 2026, 2027, 100L, null, null);
+                9L, List.of(1L), 2026, 2027, 100L);
 
         EduStudentSubscriptionContextRespDTO context = result.get(1L);
         assertEquals(42L, context.getGradeCatalogId());
@@ -202,7 +202,7 @@ class StudentServiceImplTest {
                 .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().minusDays(1)));
 
         Map<Long, EduStudentSubscriptionContextRespDTO> result = service.getSubscriptionStudentContextMap(
-                9L, List.of(1L), 2026, 2027, 100L, null, null);
+                9L, List.of(1L), 2026, 2027, 100L);
 
         assertEquals("TARGET_YEAR_CLASS_NOT_READY", result.get(1L).getBlockedReason());
     }
@@ -218,7 +218,7 @@ class StudentServiceImplTest {
                 .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().plusDays(30)));
 
         Map<Long, EduStudentSubscriptionContextRespDTO> result = service.getSubscriptionStudentContextMap(
-                9L, List.of(1L), 2026, 2027, 100L, null, null);
+                9L, List.of(1L), 2026, 2027, 100L);
 
         assertEquals("TARGET_YEAR_CLASS_REQUIRED", result.get(1L).getBlockedReason());
     }

@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.trade.job.order;
 
 import cn.iocoder.yudao.framework.quartz.core.handler.JobHandler;
 import cn.iocoder.yudao.framework.tenant.core.job.TenantJob;
-import cn.iocoder.yudao.module.trade.service.order.TradeOrderUpdateService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderCommentService;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.Resource;
@@ -16,12 +16,12 @@ import jakarta.annotation.Resource;
 public class TradeOrderAutoCommentJob implements JobHandler {
 
     @Resource
-    private TradeOrderUpdateService tradeOrderUpdateService;
+    private TradeOrderCommentService tradeOrderCommentService;
 
     @Override
     @TenantJob
     public String execute(String param) {
-        int count = tradeOrderUpdateService.createOrderItemCommentBySystem();
+        int count = tradeOrderCommentService.createOrderItemCommentBySystem();
         return String.format("评论订单 %s 个", count);
     }
 

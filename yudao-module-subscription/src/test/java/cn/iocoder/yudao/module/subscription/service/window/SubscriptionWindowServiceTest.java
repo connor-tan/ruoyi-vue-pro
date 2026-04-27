@@ -86,8 +86,6 @@ class SubscriptionWindowServiceTest {
         reqVO.setTargetPeriod("FULL_YEAR");
         reqVO.setStartTime(LocalDateTime.of(2026, 5, 1, 0, 0));
         reqVO.setEndTime(LocalDateTime.of(2026, 6, 1, 0, 0));
-        reqVO.setGradeCalcRule("CURRENT_GRADE");
-        reqVO.setGradeResolveMode("CURRENT_CHAIN");
         reqVO.setStatus(status);
         return reqVO;
     }

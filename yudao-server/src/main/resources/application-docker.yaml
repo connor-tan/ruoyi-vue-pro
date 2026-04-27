@@ -1,0 +1,216 @@
+server:
+  port: ${SERVER_APP_PORT:48080}
+
+--- #################### 数据库相关配置 ####################
+
+spring:
+  autoconfigure:
+    # noinspection SpringBootApplicationYaml
+    exclude:
+      - org.springframework.ai.vectorstore.qdrant.autoconfigure.QdrantVectorStoreAutoConfiguration
+      - org.springframework.ai.vectorstore.milvus.autoconfigure.MilvusVectorStoreAutoConfiguration
+  datasource:
+    druid:
+      web-stat-filter:
+        enabled: true
+      stat-view-servlet:
+        enabled: true
+        allow:
+        url-pattern: /druid/*
+        login-username:
+        login-password:
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true
+          slow-sql-millis: 100
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+    dynamic:
+      druid:
+        initial-size: ${DB_POOL_INITIAL_SIZE:1}
+        min-idle: ${DB_POOL_MIN_IDLE:1}
+        max-active: ${DB_POOL_MAX_ACTIVE:20}
+        max-wait: 60000
+        time-between-eviction-runs-millis: 60000
+        min-evictable-idle-time-millis: 600000
+        max-evictable-idle-time-millis: 1800000
+        validation-query: SELECT 1 FROM DUAL
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+        pool-prepared-statements: true
+        max-pool-prepared-statement-per-connection-size: 20
+      primary: master
+      datasource:
+        master:
+          url: jdbc:mysql://${MYSQL_MASTER_HOST:mysql-master}:${MYSQL_MASTER_PORT:3306}/${MYSQL_DATABASE:ruoyi-vue-pro}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
+          username: ${MYSQL_USERNAME:root}
+          password: ${MYSQL_PASSWORD:${MYSQL_ROOT_PASSWORD:123456}}
+        slave:
+          lazy: true
+          url: jdbc:mysql://${MYSQL_SLAVE_HOST:mysql-slave}:${MYSQL_SLAVE_PORT:3306}/${MYSQL_DATABASE:ruoyi-vue-pro}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true
+          username: ${MYSQL_USERNAME:root}
+          password: ${MYSQL_PASSWORD:${MYSQL_ROOT_PASSWORD:123456}}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:5}
+      password: ${REDIS_PASSWORD:}
+
+--- #################### 定时任务相关配置 ####################
+
+spring:
+  quartz:
+    auto-startup: ${QUARTZ_AUTO_STARTUP:true}
+    scheduler-name: schedulerName
+    job-store-type: jdbc
+    wait-for-jobs-to-complete-on-shutdown: true
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceName: schedulerName
+            instanceId: AUTO
+          jobStore:
+            class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+            isClustered: true
+            clusterCheckinInterval: 15000
+            misfireThreshold: 60000
+          threadPool:
+            threadCount: ${QUARTZ_THREAD_COUNT:25}
+            threadPriority: 5
+            class: org.quartz.simpl.SimpleThreadPool
+    jdbc:
+      initialize-schema: NEVER
+
+--- #################### 消息队列相关 ####################
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:127.0.0.1:9876}
+
+spring:
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+
+--- #################### 服务保障相关配置 ####################
+
+lock4j:
+  acquire-timeout: 3000
+  expire: 30000
+
+--- #################### 监控相关配置 ####################
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,info}
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+spring:
+  boot:
+    admin:
+      client:
+        url: ${SPRING_BOOT_ADMIN_CLIENT_URL:http://127.0.0.1:48080/admin}
+        instance:
+          service-host-type: IP
+        username: ${SPRING_BOOT_ADMIN_USERNAME:admin}
+        password: ${SPRING_BOOT_ADMIN_PASSWORD:admin}
+      context-path: /admin
+
+logging:
+  file:
+    name: ${LOG_FILE:${user.home}/logs/${spring.application.name}.log}
+  level:
+    cn.iocoder.yudao.module.infra.dal.mysql.logger.ApiErrorLogMapper: INFO
+    cn.iocoder.yudao.module.infra.dal.mysql.job.JobLogMapper: INFO
+    cn.iocoder.yudao.module.infra.dal.mysql.file.FileConfigMapper: INFO
+    cn.iocoder.yudao.module.pay.dal.mysql.notify.PayNotifyTaskMapper: INFO
+    cn.iocoder.yudao.module.system.dal.mysql.sms.SmsChannelMapper: INFO
+    org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
+
+debug: ${APP_DEBUG:false}
+
+--- #################### 微信公众号、小程序相关配置 ####################
+
+wx:
+  mp:
+    app-id: ${WX_MP_APP_ID:}
+    secret: ${WX_MP_SECRET:}
+    config-storage:
+      type: RedisTemplate
+      key-prefix: wx
+      http-client-type: HttpClient
+  miniapp:
+    appid: ${WX_MINIAPP_APPID:}
+    secret: ${WX_MINIAPP_SECRET:}
+    config-storage:
+      type: RedisTemplate
+      key-prefix: wa
+      http-client-type: HttpClient
+
+--- #################### 芋道相关配置 ####################
+
+yudao:
+  captcha:
+    enable: ${YUDAO_CAPTCHA_ENABLE:false}
+  security:
+    mock-enable: ${YUDAO_SECURITY_MOCK_ENABLE:true}
+  pay:
+    order-notify-url: ${YUDAO_PAY_ORDER_NOTIFY_URL:http://127.0.0.1:48080/admin-api/pay/notify/order}
+    refund-notify-url: ${YUDAO_PAY_REFUND_NOTIFY_URL:http://127.0.0.1:48080/admin-api/pay/notify/refund}
+    transfer-notify-url: ${YUDAO_PAY_TRANSFER_NOTIFY_URL:http://127.0.0.1:48080/admin-api/pay/notify/transfer}
+  access-log:
+    enable: ${YUDAO_ACCESS_LOG_ENABLE:false}
+  demo: ${YUDAO_DEMO:false}
+  wxa-code:
+    env-version: ${YUDAO_WXA_CODE_ENV_VERSION:develop}
+  wxa-subscribe-message:
+    miniprogram-state: ${YUDAO_WXA_SUBSCRIBE_MESSAGE_MINIPROGRAM_STATE:developer}
+  tencent-lbs-key: ${YUDAO_TENCENT_LBS_KEY:TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E}
+
+justauth:
+  enabled: ${JUSTAUTH_ENABLED:true}
+  type:
+    DINGTALK:
+      client-id: ${JUSTAUTH_DINGTALK_CLIENT_ID:}
+      client-secret: ${JUSTAUTH_DINGTALK_CLIENT_SECRET:}
+      ignore-check-redirect-uri: true
+    WECHAT_ENTERPRISE:
+      client-id: ${JUSTAUTH_WECHAT_ENTERPRISE_CLIENT_ID:}
+      client-secret: ${JUSTAUTH_WECHAT_ENTERPRISE_CLIENT_SECRET:}
+      agent-id: ${JUSTAUTH_WECHAT_ENTERPRISE_AGENT_ID:}
+      ignore-check-redirect-uri: true
+    WECHAT_MINI_PROGRAM:
+      client-id: ${wx.miniapp.appid:}
+      client-secret: ${wx.miniapp.secret:}
+      ignore-check-redirect-uri: true
+      ignore-check-state: true
+    WECHAT_MP:
+      client-id: ${wx.mp.app-id:}
+      client-secret: ${wx.mp.secret:}
+      ignore-check-redirect-uri: true
+    ALIPAY:
+      client-id: ${JUSTAUTH_ALIPAY_CLIENT_ID:}
+      client-secret: ${JUSTAUTH_ALIPAY_CLIENT_SECRET:}
+      alipay-public-key: ${JUSTAUTH_ALIPAY_PUBLIC_KEY:}
+      ignore-check-redirect-uri: true
+      ignore-check-state: true
+  cache:
+    type: REDIS
+    prefix: 'social_auth_state:'
+    timeout: 24h
