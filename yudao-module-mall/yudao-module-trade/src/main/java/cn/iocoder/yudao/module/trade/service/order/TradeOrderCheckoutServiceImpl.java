@@ -163,6 +163,10 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
             if (deliveryType == null) {
                 throw exception(ORDER_ITEM_DELIVERY_TYPE_REQUIRED);
             }
+            if (CollUtil.isEmpty(spu.getDeliveryTypes()) || !spu.getDeliveryTypes().contains(deliveryType)
+                    || Objects.equals(deliveryType, DeliveryTypeEnum.MIXED.getType())) {
+                throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
+            }
             String bizScene = spu.getBizScene();
             item.setDeliveryType(deliveryType);
 

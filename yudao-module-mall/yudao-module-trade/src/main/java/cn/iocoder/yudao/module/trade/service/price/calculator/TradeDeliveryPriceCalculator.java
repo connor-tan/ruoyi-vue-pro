@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
@@ -53,19 +54,37 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
 
     @Override
     public void calculate(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result) {
-        if (param.getDeliveryType() == null) {
+        List<OrderItem> selectedItems = filterList(result.getItems(), OrderItem::getSelected);
+        if (CollUtil.isEmpty(selectedItems)) {
             return;
         }
-        // 校验是不是存在商品不能门店自提，或者不能快递发货的情况。就是说，配送方式不匹配哈
-        if (CollectionUtils.anyMatch(result.getItems(), item -> !item.getDeliveryTypes().contains(param.getDeliveryType()))) {
-            throw exception(PRICE_CALCULATE_DELIVERY_PRICE_TYPE_ILLEGAL);
+
+        // 校验是不是存在商品不支持当前配送方式的情况。优先使用 item 自身配送方式，兼容普通商品全局配送方式。
+        for (OrderItem item : selectedItems) {
+            Integer deliveryType = getEffectiveDeliveryType(param, item);
+            if (deliveryType == null) {
+                continue;
+            }
+            if (CollUtil.isEmpty(item.getDeliveryTypes()) || !item.getDeliveryTypes().contains(deliveryType)
+                    || Objects.equals(deliveryType, DeliveryTypeEnum.MIXED.getType())) {
+                throw exception(PRICE_CALCULATE_DELIVERY_PRICE_TYPE_ILLEGAL);
+            }
         }
 
-        if (DeliveryTypeEnum.PICK_UP.getType().equals(param.getDeliveryType())) {
+        if (CollectionUtils.anyMatch(selectedItems,
+                item -> DeliveryTypeEnum.PICK_UP.getType().equals(getEffectiveDeliveryType(param, item)))) {
             calculateByPickUp(param);
-        } else if (DeliveryTypeEnum.EXPRESS.getType().equals(param.getDeliveryType())) {
-            calculateExpress(param, result);
         }
+
+        List<OrderItem> expressItems = filterList(selectedItems,
+                item -> DeliveryTypeEnum.EXPRESS.getType().equals(getEffectiveDeliveryType(param, item)));
+        if (CollUtil.isNotEmpty(expressItems)) {
+            calculateExpress(param, result, expressItems);
+        }
+    }
+
+    private Integer getEffectiveDeliveryType(TradePriceCalculateReqBO param, OrderItem item) {
+        return item.getResolvedDeliveryType() != null ? item.getResolvedDeliveryType() : param.getDeliveryType();
     }
 
     private void calculateByPickUp(TradePriceCalculateReqBO param) {
@@ -81,7 +100,7 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
 
     // ========= 快递发货 ==========
 
-    private void calculateExpress(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result) {
+    private void calculateExpress(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result, List<OrderItem> expressItems) {
         // 0. 得到收件地址区域
         if (param.getAddressId() == null) {
             // 价格计算时，如果为空就不算~最终下单，会校验该字段不允许空
@@ -101,9 +120,7 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
         }
 
         // 情况三：快递模版
-        // 2.1 过滤出已选中的商品 SKU
-        List<OrderItem> selectedItem = filterList(result.getItems(), OrderItem::getSelected);
-        Set<Long> deliveryTemplateIds = convertSet(selectedItem, OrderItem::getDeliveryTemplateId);
+        Set<Long> deliveryTemplateIds = convertSet(expressItems, OrderItem::getDeliveryTemplateId);
         Map<Long, DeliveryExpressTemplateRespBO> expressTemplateMap =
                 deliveryExpressTemplateService.getExpressTemplateMapByIdsAndArea(deliveryTemplateIds, address.getAreaId());
         // 2.2 计算配送费用
@@ -111,7 +128,7 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
             log.error("[calculate][找不到商品 templateIds {} areaId{} 对应的运费模板]", deliveryTemplateIds, address.getAreaId());
             throw exception(PRICE_CALCULATE_DELIVERY_PRICE_TEMPLATE_NOT_FOUND);
         }
-        calculateDeliveryPrice(selectedItem, expressTemplateMap, result);
+        calculateDeliveryPrice(expressItems, expressTemplateMap, result);
     }
 
     /**

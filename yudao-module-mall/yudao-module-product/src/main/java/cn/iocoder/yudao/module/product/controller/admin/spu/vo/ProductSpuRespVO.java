@@ -160,9 +160,6 @@ public class ProductSpuRespVO {
         @Schema(description = "邮发代号", example = "80-123")
         private String postDistributionCode;
 
-        @Schema(description = "履约方式", example = "SCHOOL_STATION")
-        private String fulfillmentMode;
-
     }
 
 }

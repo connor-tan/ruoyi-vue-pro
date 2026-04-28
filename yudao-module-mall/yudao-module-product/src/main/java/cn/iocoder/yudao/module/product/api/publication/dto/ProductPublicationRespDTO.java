@@ -56,8 +56,6 @@ public class ProductPublicationRespDTO {
 
         private String postDistributionCode;
 
-        private String fulfillmentMode;
-
     }
 
     @Data

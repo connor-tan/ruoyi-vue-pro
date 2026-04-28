@@ -30,6 +30,4 @@ public class ProductPublicationSpuExtDO extends BaseDO {
     private String cnCode;
 
     private String postDistributionCode;
-
-    private String fulfillmentMode;
 }

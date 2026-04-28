@@ -29,10 +29,10 @@ import cn.iocoder.yudao.module.product.dal.mysql.sku.ProductSkuMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
 import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
-import cn.iocoder.yudao.module.publication.api.enums.PublicationFulfillmentModeEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIdentifierRuleEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationTargetPeriodEnum;
 import cn.iocoder.yudao.module.system.api.dict.DictDataApi;
+import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +51,8 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
 
     private static final String DICT_TYPE_PUBLICATION_VOLUME = "edu_publication_volume";
     private static final String DICT_TYPE_PUBLICATION_EDITION = "edu_publication_edition";
+    private static final Set<Integer> PUBLICATION_DELIVERY_TYPES = Set.of(
+            DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.STATION.getType());
 
     @Resource
     private ProductSpuMapper productSpuMapper;
@@ -192,6 +194,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (reqVO.getPublicationExt() == null) {
             throw exception(PUBLICATION_EXT_REQUIRED);
         }
+        validatePublicationDelivery(reqVO);
         ProductSpuSaveReqVO.PublicationSpuExtSaveReqVO ext = reqVO.getPublicationExt();
         if (ext.getPublisherId() == null) {
             throw exception(PUBLICATION_PUBLISHER_REQUIRED);
@@ -235,10 +238,23 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
                 && StrUtil.isAllBlank(ext.getIssn(), ext.getCnCode(), ext.getPostDistributionCode())) {
             throw exception(PUBLICATION_TITLE_IDENTIFIER_REQUIRED);
         }
-        ext.setFulfillmentMode(PublicationFulfillmentModeEnum.normalize(ext.getFulfillmentMode()));
         reqVO.setBrandId(null);
         reqVO.setGiveIntegral(reqVO.getGiveIntegral() == null ? 0 : reqVO.getGiveIntegral());
         reqVO.setSubCommissionType(Boolean.FALSE);
+    }
+
+    private void validatePublicationDelivery(ProductSpuSaveReqVO reqVO) {
+        if (CollUtil.isEmpty(reqVO.getDeliveryTypes())) {
+            throw exception(PUBLICATION_DELIVERY_REQUIRED);
+        }
+        Set<Integer> deliveryTypes = new LinkedHashSet<>(reqVO.getDeliveryTypes());
+        if (deliveryTypes.stream().anyMatch(deliveryType -> deliveryType == null
+                || !PUBLICATION_DELIVERY_TYPES.contains(deliveryType))) {
+            throw exception(PUBLICATION_DELIVERY_TYPE_INVALID);
+        }
+        if (deliveryTypes.contains(DeliveryTypeEnum.EXPRESS.getType()) && reqVO.getDeliveryTemplateId() == null) {
+            throw exception(PUBLICATION_DELIVERY_TEMPLATE_REQUIRED);
+        }
     }
 
     private void validatePublicationSkuDictValues(Set<String> volumeLabels, Set<String> editionLabels) {

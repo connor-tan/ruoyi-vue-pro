@@ -17,7 +17,7 @@
   - `product_publication_type`
 - 刊物 SPU 扩展：
   - `product_publication_spu_ext`
-  - 字段承载出版社、刊物类型、出刊周期、ISSN/CN/邮发代号、履约方式
+  - 字段承载出版社、刊物类型、出刊周期、ISSN/CN/邮发代号
 - 刊物 SKU 扩展：
   - `product_publication_sku_ext`
   - 字段承载 `target_period`、册别、版本、ISBN、备注
@@ -29,7 +29,8 @@
 
 - 年级不再在 SPU 上维护。
 - `target_period` 只允许使用结构化字段，不允许只存在于 `properties` JSON。
-- 刊物默认履约方式是 `SCHOOL_STATION`，不映射为普通商品自提门店。
+- 刊物配送能力统一由 `product_spu.delivery_types` 表达，只允许 `EXPRESS` 和 `STATION`；`MIXED` 只作为订单配送组聚合结果存在。
+- 站点配送的站点事实来自 edu 学校站点关系，不来自商品中心。
 - `product_property` / `product_property_value` 仅服务普通商品规格，不作为刊物规则事实来源。
 
 ## 校验规则

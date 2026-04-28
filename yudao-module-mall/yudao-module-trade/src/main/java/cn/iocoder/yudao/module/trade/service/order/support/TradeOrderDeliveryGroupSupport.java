@@ -52,6 +52,10 @@ public class TradeOrderDeliveryGroupSupport {
             if (resolvedDeliveryType == null) {
                 throw exception(ORDER_ITEM_DELIVERY_TYPE_REQUIRED);
             }
+            if (CollUtil.isEmpty(item.getDeliveryTypes()) || !item.getDeliveryTypes().contains(resolvedDeliveryType)
+                    || Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.MIXED.getType())) {
+                throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
+            }
             String bizScene = item.getBizScene();
             if (BizSceneEnum.isPublication(bizScene)) {
                 if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.STATION.getType())) {

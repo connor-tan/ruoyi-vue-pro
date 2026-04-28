@@ -9,17 +9,25 @@ import cn.iocoder.yudao.module.product.service.brand.ProductBrandService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import cn.iocoder.yudao.module.product.service.publication.ProductPublicationService;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
+import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PRODUCT_BRAND_REQUIRED;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PRODUCT_DELIVERY_REQUIRED;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PRODUCT_DELIVERY_TEMPLATE_REQUIRED;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PRODUCT_DELIVERY_TYPE_INVALID;
 
 @Component
 public class NormalProductSceneHandler implements ProductSceneHandler {
+
+    private static final Set<Integer> NORMAL_DELIVERY_TYPES = Set.of(
+            DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.PICK_UP.getType());
 
     @Resource
     private ProductBrandService brandService;
@@ -40,6 +48,14 @@ public class NormalProductSceneHandler implements ProductSceneHandler {
         }
         if (CollUtil.isEmpty(reqVO.getDeliveryTypes())) {
             throw exception(NORMAL_PRODUCT_DELIVERY_REQUIRED);
+        }
+        Set<Integer> deliveryTypes = new LinkedHashSet<>(reqVO.getDeliveryTypes());
+        if (deliveryTypes.stream().anyMatch(deliveryType -> deliveryType == null
+                || !NORMAL_DELIVERY_TYPES.contains(deliveryType))) {
+            throw exception(NORMAL_PRODUCT_DELIVERY_TYPE_INVALID);
+        }
+        if (deliveryTypes.contains(DeliveryTypeEnum.EXPRESS.getType()) && reqVO.getDeliveryTemplateId() == null) {
+            throw exception(NORMAL_PRODUCT_DELIVERY_TEMPLATE_REQUIRED);
         }
         brandService.validateProductBrand(reqVO.getBrandId());
         List<ProductSkuSaveReqVO> skuSaveReqList = reqVO.getSkus();

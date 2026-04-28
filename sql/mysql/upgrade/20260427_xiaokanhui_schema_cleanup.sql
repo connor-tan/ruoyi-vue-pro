@@ -33,16 +33,3 @@ SET @sql := IF(
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
-SET @sql := IF(
-  (SELECT COUNT(1)
-     FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = @schema_name
-      AND TABLE_NAME = 'product_publication_spu_ext'
-      AND COLUMN_NAME = 'fulfillment_mode') > 0,
-  'ALTER TABLE product_publication_spu_ext MODIFY COLUMN fulfillment_mode varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT ''SCHOOL_STATION'' COMMENT ''技术保留字段：当前配送以商品配送方式和订单配送组为准''',
-  'SELECT ''skip product_publication_spu_ext.fulfillment_mode'' AS message'
-);
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;

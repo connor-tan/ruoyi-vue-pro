@@ -42,6 +42,8 @@ public interface ErrorCodeConstants {
     ErrorCode SPU_NOT_RECYCLE = new ErrorCode(1_008_005_004, "商品 SPU 不处于回收站状态");
     ErrorCode NORMAL_PRODUCT_BRAND_REQUIRED = new ErrorCode(1_008_005_005, "普通商品品牌不能为空");
     ErrorCode NORMAL_PRODUCT_DELIVERY_REQUIRED = new ErrorCode(1_008_005_006, "普通商品配送方式不能为空");
+    ErrorCode NORMAL_PRODUCT_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_005_007, "普通商品配送方式只允许快递发货或用户自提");
+    ErrorCode NORMAL_PRODUCT_DELIVERY_TEMPLATE_REQUIRED = new ErrorCode(1_008_005_008, "普通商品选择快递发货时，运费模板不能为空");
 
     // ========== 商品 SKU 1-008-006-000 ==========
     ErrorCode SKU_NOT_EXISTS = new ErrorCode(1_008_006_000, "商品 SKU 不存在");
@@ -75,5 +77,8 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_TITLE_IDENTIFIER_REQUIRED = new ErrorCode(1_008_010_007, "当前刊物类型要求至少填写 ISSN、CN 刊号、邮发代号之一");
     ErrorCode PUBLICATION_SKU_ISBN_REQUIRED = new ErrorCode(1_008_010_008, "当前刊物类型要求每个 SKU 都填写 ISBN");
     ErrorCode PUBLICATION_GRADE_CATALOG_NOT_EXISTS = new ErrorCode(1_008_010_009, "适用年级不存在或已禁用");
+    ErrorCode PUBLICATION_DELIVERY_REQUIRED = new ErrorCode(1_008_010_010, "刊物商品配送方式不能为空");
+    ErrorCode PUBLICATION_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_010_011, "刊物商品配送方式只允许快递发货或站点配送");
+    ErrorCode PUBLICATION_DELIVERY_TEMPLATE_REQUIRED = new ErrorCode(1_008_010_012, "刊物商品选择快递发货时，运费模板不能为空");
 
 }
