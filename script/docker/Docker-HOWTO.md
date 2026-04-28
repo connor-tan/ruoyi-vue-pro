@@ -1,11 +1,11 @@
 # Docker Build & Up
 
-目标：用一套 `docker-compose.yml` 启动校刊汇开发环境，包括 MySQL 主从、Redis、`yudao-server` 和管理后台。
+目标：用一套 `docker-compose.yml` 启动校刊汇开发环境，包括 MySQL 主从、Redis、`yudao-server`、管理后台和 App H5 浏览器预览服务。
 
 ## 启动
 
 ```shell
-cd /Users/connor/workspace/king/ruoyi-vue-pro/script/docker
+cd /Users/connor/workspace/xiaokanhui/ruoyi-vue-pro/script/docker
 cp .env.example .env
 docker compose --env-file .env up -d --build
 ```
@@ -72,15 +72,27 @@ MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info
 管理后台 Dockerfile 和 Nginx 配置位于：
 
 ```text
-/Users/connor/workspace/king/yudao-ui-admin-vue3
+/Users/connor/workspace/xiaokanhui/yudao-ui-admin-vue3
 ├── Dockerfile
 ├── .dockerignore
 └── nginx.conf
 ```
 
+App H5 浏览器预览 Dockerfile 和 Nginx 配置位于：
+
+```text
+/Users/connor/workspace/xiaokanhui/yudao-mall-uniapp
+├── Dockerfile
+├── .dockerignore
+└── nginx.conf
+```
+
+App H5 仅用于浏览器调试。最终小程序发行仍走独立小程序构建链路；不要把 H5 的同源代理当作小程序运行环境。
+
 ## 访问地址
 
 - 管理后台：http://localhost:8080
+- App H5：http://localhost:3000
 - 后端服务：http://localhost:48080
 - MySQL master：`127.0.0.1:3307`
 - MySQL slave：`127.0.0.1:3308`
@@ -97,11 +109,13 @@ docker compose --env-file .env config
 # 单独构建后端或前端
 docker compose --env-file .env build server
 docker compose --env-file .env build admin
+docker compose --env-file .env build app
 
 # 查看状态和日志
 docker compose --env-file .env ps
 docker compose --env-file .env logs -f server
 docker compose --env-file .env logs -f admin
+docker compose --env-file .env logs -f app
 
 # 验证后端健康
 curl http://localhost:48080/actuator/health
@@ -127,10 +141,17 @@ cd /Users/connor/workspace/king/ruoyi-vue-pro/script/docker
 docker compose --env-file .env up -d --build admin
 ```
 
-如果同时改了后端、前端、Dockerfile、Nginx 或 compose 配置，直接重建相关服务：
+App H5 代码更新后，重新构建并替换 `app` 容器：
 
 ```shell
-docker compose --env-file .env up -d --build server admin
+cd /Users/connor/workspace/xiaokanhui/ruoyi-vue-pro/script/docker
+docker compose --env-file .env up -d --build app
+```
+
+如果同时改了后端、前端、App、Dockerfile、Nginx 或 compose 配置，直接重建相关服务：
+
+```shell
+docker compose --env-file .env up -d --build server admin app
 ```
 
 后端 Dockerfile 使用 BuildKit cache mount 缓存 Maven 本地仓库：
@@ -139,10 +160,16 @@ docker compose --env-file .env up -d --build server admin
 /root/.m2/repository
 ```
 
-前端 Dockerfile 使用 BuildKit cache mount 缓存 pnpm store：
+管理后台 Dockerfile 使用 BuildKit cache mount 缓存 pnpm store：
 
 ```text
 /pnpm/store
+```
+
+App H5 Dockerfile 使用 BuildKit cache mount 缓存 npm cache：
+
+```text
+/root/.npm
 ```
 
 因此普通代码更新后重新执行 `up -d --build` 会重新编译代码，但不会每次从远端重新下载全部 Maven / npm 依赖。Docker Compose v2 默认启用 BuildKit；如果目标机器关闭了 BuildKit，可以显式加：

@@ -158,6 +158,32 @@ services:
       timeout: 3s
       retries: 10
 
+  app:
+    build:
+      context: ../../../yudao-mall-uniapp
+      dockerfile: Dockerfile
+      args:
+        SHOPRO_BASE_URL: ""
+        SHOPRO_DEV_BASE_URL: ""
+        SHOPRO_API_PATH: /app-api
+        SHOPRO_WEBSOCKET_PATH: /infra/ws
+        SHOPRO_H5_URL: ${APP_H5_URL:-http://localhost:3000}
+        SHOPRO_STATIC_URL: ${APP_STATIC_URL:-}
+        SHOPRO_MPLIVE_ON: ${APP_MPLIVE_ON:-0}
+        SHOPRO_TENANT_ID: ${APP_TENANT_ID:-1}
+    image: yudao-mall-uniapp-h5:dev
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
 volumes:
   mysql-master-data:
     driver: local
