@@ -124,6 +124,8 @@ services:
       ARGS: >-
         --spring.profiles.active=${SPRING_PROFILES_ACTIVE:-docker}
         ${SERVER_EXTRA_ARGS:-}
+    volumes:
+      - ${FILE_STORAGE_HOST_PATH:-/mnt/data/workspace/king/files}:/mnt/data/workspace/king/files
     depends_on:
       mysql-replica-init:
         condition: service_completed_successfully
