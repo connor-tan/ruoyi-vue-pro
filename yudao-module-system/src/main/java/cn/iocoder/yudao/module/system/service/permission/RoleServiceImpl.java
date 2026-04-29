@@ -34,6 +34,7 @@ import java.util.function.Predicate;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 import static cn.iocoder.yudao.module.system.enums.LogRecordConstants.*;
 
@@ -228,7 +229,13 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public PageResult<RoleDO> getRolePage(RolePageReqVO reqVO) {
-        return roleMapper.selectPage(reqVO);
+        Long loginUserId = getLoginUserId();
+        boolean excludeSuperAdmin = true;
+        if (loginUserId != null) {
+            Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(loginUserId);
+            excludeSuperAdmin = !hasAnySuperAdmin(roleIds);
+        }
+        return roleMapper.selectPage(reqVO, excludeSuperAdmin);
     }
 
     @Override

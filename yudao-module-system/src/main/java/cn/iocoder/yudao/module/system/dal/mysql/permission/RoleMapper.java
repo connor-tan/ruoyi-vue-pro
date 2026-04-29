@@ -16,12 +16,12 @@ import java.util.List;
 @Mapper
 public interface RoleMapper extends BaseMapperX<RoleDO> {
 
-    default PageResult<RoleDO> selectPage(RolePageReqVO reqVO) {
+    default PageResult<RoleDO> selectPage(RolePageReqVO reqVO, boolean excludeSuperAdmin) {
         return selectPage(reqVO, new LambdaQueryWrapperX<RoleDO>()
                 .likeIfPresent(RoleDO::getName, reqVO.getName())
                 .likeIfPresent(RoleDO::getCode, reqVO.getCode())
                 .eqIfPresent(RoleDO::getStatus, reqVO.getStatus())
-                .neIfPresent(RoleDO::getCode, RoleCodeEnum.SUPER_ADMIN.getCode())
+                .neIfPresent(RoleDO::getCode, excludeSuperAdmin ? RoleCodeEnum.SUPER_ADMIN.getCode() : null)
                 .betweenIfPresent(BaseDO::getCreateTime, reqVO.getCreateTime())
                 .orderByAsc(RoleDO::getSort));
     }
