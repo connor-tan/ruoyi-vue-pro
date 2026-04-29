@@ -170,7 +170,7 @@ services:
         SHOPRO_API_PATH: /app-api
         SHOPRO_WEBSOCKET_PATH: /infra/ws
         SHOPRO_H5_URL: ${APP_H5_URL:-http://localhost:3000}
-        SHOPRO_STATIC_URL: ${APP_STATIC_URL:-}
+        SHOPRO_STATIC_URL: ${APP_STATIC_URL:-http://test.yudao.iocoder.cn}
         SHOPRO_MPLIVE_ON: ${APP_MPLIVE_ON:-0}
         SHOPRO_TENANT_ID: ${APP_TENANT_ID:-1}
     image: yudao-mall-uniapp-h5:dev
