@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.role.RolePageReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
+import cn.iocoder.yudao.module.system.enums.permission.RoleCodeEnum;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.lang.Nullable;
 
@@ -20,6 +21,7 @@ public interface RoleMapper extends BaseMapperX<RoleDO> {
                 .likeIfPresent(RoleDO::getName, reqVO.getName())
                 .likeIfPresent(RoleDO::getCode, reqVO.getCode())
                 .eqIfPresent(RoleDO::getStatus, reqVO.getStatus())
+                .neIfPresent(RoleDO::getCode, RoleCodeEnum.SUPER_ADMIN.getCode())
                 .betweenIfPresent(BaseDO::getCreateTime, reqVO.getCreateTime())
                 .orderByAsc(RoleDO::getSort));
     }
