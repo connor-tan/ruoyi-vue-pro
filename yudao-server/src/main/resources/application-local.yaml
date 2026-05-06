@@ -47,7 +47,7 @@ spring:
       primary: master
       datasource:
         master:
-          url: jdbc:mysql://192.168.101.66:3307/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
+          url: jdbc:mysql://61.160.108.46:11207/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
           #          url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true # MySQL Connector/J 5.X 连接的示例
           #          url: jdbc:postgresql://127.0.0.1:5432/ruoyi-vue-pro # PostgreSQL 连接的示例
           #          url: jdbc:oracle:thin:@127.0.0.1:1521:xe # Oracle 连接的示例
@@ -56,7 +56,7 @@ spring:
           #          url: jdbc:kingbase8://127.0.0.1:54321/test  # 人大金仓 KingbaseES 连接的示例
           #          url: jdbc:postgresql://127.0.0.1:5432/postgres # OpenGauss 连接的示例
           username: root
-          password: 123456
+          password: connor-890820
           #          username: sa # SQL Server 连接的示例
           #          password: Yudao@2024 # SQL Server 连接的示例
           #          username: SYSDBA # DM 连接的示例
@@ -65,9 +65,9 @@ spring:
           #          password: Yudao@2024 # OpenGauss 连接的示例
         slave: # 模拟从库，可根据自己需要修改
           lazy: true # 开启懒加载，保证启动速度
-          url: jdbc:mysql://192.168.101.66:3308/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://61.160.108.46:11208/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true
           username: root
-          password: 123456
+          password: connor-890820
 #        tdengine: # IoT 数据库（需要 IoT 物联网再开启噢！）
 #          lazy: true # 开启懒加载，保证启动速度
 #          url: jdbc:TAOS-WS://127.0.0.1:6041/ruoyi_vue_pro?varcharAsString=true
@@ -214,8 +214,8 @@ wx:
     #    secret: 333ae72f41552af1e998fe1f54e1584a
 #    appid: wx63c280fe3248a3e7 # wenhualian的接口测试号
 #    secret: 6f270509224a7ae1296bbf1c8cb97aed
-    appid: wxc4598c446f8a9cb3 # 测试号（Kongdy 提供的）
-    secret: 4a1a04e07f6a4a0751b39c3064a92c8b
+    appid: wx794b07a185e2c7d1 # 测试号（Kongdy 提供的）
+    secret: e04961a922788853ca8e63aa5151f8c3
 #    appid: wx66186af0759f47c9 # 测试号（puhui 提供的）
 #    secret: 3218bcbd112cbc614c7264ceb20144ac
     config-storage:
@@ -232,7 +232,7 @@ yudao:
   security:
     mock-enable: true
   pay:
-    order-notify-url: https://yutou.mynatapp.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
+    order-notify-url: https://www.alamafa.cn/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
     refund-notify-url: https://yutou.mynatapp.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
     transfer-notify-url: https://yutou.mynatapp.cc/admin-api/pay/notify/transfer # 支付渠道的【转账】回调地址
   access-log: # 访问日志的配置项
