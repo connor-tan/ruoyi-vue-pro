@@ -2,11 +2,14 @@ package cn.iocoder.yudao.module.trade.service.order;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.promotion.api.combination.CombinationRecordApi;
+import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryPickUpStoreDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderDeliveryMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderMapper;
+import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
 import cn.iocoder.yudao.module.trade.service.delivery.DeliveryPickUpStoreService;
 import cn.iocoder.yudao.module.trade.service.order.handler.TradeOrderHandler;
@@ -105,6 +108,30 @@ class TradeOrderReceiveServiceImplTest {
 
         assertThrows(ServiceException.class,
                 () -> tradeOrderReceiveService.receiveOrderByMember(order.getUserId(), order.getId()));
+    }
+
+    @Test
+    void pickUpOrder_shouldCompletePickUpDeliveryAndKeepMixedOrderUndelivered() {
+        Long verifyUserId = 9L;
+        TradeOrderDO order = order(TradeOrderStatusEnum.UNDELIVERED.getStatus())
+                .setType(TradeOrderTypeEnum.NORMAL.getType());
+        TradeOrderDeliveryDO pickUpDelivery = delivery(TradeOrderStatusEnum.UNDELIVERED.getStatus())
+                .setDeliveryType(DeliveryTypeEnum.PICK_UP.getType())
+                .setPickUpStoreId(100L)
+                .setPickUpVerifyCode("12345678");
+        TradeOrderDO refreshedOrder = order(TradeOrderStatusEnum.UNDELIVERED.getStatus());
+        DeliveryPickUpStoreDO pickUpStore = new DeliveryPickUpStoreDO().setId(100L).setVerifyUserIds(List.of(verifyUserId));
+        when(pickUpStoreService.getDeliveryPickUpStore(pickUpDelivery.getPickUpStoreId())).thenReturn(pickUpStore);
+        when(tradeOrderDeliveryMapper.updateByIdAndStatus(eq(pickUpDelivery.getId()), eq(pickUpDelivery.getStatus()), any()))
+                .thenReturn(1);
+        when(statusAggregateSupport.refreshOrderStatusByDeliveries(order)).thenReturn(refreshedOrder);
+
+        tradeOrderReceiveService.pickUpOrder(verifyUserId, order, pickUpDelivery);
+
+        verify(tradeOrderDeliveryMapper).updateByIdAndStatus(eq(pickUpDelivery.getId()),
+                eq(TradeOrderStatusEnum.UNDELIVERED.getStatus()), any());
+        verify(statusAggregateSupport).refreshOrderStatusByDeliveries(order);
+        verify(tradeOrderHandler, never()).afterReceiveOrder(any());
     }
 
     private TradeOrderDO order(Integer status) {

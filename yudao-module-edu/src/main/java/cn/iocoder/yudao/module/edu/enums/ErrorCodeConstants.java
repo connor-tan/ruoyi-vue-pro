@@ -65,4 +65,9 @@ public interface ErrorCodeConstants {
     ErrorCode STUDENT_IN_USE_BY_FLOW = new ErrorCode(1_017_001_022, "学生已有升班或流转记录，无法删除");
     ErrorCode STUDENT_STATUS_READING_CURRENT_CLASS_REQUIRED = new ErrorCode(1_017_001_023, "在读学生必须存在一条当前班级记录");
     ErrorCode STUDENT_STATUS_CURRENT_CLASS_FORBIDDEN = new ErrorCode(1_017_001_024, "非在读学生不能存在当前班级记录");
+    ErrorCode STUDENT_BIND_BOUND_TO_OTHER_PARENT = new ErrorCode(1_017_001_025, "该学生已绑定其他家长，请联系学校或运营处理");
+    ErrorCode STUDENT_BIND_DUPLICATE_STUDENT = new ErrorCode(1_017_001_026, "同名学生存在多条记录，请联系运营确认");
+    ErrorCode STUDENT_BIND_CURRENT_CLASS_MULTI = new ErrorCode(1_017_001_027, "学生当前班级记录异常，请联系运营处理");
+    ErrorCode STUDENT_BIND_CURRENT_YEAR_NOT_EXISTS = new ErrorCode(1_017_001_028, "学校当前学年未维护，请联系学校或运营处理");
+    ErrorCode STUDENT_BIND_CLASS_NOT_CURRENT = new ErrorCode(1_017_001_029, "请选择学校当前学年下的班级");
 }

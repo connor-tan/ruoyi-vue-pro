@@ -26,8 +26,7 @@ public class MenuDataPermissionRule implements DataPermissionRule {
     @Override
     public Expression getExpression(String tableName, Alias tableAlias) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        assert userId != null;
-        if (tableName.equals("system_menu") && !userId.equals(1L)) {
+        if (userId != null && tableName.equals("system_menu") && !userId.equals(1L)) {
             ExpressionList<LongValue> right = new ExpressionList<>(Arrays.asList(
                     new LongValue(102),
                     new LongValue(1254),

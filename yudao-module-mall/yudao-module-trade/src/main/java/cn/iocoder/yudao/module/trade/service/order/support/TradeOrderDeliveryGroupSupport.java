@@ -144,6 +144,11 @@ public class TradeOrderDeliveryGroupSupport {
                         .setReceiverAreaId(plan.getAddress().getAreaId())
                         .setReceiverAreaName(AreaUtils.format(plan.getAddress().getAreaId()))
                         .setReceiverDetailAddress(plan.getAddress().getDetailAddress());
+            } else if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
+                respVO.setPickUpStoreId(plan.getPickUpStoreId())
+                        .setPickUpVerifyCode(plan.getPickUpVerifyCode())
+                        .setReceiverName(plan.getReceiverName())
+                        .setReceiverMobile(plan.getReceiverMobile());
             }
             return respVO;
         });
@@ -190,6 +195,11 @@ public class TradeOrderDeliveryGroupSupport {
                         .setReceiverMobile(plan.getAddress().getMobile())
                         .setReceiverAreaId(plan.getAddress().getAreaId().intValue())
                         .setReceiverDetailAddress(plan.getAddress().getDetailAddress());
+            } else if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
+                delivery.setPickUpStoreId(plan.getPickUpStoreId())
+                        .setPickUpVerifyCode(plan.getPickUpVerifyCode())
+                        .setReceiverName(plan.getReceiverName())
+                        .setReceiverMobile(plan.getReceiverMobile());
             }
             plan.setPersistedDelivery(delivery);
             return delivery;

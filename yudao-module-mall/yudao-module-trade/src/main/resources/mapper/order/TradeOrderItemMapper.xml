@@ -20,4 +20,104 @@
           AND o.status &lt;&gt; #{canceledStatus}
     </select>
 
+    <sql id="PublicationDeliveryCandidateWhere">
+        FROM trade_order_item i
+        INNER JOIN trade_order_delivery d ON d.id = i.delivery_id AND d.deleted = FALSE
+        INNER JOIN trade_order o ON o.id = i.order_id AND o.deleted = FALSE
+        WHERE i.deleted = FALSE
+          AND d.biz_scene = #{bizScene}
+          AND d.delivery_type = #{deliveryType}
+          AND d.status = #{deliveryStatus}
+          AND o.status = #{orderStatus}
+          AND o.refund_status = #{refundStatus}
+          AND i.subscription_window_id IS NOT NULL
+          AND i.subscription_offer_id IS NOT NULL
+          AND i.subscription_offer_sku_id IS NOT NULL
+          AND (i.publication_delivery_status IS NULL OR i.publication_delivery_status = #{publicationDeliveryStatus})
+        <if test="reqVO.schoolId != null">
+          AND d.school_id = #{reqVO.schoolId}
+        </if>
+        <if test="reqVO.stationId != null">
+          AND d.station_id = #{reqVO.stationId}
+        </if>
+        <if test="reqVO.windowId != null">
+          AND i.subscription_window_id = #{reqVO.windowId}
+        </if>
+        <if test="reqVO.offerId != null">
+          AND i.subscription_offer_id = #{reqVO.offerId}
+        </if>
+        <if test="reqVO.offerSkuId != null">
+          AND i.subscription_offer_sku_id = #{reqVO.offerSkuId}
+        </if>
+        <if test="reqVO.skuId != null">
+          AND i.sku_id = #{reqVO.skuId}
+        </if>
+    </sql>
+
+    <select id="selectPublicationDeliveryCandidatePage"
+            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
+        SELECT d.school_id AS schoolId,
+               COALESCE(d.school_name_snapshot, i.subscription_school_name_snapshot) AS schoolNameSnapshot,
+               d.station_id AS stationId,
+               d.station_name_snapshot AS stationNameSnapshot,
+               i.subscription_window_id AS windowId,
+               i.subscription_window_name_snapshot AS windowNameSnapshot,
+               i.subscription_offer_id AS offerId,
+               i.subscription_offer_sku_id AS offerSkuId,
+               i.sku_id AS skuId,
+               i.spu_name AS productNameSnapshot,
+               i.subscription_target_period AS targetPeriod,
+               COALESCE(SUM(i.count), 0) AS totalCount,
+               COUNT(DISTINCT i.order_id) AS orderCount,
+               COUNT(DISTINCT i.subscription_student_id) AS studentCount
+        <include refid="PublicationDeliveryCandidateWhere"/>
+        GROUP BY d.school_id,
+                 COALESCE(d.school_name_snapshot, i.subscription_school_name_snapshot),
+                 d.station_id,
+                 d.station_name_snapshot,
+                 i.subscription_window_id,
+                 i.subscription_window_name_snapshot,
+                 i.subscription_offer_id,
+                 i.subscription_offer_sku_id,
+                 i.sku_id,
+                 i.spu_name,
+                 i.subscription_target_period
+        ORDER BY d.station_id ASC, i.subscription_offer_sku_id ASC, i.sku_id ASC
+    </select>
+
+    <select id="selectPublicationDeliveryCandidateItemList"
+            resultType="cn.iocoder.yudao.module.trade.service.delivery.bo.TradePublicationDeliveryCandidateItemBO">
+        SELECT o.id AS orderId,
+               o.no AS orderNo,
+               i.id AS orderItemId,
+               i.delivery_id AS deliveryId,
+               i.user_id AS userId,
+               i.count AS count,
+               d.school_id AS schoolId,
+               COALESCE(d.school_name_snapshot, i.subscription_school_name_snapshot) AS schoolNameSnapshot,
+               d.station_id AS stationId,
+               d.station_name_snapshot AS stationNameSnapshot,
+               i.subscription_window_id AS windowId,
+               i.subscription_window_name_snapshot AS windowNameSnapshot,
+               i.subscription_offer_id AS offerId,
+               i.subscription_offer_sku_id AS offerSkuId,
+               i.sku_id AS skuId,
+               i.spu_name AS productNameSnapshot,
+               i.subscription_target_period AS targetPeriod,
+               i.subscription_student_id AS studentId,
+               i.subscription_student_name_snapshot AS studentNameSnapshot,
+               i.subscription_class_id AS classId,
+               i.subscription_class_name_snapshot AS classNameSnapshot
+        <include refid="PublicationDeliveryCandidateWhere"/>
+        ORDER BY o.id ASC, i.id ASC
+    </select>
+
+    <select id="selectUndeliveredCountByDeliveryId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM trade_order_item
+        WHERE deleted = FALSE
+          AND delivery_id = #{deliveryId}
+          AND (publication_delivery_status IS NULL OR publication_delivery_status &lt;&gt; #{publicationDeliveryStatus})
+    </select>
+
 </mapper>

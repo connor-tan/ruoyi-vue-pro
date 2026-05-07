@@ -1,7 +1,13 @@
 package cn.iocoder.yudao.module.trade.controller.admin.order.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 /**
  * 交易订单项 Base VO，提供给添加、修改、详细的子 VO 使用
@@ -96,5 +102,15 @@ public class TradeOrderItemBaseVO {
 
     @Schema(description = "订刊窗口 SKU 编号（offerSku）", example = "1")
     private Long subscriptionOfferSkuId;
+
+    @Schema(description = "刊物发货状态", example = "20")
+    private Integer publicationDeliveryStatus;
+
+    @Schema(description = "刊物发货批次编号", example = "1")
+    private Long publicationDeliveryBatchId;
+
+    @Schema(description = "刊物发货时间")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
+    private LocalDateTime publicationDeliveryTime;
 
 }

@@ -86,6 +86,14 @@ public class TradeOrderDeliveryDO extends BaseDO {
      */
     private String receiverDetailAddress;
     /**
+     * 自提门店编号
+     */
+    private Long pickUpStoreId;
+    /**
+     * 自提核销码
+     */
+    private String pickUpVerifyCode;
+    /**
      * 学校编号
      */
     private Long schoolId;

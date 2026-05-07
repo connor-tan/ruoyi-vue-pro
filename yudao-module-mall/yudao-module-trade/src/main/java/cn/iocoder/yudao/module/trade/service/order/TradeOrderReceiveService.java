@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.trade.service.order;
 
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 
 /**
  * 交易订单收货完成 Service 接口
@@ -21,6 +22,6 @@ public interface TradeOrderReceiveService {
 
     TradeOrderDO getByPickUpVerifyCode(String pickUpVerifyCode);
 
-    void pickUpOrder(Long userId, TradeOrderDO order);
+    void pickUpOrder(Long userId, TradeOrderDO order, TradeOrderDeliveryDO pickUpDelivery);
 
 }

@@ -56,6 +56,14 @@ public interface ErrorCodeConstants {
     ErrorCode ORDER_SPLIT_MARKETING_NOT_SUPPORTED = new ErrorCode(1_011_000_051, "当前订单包含多个配送组，暂不支持优惠劵、积分或营销活动混合结算");
     ErrorCode ORDER_UPDATE_ADDRESS_FAIL_EXPRESS_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_052, "交易订单修改收货地址失败，原因：订单不存在可修改的快递配送组");
     ErrorCode ORDER_PUBLICATION_OFFER_SKU_REQUIRED = new ErrorCode(1_011_000_053, "刊物商品必须携带订刊窗口 SKU 后购买");
+    ErrorCode PUBLICATION_DELIVERY_BATCH_NOT_FOUND = new ErrorCode(1_011_000_054, "刊物发货批次不存在");
+    ErrorCode PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND = new ErrorCode(1_011_000_055, "当前条件下没有可发货的刊物订单项");
+    ErrorCode PUBLICATION_DELIVERY_DUPLICATE_ORDER_ITEM = new ErrorCode(1_011_000_056, "存在已发货的刊物订单项，请刷新后重试");
+    ErrorCode PUBLICATION_DELIVERY_ITEM_UPDATE_FAIL = new ErrorCode(1_011_000_057, "刊物订单项发货状态更新失败，请刷新后重试");
+    ErrorCode ORDER_DELIVERY_FAIL_SPLIT_DELIVERY_REQUIRED = new ErrorCode(1_011_000_058,
+            "订单包含多个待发货快递配送组，请进入订单详情按配送组发货");
+    ErrorCode ORDER_PICK_UP_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_059, "交易订单自提失败，订单不存在可核销的自提配送组");
+    ErrorCode ORDER_PICK_UP_DELIVERY_DUPLICATE = new ErrorCode(1_011_000_060, "交易订单自提失败，订单存在多个自提配送组，请联系运营处理");
 
     // ========== After Sale 模块 1-011-000-100 ==========
     ErrorCode AFTER_SALE_NOT_FOUND = new ErrorCode(1_011_000_100, "售后单不存在");

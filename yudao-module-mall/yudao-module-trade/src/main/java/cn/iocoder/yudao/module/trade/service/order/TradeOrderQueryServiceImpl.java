@@ -19,6 +19,7 @@ import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderDeliveryMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderItemMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderMapper;
 import cn.iocoder.yudao.module.trade.dal.redis.RedisKeyConstants;
+import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderRefundStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
@@ -101,9 +102,13 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
         if (userIds == null) { // 没查询到用户，说明肯定也没他的订单
             return PageResult.empty();
         }
+        Set<Long> deliveryOrderIds = buildQueryConditionDeliveryOrderIds(reqVO);
+        if (deliveryOrderIds != null && deliveryOrderIds.isEmpty()) {
+            return PageResult.empty();
+        }
 
         // 分页查询
-        return tradeOrderMapper.selectPage(reqVO, userIds);
+        return tradeOrderMapper.selectPage(reqVO, userIds, deliveryOrderIds);
     }
 
     private Set<Long> buildQueryConditionUserIds(TradeOrderPageReqVO reqVO) {
@@ -126,6 +131,23 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
         return userIds;
     }
 
+    private Set<Long> buildQueryConditionDeliveryOrderIds(TradeOrderPageReqVO reqVO) {
+        boolean filterByDeliveryType = reqVO.getDeliveryType() != null
+                && !Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.MIXED.getType());
+        boolean filterByPickUp = CollUtil.isNotEmpty(reqVO.getPickUpStoreIds())
+                || StrUtil.isNotEmpty(reqVO.getPickUpVerifyCode());
+        if (!filterByDeliveryType && reqVO.getLogisticsId() == null && !filterByPickUp) {
+            return null;
+        }
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByAdminFilter(
+                filterByDeliveryType ? reqVO.getDeliveryType() : null, reqVO.getLogisticsId(),
+                reqVO.getPickUpStoreIds(), reqVO.getPickUpVerifyCode());
+        if (CollUtil.isEmpty(deliveries)) {
+            return Collections.emptySet();
+        }
+        return convertSet(deliveries, TradeOrderDeliveryDO::getOrderId);
+    }
+
     @Override
     public TradeOrderSummaryRespVO getOrderSummary(TradeOrderPageReqVO reqVO) {
         // 根据用户查询条件构建用户编号列表
@@ -133,8 +155,13 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
         if (userIds == null) { // 没查询到用户，说明肯定也没他的订单
             return new TradeOrderSummaryRespVO();
         }
+        Set<Long> deliveryOrderIds = buildQueryConditionDeliveryOrderIds(reqVO);
+        if (deliveryOrderIds != null && deliveryOrderIds.isEmpty()) {
+            return new TradeOrderSummaryRespVO();
+        }
         // 查询每个售后状态对应的数量、金额
-        List<Map<String, Object>> list = tradeOrderMapper.selectOrderSummaryGroupByRefundStatus(reqVO, userIds);
+        List<Map<String, Object>> list = tradeOrderMapper.selectOrderSummaryGroupByRefundStatus(reqVO, userIds,
+                deliveryOrderIds);
 
         TradeOrderSummaryRespVO vo = new TradeOrderSummaryRespVO().setAfterSaleCount(0L).setAfterSalePrice(0L);
         for (Map<String, Object> map : list) {

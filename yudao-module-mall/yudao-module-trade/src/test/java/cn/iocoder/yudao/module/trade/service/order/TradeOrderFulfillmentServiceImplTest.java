@@ -3,7 +3,6 @@ package cn.iocoder.yudao.module.trade.service.order;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderDeliveryReqVO;
-import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderStationDeliveryReqVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
@@ -26,11 +25,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -71,7 +72,8 @@ class TradeOrderFulfillmentServiceImplTest {
         when(deliveryAccessSupport.validateDeliveryExists(delivery.getId())).thenReturn(delivery);
         when(tradeOrderMapper.selectById(order.getId())).thenReturn(order);
         when(deliveryExpressService.validateDeliveryExpress(100L)).thenReturn(new DeliveryExpressDO().setName("顺丰"));
-        when(tradeOrderDeliveryMapper.updateByIdAndStatus(eq(delivery.getId()), eq(delivery.getStatus()), any()))
+        when(tradeOrderDeliveryMapper.updateByIdAndStatus(eq(delivery.getId()),
+                eq(TradeOrderStatusEnum.UNDELIVERED.getStatus()), any()))
                 .thenReturn(1);
         when(statusAggregateSupport.refreshOrderStatusByDeliveries(order))
                 .thenReturn(new TradeOrderDO().setId(order.getId()).setUserId(order.getUserId())
@@ -88,28 +90,62 @@ class TradeOrderFulfillmentServiceImplTest {
     }
 
     @Test
-    void stationDeliveryOrder_shouldDeliveryStationGroup() {
-        TradeOrderDeliveryDO delivery = delivery(DeliveryTypeEnum.STATION.getType());
+    void deliveryOrder_shouldRejectNonUndeliveredDeliveryStatus() {
         TradeOrderDO order = order();
-        TradeOrderStationDeliveryReqVO reqVO = new TradeOrderStationDeliveryReqVO().setDeliveryId(delivery.getId());
-        when(deliveryAccessSupport.validateDeliveryExists(delivery.getId())).thenReturn(delivery);
-        when(tradeOrderMapper.selectById(order.getId())).thenReturn(order);
-        when(tradeOrderDeliveryMapper.updateByIdAndStatus(eq(delivery.getId()), eq(delivery.getStatus()), any()))
-                .thenReturn(1);
+        for (Integer status : List.of(TradeOrderStatusEnum.UNPAID.getStatus(), TradeOrderStatusEnum.DELIVERED.getStatus(),
+                TradeOrderStatusEnum.COMPLETED.getStatus(), TradeOrderStatusEnum.CANCELED.getStatus())) {
+            TradeOrderDeliveryDO delivery = delivery(DeliveryTypeEnum.EXPRESS.getType()).setId(100L + status).setStatus(status);
+            TradeOrderDeliveryReqVO reqVO = new TradeOrderDeliveryReqVO().setDeliveryId(delivery.getId())
+                    .setLogisticsId(100L).setLogisticsNo("SF100");
+            when(deliveryAccessSupport.validateDeliveryExists(delivery.getId())).thenReturn(delivery);
+            when(tradeOrderMapper.selectById(order.getId())).thenReturn(order);
 
-        tradeOrderFulfillmentService.stationDeliveryOrder(reqVO);
-
-        verify(statusAggregateSupport).refreshOrderStatusByDeliveries(order);
+            assertThrows(ServiceException.class, () -> tradeOrderFulfillmentService.deliveryOrder(reqVO));
+        }
+        verify(tradeOrderDeliveryMapper, never()).updateByIdAndStatus(any(), any(), any());
     }
 
     @Test
-    void stationDeliveryOrder_shouldRejectWrongDeliveryType() {
+    void deliveryOrder_shouldRejectNonUndeliveredOrderStatus() {
         TradeOrderDeliveryDO delivery = delivery(DeliveryTypeEnum.EXPRESS.getType());
+        TradeOrderDO order = order().setStatus(TradeOrderStatusEnum.DELIVERED.getStatus());
+        TradeOrderDeliveryReqVO reqVO = new TradeOrderDeliveryReqVO().setDeliveryId(delivery.getId())
+                .setLogisticsId(100L).setLogisticsNo("SF100");
         when(deliveryAccessSupport.validateDeliveryExists(delivery.getId())).thenReturn(delivery);
+        when(tradeOrderMapper.selectById(order.getId())).thenReturn(order);
 
-        assertThrows(ServiceException.class,
-                () -> tradeOrderFulfillmentService.stationDeliveryOrder(
-                        new TradeOrderStationDeliveryReqVO().setDeliveryId(delivery.getId())));
+        assertThrows(ServiceException.class, () -> tradeOrderFulfillmentService.deliveryOrder(reqVO));
+
+        verify(tradeOrderDeliveryMapper, never()).updateByIdAndStatus(any(), any(), any());
+    }
+
+    @Test
+    void deliveryOrder_shouldRejectSplitExpressDeliveriesByOrderId() {
+        TradeOrderDO order = order();
+        TradeOrderDeliveryDO first = delivery(DeliveryTypeEnum.EXPRESS.getType()).setId(11L);
+        TradeOrderDeliveryDO second = delivery(DeliveryTypeEnum.EXPRESS.getType()).setId(12L);
+        TradeOrderDeliveryReqVO reqVO = new TradeOrderDeliveryReqVO().setId(order.getId())
+                .setLogisticsId(100L).setLogisticsNo("SF100");
+        when(tradeOrderMapper.selectById(order.getId())).thenReturn(order);
+        when(deliveryAccessSupport.getDeliveryListByOrderId(order.getId())).thenReturn(List.of(first, second));
+
+        assertThrows(ServiceException.class, () -> tradeOrderFulfillmentService.deliveryOrder(reqVO));
+
+        verify(tradeOrderDeliveryMapper, never()).updateByIdAndStatus(any(), any(), any());
+    }
+
+    @Test
+    void deliveryOrder_shouldRejectStationDeliveryGroup() {
+        TradeOrderDeliveryDO delivery = delivery(DeliveryTypeEnum.STATION.getType());
+        TradeOrderDO order = order();
+        TradeOrderDeliveryReqVO reqVO = new TradeOrderDeliveryReqVO().setDeliveryId(delivery.getId())
+                .setLogisticsId(100L).setLogisticsNo("SF100");
+        when(deliveryAccessSupport.validateDeliveryExists(delivery.getId())).thenReturn(delivery);
+        when(tradeOrderMapper.selectById(order.getId())).thenReturn(order);
+
+        assertThrows(ServiceException.class, () -> tradeOrderFulfillmentService.deliveryOrder(reqVO));
+
+        verify(tradeOrderDeliveryMapper, never()).updateByIdAndStatus(any(), any(), any());
     }
 
     private TradeOrderDO order() {

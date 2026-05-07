@@ -31,6 +31,14 @@ public class TradeOrderDeliveryGroupDraft {
 
     private TradeOrderDeliveryDO persistedDelivery;
 
+    private Long pickUpStoreId;
+
+    private String pickUpVerifyCode;
+
+    private String receiverName;
+
+    private String receiverMobile;
+
     private Long studentId;
 
     private String studentNameSnapshot;

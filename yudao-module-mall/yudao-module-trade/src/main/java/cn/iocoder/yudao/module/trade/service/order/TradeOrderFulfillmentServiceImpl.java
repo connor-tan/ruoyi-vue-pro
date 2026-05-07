@@ -1,14 +1,14 @@
 package cn.iocoder.yudao.module.trade.service.order;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.module.system.api.social.SocialClientApi;
 import cn.iocoder.yudao.module.system.api.social.dto.SocialWxaSubscribeMessageSendReqDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderDeliveryReqVO;
-import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderStationDeliveryReqVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
@@ -38,9 +38,10 @@ import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS;
-import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_STATION;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_DELIVERY_FAIL_REFUND_STATUS_NOT_NONE;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_DELIVERY_FAIL_SPLIT_DELIVERY_REQUIRED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_DELIVERY_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.MessageTemplateConstants.WXA_ORDER_DELIVERY;
 
@@ -76,15 +77,16 @@ public class TradeOrderFulfillmentServiceImpl implements TradeOrderFulfillmentSe
     @Transactional(rollbackFor = Exception.class)
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.ADMIN_DELIVERY)
     public void deliveryOrder(TradeOrderDeliveryReqVO deliveryReqVO) {
-        TradeOrderDeliveryDO delivery = resolveExpressDelivery(deliveryReqVO);
-        if (delivery == null) {
-            deliveryOrderLegacy(deliveryReqVO);
-            return;
+        TradeOrderDO order;
+        TradeOrderDeliveryDO delivery;
+        if (deliveryReqVO.getDeliveryId() != null) {
+            delivery = resolveExpressDeliveryById(deliveryReqVO);
+            order = validateOrderDeliverable(delivery.getOrderId());
+        } else {
+            order = validateOrderDeliverable(deliveryReqVO.getId());
+            delivery = resolveUniqueUndeliveredExpressDelivery(order.getId());
         }
-        TradeOrderDO order = validateOrderDeliverable(delivery.getOrderId());
-        if (ObjectUtil.notEqual(delivery.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
-            throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS);
-        }
+        validateExpressDelivery(delivery);
 
         TradeOrderDeliveryDO updateDeliveryObj = new TradeOrderDeliveryDO();
         DeliveryExpressDO express = null;
@@ -95,7 +97,8 @@ public class TradeOrderFulfillmentServiceImpl implements TradeOrderFulfillmentSe
             updateDeliveryObj.setLogisticsId(0L).setLogisticsNo("");
         }
         updateDeliveryObj.setStatus(TradeOrderStatusEnum.DELIVERED.getStatus()).setDeliveryTime(LocalDateTime.now());
-        int updateCount = tradeOrderDeliveryMapper.updateByIdAndStatus(delivery.getId(), delivery.getStatus(), updateDeliveryObj);
+        int updateCount = tradeOrderDeliveryMapper.updateByIdAndStatus(delivery.getId(),
+                TradeOrderStatusEnum.UNDELIVERED.getStatus(), updateDeliveryObj);
         if (updateCount == 0) {
             throw exception(ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED);
         }
@@ -117,27 +120,6 @@ public class TradeOrderFulfillmentServiceImpl implements TradeOrderFulfillmentSe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.ADMIN_DELIVERY)
-    public void stationDeliveryOrder(TradeOrderStationDeliveryReqVO reqVO) {
-        TradeOrderDeliveryDO delivery = deliveryAccessSupport.validateDeliveryExists(reqVO.getDeliveryId());
-        if (!Objects.equals(delivery.getDeliveryType(), DeliveryTypeEnum.STATION.getType())) {
-            throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_STATION);
-        }
-        TradeOrderDO order = validateOrderDeliverable(delivery.getOrderId());
-        int updateCount = tradeOrderDeliveryMapper.updateByIdAndStatus(delivery.getId(), delivery.getStatus(),
-                new TradeOrderDeliveryDO().setStatus(TradeOrderStatusEnum.DELIVERED.getStatus())
-                        .setDeliveryTime(LocalDateTime.now()));
-        if (updateCount == 0) {
-            throw exception(ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED);
-        }
-        statusAggregateSupport.refreshOrderStatusByDeliveries(order);
-        TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.DELIVERED.getStatus(),
-                MapUtil.<String, Object>builder().put("stationName", delivery.getStationNameSnapshot())
-                        .put("schoolName", delivery.getSchoolNameSnapshot()).build());
-    }
-
-    @Override
     @Async
     public void sendDeliveryOrderMessage(TradeOrderDO order, TradeOrderDeliveryReqVO deliveryReqVO) {
         Long orderId = order.getId();
@@ -154,6 +136,9 @@ public class TradeOrderFulfillmentServiceImpl implements TradeOrderFulfillmentSe
 
     private TradeOrderDO validateOrderDeliverable(Long id) {
         TradeOrderDO order = validateOrderExists(id);
+        if (ObjectUtil.notEqual(TradeOrderStatusEnum.UNDELIVERED.getStatus(), order.getStatus())) {
+            throw exception(ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED);
+        }
         if (ObjectUtil.notEqual(TradeOrderRefundStatusEnum.NONE.getStatus(), order.getRefundStatus())) {
             throw exception(ORDER_DELIVERY_FAIL_REFUND_STATUS_NOT_NONE);
         }
@@ -169,53 +154,39 @@ public class TradeOrderFulfillmentServiceImpl implements TradeOrderFulfillmentSe
         return order;
     }
 
-    private TradeOrderDeliveryDO resolveExpressDelivery(TradeOrderDeliveryReqVO deliveryReqVO) {
-        if (deliveryReqVO.getDeliveryId() != null) {
-            return deliveryAccessSupport.validateDeliveryExists(deliveryReqVO.getDeliveryId());
+    private TradeOrderDeliveryDO resolveExpressDeliveryById(TradeOrderDeliveryReqVO deliveryReqVO) {
+        TradeOrderDeliveryDO delivery = deliveryAccessSupport.validateDeliveryExists(deliveryReqVO.getDeliveryId());
+        if (deliveryReqVO.getId() != null && !Objects.equals(deliveryReqVO.getId(), delivery.getOrderId())) {
+            throw exception(ORDER_DELIVERY_NOT_FOUND);
         }
-        List<TradeOrderDeliveryDO> deliveries = deliveryAccessSupport.getDeliveryListByOrderId(deliveryReqVO.getId());
-        if (cn.hutool.core.collection.CollUtil.isEmpty(deliveries)) {
-            return null;
-        }
-        TradeOrderDeliveryDO expressDelivery = deliveryAccessSupport.findDeliveryByType(
-                deliveries, DeliveryTypeEnum.EXPRESS.getType());
-        if (expressDelivery == null) {
-            throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS);
-        }
-        return expressDelivery;
+        return delivery;
     }
 
-    private void deliveryOrderLegacy(TradeOrderDeliveryReqVO deliveryReqVO) {
-        TradeOrderDO order = validateOrderDeliverable(deliveryReqVO.getId());
-        if (ObjectUtil.notEqual(order.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+    private TradeOrderDeliveryDO resolveUniqueUndeliveredExpressDelivery(Long orderId) {
+        List<TradeOrderDeliveryDO> expressDeliveries = CollUtil.emptyIfNull(deliveryAccessSupport.getDeliveryListByOrderId(orderId))
+                .stream()
+                .filter(delivery -> Objects.equals(delivery.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType()))
+                .toList();
+        if (CollUtil.isEmpty(expressDeliveries)) {
             throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS);
         }
-
-        TradeOrderDO updateOrderObj = new TradeOrderDO();
-        DeliveryExpressDO express = null;
-        if (ObjectUtil.notEqual(deliveryReqVO.getLogisticsId(), TradeOrderDO.LOGISTICS_ID_NULL)) {
-            express = deliveryExpressService.validateDeliveryExpress(deliveryReqVO.getLogisticsId());
-            updateOrderObj.setLogisticsId(deliveryReqVO.getLogisticsId()).setLogisticsNo(deliveryReqVO.getLogisticsNo());
-        } else {
-            updateOrderObj.setLogisticsId(0L).setLogisticsNo("");
+        List<TradeOrderDeliveryDO> undeliveredExpressDeliveries = expressDeliveries.stream()
+                .filter(delivery -> TradeOrderStatusEnum.isUndelivered(delivery.getStatus()))
+                .toList();
+        if (undeliveredExpressDeliveries.size() > 1) {
+            throw exception(ORDER_DELIVERY_FAIL_SPLIT_DELIVERY_REQUIRED);
         }
-        updateOrderObj.setStatus(TradeOrderStatusEnum.DELIVERED.getStatus()).setDeliveryTime(LocalDateTime.now());
-        int updateCount = tradeOrderMapper.updateByIdAndStatus(order.getId(), order.getStatus(), updateOrderObj);
-        if (updateCount == 0) {
+        return CollUtil.getFirst(CollUtil.isNotEmpty(undeliveredExpressDeliveries)
+                ? undeliveredExpressDeliveries : expressDeliveries);
+    }
+
+    private void validateExpressDelivery(TradeOrderDeliveryDO delivery) {
+        if (ObjectUtil.notEqual(delivery.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+            throw exception(ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_EXPRESS);
+        }
+        if (ObjectUtil.notEqual(TradeOrderStatusEnum.UNDELIVERED.getStatus(), delivery.getStatus())) {
             throw exception(ORDER_DELIVERY_FAIL_STATUS_NOT_UNDELIVERED);
         }
-
-        TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.DELIVERED.getStatus(),
-                MapUtil.<String, Object>builder().put("expressName", express != null ? express.getName() : "")
-                        .put("logisticsNo", express != null ? deliveryReqVO.getLogisticsNo() : "").build());
-
-        tradeMessageService.sendMessageWhenDeliveryOrder(new TradeOrderMessageWhenDeliveryOrderReqBO()
-                .setOrderId(order.getId()).setUserId(order.getUserId()).setMessage(null));
-        self.sendDeliveryOrderMessage(order, deliveryReqVO);
-
-        order.setLogisticsId(updateOrderObj.getLogisticsId()).setLogisticsNo(updateOrderObj.getLogisticsNo())
-                .setStatus(updateOrderObj.getStatus()).setDeliveryTime(updateOrderObj.getDeliveryTime());
-        tradeOrderHandlers.forEach(handler -> handler.afterDeliveryOrder(order));
     }
 
 }

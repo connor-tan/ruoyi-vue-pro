@@ -36,4 +36,25 @@ public interface TradeOrderDeliveryMapper extends BaseMapperX<TradeOrderDelivery
                 .eq(TradeOrderDeliveryDO::getOrderId, orderId));
     }
 
+    default List<TradeOrderDeliveryDO> selectListByOrderIdAndDeliveryType(Long orderId, Integer deliveryType) {
+        return selectList(new LambdaQueryWrapperX<TradeOrderDeliveryDO>()
+                .eq(TradeOrderDeliveryDO::getOrderId, orderId)
+                .eq(TradeOrderDeliveryDO::getDeliveryType, deliveryType));
+    }
+
+    default TradeOrderDeliveryDO selectOneByPickUpVerifyCode(String pickUpVerifyCode) {
+        return selectOne(new LambdaQueryWrapperX<TradeOrderDeliveryDO>()
+                .eq(TradeOrderDeliveryDO::getPickUpVerifyCode, pickUpVerifyCode));
+    }
+
+    default List<TradeOrderDeliveryDO> selectListByAdminFilter(Integer deliveryType, Long logisticsId,
+                                                               Collection<Long> pickUpStoreIds,
+                                                               String pickUpVerifyCode) {
+        return selectList(new LambdaQueryWrapperX<TradeOrderDeliveryDO>()
+                .eqIfPresent(TradeOrderDeliveryDO::getDeliveryType, deliveryType)
+                .eqIfPresent(TradeOrderDeliveryDO::getLogisticsId, logisticsId)
+                .inIfPresent(TradeOrderDeliveryDO::getPickUpStoreId, pickUpStoreIds)
+                .likeIfPresent(TradeOrderDeliveryDO::getPickUpVerifyCode, pickUpVerifyCode));
+    }
+
 }

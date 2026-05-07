@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -73,8 +74,10 @@ public class TradeOrderController {
         // 查询订单项
         List<TradeOrderItemDO> orderItems = tradeOrderQueryService.getOrderItemListByOrderId(
                 convertSet(pageResult.getList(), TradeOrderDO::getId));
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderQueryService.getOrderDeliveryListByOrderId(
+                convertSet(pageResult.getList(), TradeOrderDO::getId));
         // 最终组合
-        return success(TradeOrderConvert.INSTANCE.convertPage(pageResult, orderItems, userMap));
+        return success(TradeOrderConvert.INSTANCE.convertPage(pageResult, orderItems, deliveries, userMap));
     }
 
     @GetMapping("/summary")
@@ -118,16 +121,8 @@ public class TradeOrderController {
     @PutMapping("/delivery")
     @Operation(summary = "订单发货")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
-    public CommonResult<Boolean> deliveryOrder(@RequestBody TradeOrderDeliveryReqVO deliveryReqVO) {
+    public CommonResult<Boolean> deliveryOrder(@Valid @RequestBody TradeOrderDeliveryReqVO deliveryReqVO) {
         tradeOrderFulfillmentService.deliveryOrder(deliveryReqVO);
-        return success(true);
-    }
-
-    @PutMapping("/station-delivery")
-    @Operation(summary = "站点配送发放")
-    @PreAuthorize("@ss.hasPermission('trade:order:update')")
-    public CommonResult<Boolean> stationDeliveryOrder(@RequestBody TradeOrderStationDeliveryReqVO reqVO) {
-        tradeOrderFulfillmentService.stationDeliveryOrder(reqVO);
         return success(true);
     }
 
@@ -179,7 +174,16 @@ public class TradeOrderController {
     @PreAuthorize("@ss.hasPermission('trade:order:query')")
     public CommonResult<TradeOrderDetailRespVO> getByPickUpVerifyCode(@RequestParam("pickUpVerifyCode") String pickUpVerifyCode) {
         TradeOrderDO tradeOrder = tradeOrderReceiveService.getByPickUpVerifyCode(pickUpVerifyCode);
-        return success(TradeOrderConvert.INSTANCE.convert2(tradeOrder, null));
+        if (tradeOrder == null) {
+            return success(null);
+        }
+        List<TradeOrderItemDO> orderItems = tradeOrderQueryService.getOrderItemListByOrderId(tradeOrder.getId());
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderQueryService.getOrderDeliveryListByOrderId(tradeOrder.getId());
+        MemberUserRespDTO user = memberUserApi.getUser(tradeOrder.getUserId());
+        MemberUserRespDTO brokerageUser = tradeOrder.getBrokerageUserId() != null ?
+                memberUserApi.getUser(tradeOrder.getBrokerageUserId()) : null;
+        List<TradeOrderLogDO> orderLogs = tradeOrderLogService.getOrderLogListByOrderId(tradeOrder.getId());
+        return success(TradeOrderConvert.INSTANCE.convert(tradeOrder, orderItems, deliveries, orderLogs, user, brokerageUser));
     }
 
 }

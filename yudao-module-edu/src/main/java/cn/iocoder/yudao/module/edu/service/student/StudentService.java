@@ -3,6 +3,8 @@ package cn.iocoder.yudao.module.edu.service.student;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentOrderContextRespDTO;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindReqVO;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentPageReqVO;
@@ -73,6 +75,15 @@ public interface StudentService {
      * @return 学生精简列表
      */
     List<AppStudentSimpleRespVO> getAppStudentSimpleList(Long belongTo);
+
+    /**
+     * App 绑定学生。
+     *
+     * @param belongTo 家长编号
+     * @param reqVO 绑定请求
+     * @return 绑定结果
+     */
+    AppStudentBindRespVO bindAppStudent(Long belongTo, @Valid AppStudentBindReqVO reqVO);
 
     /**
      * 获得用于交易链的学生归属快照。

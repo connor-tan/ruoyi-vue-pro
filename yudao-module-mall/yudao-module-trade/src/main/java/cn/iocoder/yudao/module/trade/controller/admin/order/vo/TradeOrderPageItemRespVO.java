@@ -17,6 +17,9 @@ public class TradeOrderPageItemRespVO extends TradeOrderBaseVO {
     @Schema(description = "订单项列表", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<Item> items;
 
+    @Schema(description = "配送组列表")
+    private List<TradeOrderDeliveryRespVO> deliveries;
+
     @Schema(description = "用户信息", requiredMode = Schema.RequiredMode.REQUIRED)
     private MemberUserRespVO user;
 

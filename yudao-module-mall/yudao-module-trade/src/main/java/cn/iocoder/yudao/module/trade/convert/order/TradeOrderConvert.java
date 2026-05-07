@@ -118,12 +118,16 @@ public interface TradeOrderConvert {
 
     default PageResult<TradeOrderPageItemRespVO> convertPage(PageResult<TradeOrderDO> pageResult,
                                                              List<TradeOrderItemDO> orderItems,
+                                                             List<TradeOrderDeliveryDO> deliveries,
                                                              Map<Long, MemberUserRespDTO> memberUserMap) {
         Map<Long, List<TradeOrderItemDO>> orderItemMap = convertMultiMap(orderItems, TradeOrderItemDO::getOrderId);
+        Map<Long, List<TradeOrderDeliveryDO>> deliveryMap = convertMultiMap(deliveries, TradeOrderDeliveryDO::getOrderId);
         // 转化 List
         List<TradeOrderPageItemRespVO> orderVOs = CollectionUtils.convertList(pageResult.getList(), order -> {
             List<TradeOrderItemDO> xOrderItems = orderItemMap.get(order.getId());
+            List<TradeOrderDeliveryDO> xDeliveries = deliveryMap.getOrDefault(order.getId(), List.of());
             TradeOrderPageItemRespVO orderVO = convert(order, xOrderItems);
+            orderVO.setDeliveries(CollectionUtils.convertList(xDeliveries, this::convert05));
             // 处理收货地址
             orderVO.setReceiverAreaName(AreaUtils.format(order.getReceiverAreaId()));
             // 增加用户信息

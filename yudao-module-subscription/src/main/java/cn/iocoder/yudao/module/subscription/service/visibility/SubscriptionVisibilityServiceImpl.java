@@ -6,6 +6,7 @@ import cn.iocoder.yudao.module.edu.api.student.EduStudentApi;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
 import cn.iocoder.yudao.module.product.api.publication.ProductPublicationApi;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
+import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.*;
 import cn.iocoder.yudao.module.subscription.dal.mysql.*;
 import cn.iocoder.yudao.module.subscription.enums.SubscriptionRuleEffectTypeEnum;
@@ -112,7 +113,7 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
         decision.setPublication(publication);
         decision.setTotalOfferSkuCount(CollUtil.size(offerSkus));
         decision.setGradeApplicabilityOverride(false);
-        if (publication == null || !CommonStatusEnum.isEnable(publication.getStatus())
+        if (publication == null || !ProductSpuStatusEnum.isEnable(publication.getStatus())
                 || !CommonStatusEnum.isEnable(offer.getStatus())) {
             return fillDecision(decision, false, SubscriptionVisibilityReasonEnum.PRODUCT_NOT_ENABLED,
                     Collections.emptyList(), Collections.emptyList(), null, false);

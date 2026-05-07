@@ -2,11 +2,14 @@ package cn.iocoder.yudao.module.edu.service.student;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentOrderContextRespDTO;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindReqVO;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassSaveReqVO;
@@ -48,8 +51,17 @@ import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionU
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.diffList;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.GRADE_CATALOG_DISABLED;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.GRADE_CATALOG_NOT_EXISTS;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_CLASS_NOT_EXISTS;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_GRADE_NOT_BELONG_TO_SCHOOL;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_GRADE_NOT_EXISTS;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_NOT_EXISTS;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_BIND_BOUND_TO_OTHER_PARENT;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_BIND_CLASS_NOT_CURRENT;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_BIND_CURRENT_CLASS_MULTI;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_BIND_CURRENT_YEAR_NOT_EXISTS;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_BIND_DUPLICATE_STUDENT;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS_DATE_OVERLAP;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS_DUPLICATE_START_DATE;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS_END_DATE_INVALID;
@@ -75,6 +87,12 @@ public class StudentServiceImpl implements StudentService {
     private static final Integer STUDENT_STATUS_READING = StudentStatusEnum.READING.getStatus();
     private static final String GRADE_RESOLVE_SOURCE_TARGET_YEAR_CLASS = "TARGET_YEAR_CLASS";
     private static final String GRADE_RESOLVE_SOURCE_PROMOTED_FROM_CURRENT = "PROMOTED_FROM_CURRENT";
+    private static final String STUDENT_BIND_RESULT_CREATED = "CREATED";
+    private static final String STUDENT_BIND_RESULT_BOUND = "BOUND";
+    private static final String STUDENT_BIND_RESULT_CONFIRM_REQUIRED = "CONFIRM_REQUIRED";
+    private static final String STUDENT_BIND_CONFLICT_GRADE_MISMATCH = "GRADE_MISMATCH";
+    private static final String STUDENT_BIND_CONFLICT_CLASS_MISMATCH = "CLASS_MISMATCH";
+    private static final String STUDENT_BIND_CONFLICT_CLASS_MISSING = "CLASS_MISSING";
 
     @Resource
     private StudentMapper studentMapper;
@@ -185,6 +203,55 @@ public class StudentServiceImpl implements StudentService {
                 .collect(Collectors.toMap(GradeCatalogDO::getId, Function.identity(), (item1, item2) -> item1));
         return students.stream().map(student -> buildAppStudentSimpleResp(student, schoolMap, currentStudentClassMap,
                 schoolClassMap, schoolGradeMap, gradeCatalogMap)).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AppStudentBindRespVO bindAppStudent(Long belongTo, AppStudentBindReqVO reqVO) {
+        validateParentExists(belongTo);
+        LocalDate today = LocalDate.now();
+        String studentName = StrUtil.trim(reqVO.getStudentName());
+        StudentBindClassContext selectedContext = resolveStudentBindSelectedContext(reqVO, today);
+
+        List<StudentDO> matchedStudents = studentMapper.selectSimpleListByExactStudentNameAndSchoolId(
+                studentName, selectedContext.schoolId);
+        if (CollUtil.isEmpty(matchedStudents)) {
+            StudentDO student = StudentDO.builder()
+                    .studentName(studentName)
+                    .belongTo(belongTo)
+                    .currentSchoolId(selectedContext.schoolId)
+                    .entryYear(selectedContext.entryYear)
+                    .status(STUDENT_STATUS_READING)
+                    .build();
+            student.clean();
+            studentMapper.insert(student);
+            createCurrentStudentClass(student.getId(), selectedContext, today);
+            return buildStudentBindSuccessResp(STUDENT_BIND_RESULT_CREATED, student);
+        }
+        if (matchedStudents.size() > 1) {
+            throw exception(STUDENT_BIND_DUPLICATE_STUDENT);
+        }
+
+        StudentDO student = matchedStudents.get(0);
+        if (student.getBelongTo() != null && !Objects.equals(student.getBelongTo(), belongTo)) {
+            throw exception(STUDENT_BIND_BOUND_TO_OTHER_PARENT);
+        }
+
+        List<StudentClassDO> currentStudentClasses = studentClassMapper.selectCurrentListByStudentId(student.getId());
+        if (currentStudentClasses.size() > 1) {
+            throw exception(STUDENT_BIND_CURRENT_CLASS_MULTI);
+        }
+        StudentBindClassContext currentContext = CollUtil.isEmpty(currentStudentClasses)
+                ? null : resolveStudentBindCurrentContext(currentStudentClasses.get(0));
+        String conflictType = getStudentBindConflictType(currentContext, selectedContext);
+        if (conflictType != null && !Boolean.TRUE.equals(reqVO.getForceUpdate())) {
+            return buildStudentBindConfirmResp(student, conflictType, currentContext, selectedContext);
+        }
+        if (conflictType != null) {
+            replaceCurrentStudentClass(student.getId(), currentStudentClasses, selectedContext, today);
+        }
+        bindStudentToParent(student, belongTo, selectedContext);
+        return buildStudentBindSuccessResp(STUDENT_BIND_RESULT_BOUND, student);
     }
 
     @Override
@@ -451,6 +518,177 @@ public class StudentServiceImpl implements StudentService {
             throw exception(STUDENT_NOT_EXISTS);
         }
         return student;
+    }
+
+    private StudentBindClassContext resolveStudentBindSelectedContext(AppStudentBindReqVO reqVO, LocalDate today) {
+        SchoolDO school = schoolMapper.selectById(reqVO.getSchoolId());
+        if (school == null) {
+            throw exception(SCHOOL_NOT_EXISTS);
+        }
+        SchoolGradeDO schoolGrade = schoolGradeMapper.selectById(reqVO.getSchoolGradeId());
+        if (schoolGrade == null) {
+            throw exception(SCHOOL_GRADE_NOT_EXISTS);
+        }
+        if (!Objects.equals(schoolGrade.getSchoolId(), school.getId())) {
+            throw exception(SCHOOL_GRADE_NOT_BELONG_TO_SCHOOL);
+        }
+        GradeCatalogDO gradeCatalog = validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        SchoolYearDO currentSchoolYear = schoolYearMapper.selectCurrentBySchoolId(school.getId(), today);
+        if (currentSchoolYear == null) {
+            throw exception(STUDENT_BIND_CURRENT_YEAR_NOT_EXISTS);
+        }
+        SchoolClassDO schoolClass = schoolClassMapper.selectById(reqVO.getClassId());
+        if (schoolClass == null) {
+            throw exception(SCHOOL_CLASS_NOT_EXISTS);
+        }
+        if (!Objects.equals(schoolClass.getSchoolId(), school.getId())
+                || !Objects.equals(schoolClass.getSchoolGradeId(), schoolGrade.getId())
+                || !Objects.equals(schoolClass.getSchoolYearId(), currentSchoolYear.getId())) {
+            throw exception(STUDENT_BIND_CLASS_NOT_CURRENT);
+        }
+        return new StudentBindClassContext(school, schoolGrade, gradeCatalog, schoolClass);
+    }
+
+    private StudentBindClassContext resolveStudentBindCurrentContext(StudentClassDO studentClass) {
+        SchoolClassDO schoolClass = schoolClassMapper.selectById(studentClass.getClassId());
+        if (schoolClass == null) {
+            throw exception(SCHOOL_CLASS_NOT_EXISTS);
+        }
+        SchoolDO school = schoolMapper.selectById(schoolClass.getSchoolId());
+        if (school == null) {
+            throw exception(SCHOOL_NOT_EXISTS);
+        }
+        SchoolGradeDO schoolGrade = schoolGradeMapper.selectById(schoolClass.getSchoolGradeId());
+        if (schoolGrade == null) {
+            throw exception(SCHOOL_GRADE_NOT_EXISTS);
+        }
+        GradeCatalogDO gradeCatalog = validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        return new StudentBindClassContext(school, schoolGrade, gradeCatalog, schoolClass);
+    }
+
+    private GradeCatalogDO validateGradeCatalogEnabled(Long id) {
+        GradeCatalogDO gradeCatalog = gradeCatalogMapper.selectById(id);
+        if (gradeCatalog == null) {
+            throw exception(GRADE_CATALOG_NOT_EXISTS);
+        }
+        if (CommonStatusEnum.isDisable(gradeCatalog.getStatus())) {
+            throw exception(GRADE_CATALOG_DISABLED);
+        }
+        return gradeCatalog;
+    }
+
+    private String getStudentBindConflictType(StudentBindClassContext currentContext,
+                                              StudentBindClassContext selectedContext) {
+        if (currentContext == null) {
+            return STUDENT_BIND_CONFLICT_CLASS_MISSING;
+        }
+        if (!Objects.equals(currentContext.gradeCatalogId, selectedContext.gradeCatalogId)) {
+            return STUDENT_BIND_CONFLICT_GRADE_MISMATCH;
+        }
+        if (!Objects.equals(currentContext.classId, selectedContext.classId)) {
+            return STUDENT_BIND_CONFLICT_CLASS_MISMATCH;
+        }
+        return null;
+    }
+
+    private AppStudentBindRespVO buildStudentBindConfirmResp(StudentDO student,
+                                                             String conflictType,
+                                                             StudentBindClassContext currentContext,
+                                                             StudentBindClassContext selectedContext) {
+        AppStudentBindRespVO respVO = new AppStudentBindRespVO();
+        respVO.setResult(STUDENT_BIND_RESULT_CONFIRM_REQUIRED);
+        respVO.setStudentId(student.getId());
+        respVO.setStudentName(student.getStudentName());
+        respVO.setConflictType(conflictType);
+        respVO.setMessage(buildStudentBindConfirmMessage(conflictType, currentContext, selectedContext));
+        fillStudentBindCurrentContext(respVO, currentContext);
+        fillStudentBindSelectedContext(respVO, selectedContext);
+        return respVO;
+    }
+
+    private String buildStudentBindConfirmMessage(String conflictType,
+                                                  StudentBindClassContext currentContext,
+                                                  StudentBindClassContext selectedContext) {
+        if (Objects.equals(conflictType, STUDENT_BIND_CONFLICT_GRADE_MISMATCH)) {
+            return String.format("系统中该学生当前为%s，您选择的是%s。确认后将按所选年级和班级更新学生当前班级。",
+                    currentContext.gradeName, selectedContext.gradeName);
+        }
+        if (Objects.equals(conflictType, STUDENT_BIND_CONFLICT_CLASS_MISMATCH)) {
+            return String.format("系统中该学生当前班级为%s，您选择的是%s。确认后将更新学生当前班级。",
+                    currentContext.className, selectedContext.className);
+        }
+        return "系统中该学生暂无当前班级。确认后将按所选班级建立当前班级记录。";
+    }
+
+    private void fillStudentBindCurrentContext(AppStudentBindRespVO respVO, StudentBindClassContext currentContext) {
+        if (currentContext == null) {
+            return;
+        }
+        respVO.setCurrentSchoolGradeId(currentContext.schoolGradeId);
+        respVO.setCurrentGradeCatalogId(currentContext.gradeCatalogId);
+        respVO.setCurrentGradeName(currentContext.gradeName);
+        respVO.setCurrentClassId(currentContext.classId);
+        respVO.setCurrentClassName(currentContext.className);
+    }
+
+    private void fillStudentBindSelectedContext(AppStudentBindRespVO respVO, StudentBindClassContext selectedContext) {
+        respVO.setSelectedSchoolGradeId(selectedContext.schoolGradeId);
+        respVO.setSelectedGradeCatalogId(selectedContext.gradeCatalogId);
+        respVO.setSelectedGradeName(selectedContext.gradeName);
+        respVO.setSelectedClassId(selectedContext.classId);
+        respVO.setSelectedClassName(selectedContext.className);
+    }
+
+    private void replaceCurrentStudentClass(Long studentId,
+                                            List<StudentClassDO> currentStudentClasses,
+                                            StudentBindClassContext selectedContext,
+                                            LocalDate today) {
+        for (StudentClassDO currentStudentClass : currentStudentClasses) {
+            if (currentStudentClass.getStartDate() != null && currentStudentClass.getStartDate().isBefore(today)) {
+                StudentClassDO updateObj = StudentClassDO.builder()
+                        .id(currentStudentClass.getId())
+                        .endDate(today.minusDays(1))
+                        .build();
+                studentClassMapper.updateById(updateObj);
+            } else {
+                studentClassMapper.deletePhysicallyById(currentStudentClass.getId());
+            }
+        }
+        createCurrentStudentClass(studentId, selectedContext, today);
+    }
+
+    private void createCurrentStudentClass(Long studentId, StudentBindClassContext selectedContext, LocalDate today) {
+        StudentClassDO studentClass = StudentClassDO.builder()
+                .studentId(studentId)
+                .classId(selectedContext.classId)
+                .startDate(today)
+                .endDate(null)
+                .build();
+        studentClass.clean();
+        studentClassMapper.insert(studentClass);
+    }
+
+    private void bindStudentToParent(StudentDO student, Long belongTo, StudentBindClassContext selectedContext) {
+        StudentDO updateObj = StudentDO.builder()
+                .id(student.getId())
+                .belongTo(belongTo)
+                .currentSchoolId(selectedContext.schoolId)
+                .entryYear(selectedContext.entryYear)
+                .status(STUDENT_STATUS_READING)
+                .build();
+        studentMapper.updateById(updateObj);
+        student.setBelongTo(belongTo);
+        student.setCurrentSchoolId(selectedContext.schoolId);
+        student.setEntryYear(selectedContext.entryYear);
+        student.setStatus(STUDENT_STATUS_READING);
+    }
+
+    private AppStudentBindRespVO buildStudentBindSuccessResp(String result, StudentDO student) {
+        AppStudentBindRespVO respVO = new AppStudentBindRespVO();
+        respVO.setResult(result);
+        respVO.setStudentId(student.getId());
+        respVO.setStudentName(student.getStudentName());
+        return respVO;
     }
 
     private void validateStudentUnused(Long studentId) {
@@ -725,6 +963,29 @@ public class StudentServiceImpl implements StudentService {
 
     private void deleteStudentClassByStudentIds(List<Long> studentIds) {
         studentClassMapper.deletePhysicallyByStudentIds(studentIds);
+    }
+
+    private static class StudentBindClassContext {
+
+        private final Long schoolId;
+        private final Long schoolGradeId;
+        private final Long gradeCatalogId;
+        private final Long classId;
+        private final Integer entryYear;
+        private final String gradeName;
+        private final String className;
+
+        private StudentBindClassContext(SchoolDO school, SchoolGradeDO schoolGrade,
+                                        GradeCatalogDO gradeCatalog, SchoolClassDO schoolClass) {
+            this.schoolId = school.getId();
+            this.schoolGradeId = schoolGrade.getId();
+            this.gradeCatalogId = gradeCatalog.getId();
+            this.classId = schoolClass.getId();
+            this.entryYear = schoolClass.getEntryYear();
+            this.gradeName = gradeCatalog.getGradeName();
+            this.className = schoolClass.getClassName();
+        }
+
     }
 
 }

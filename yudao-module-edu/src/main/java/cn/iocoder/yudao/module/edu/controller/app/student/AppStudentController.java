@@ -1,13 +1,18 @@
 package cn.iocoder.yudao.module.edu.controller.app.student;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindReqVO;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
 import cn.iocoder.yudao.module.edu.service.student.StudentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,5 +34,11 @@ public class AppStudentController {
     @Operation(summary = "获得当前家长绑定的学生精简列表")
     public CommonResult<List<AppStudentSimpleRespVO>> getMySimpleList() {
         return success(studentService.getAppStudentSimpleList(getLoginUserId()));
+    }
+
+    @PostMapping("/bind")
+    @Operation(summary = "绑定学生")
+    public CommonResult<AppStudentBindRespVO> bindStudent(@Valid @RequestBody AppStudentBindReqVO reqVO) {
+        return success(studentService.bindAppStudent(getLoginUserId(), reqVO));
     }
 }

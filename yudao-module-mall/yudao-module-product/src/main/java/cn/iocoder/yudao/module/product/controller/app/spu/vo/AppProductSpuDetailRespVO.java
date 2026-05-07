@@ -62,6 +62,11 @@ public class AppProductSpuDetailRespVO {
     @Schema(description = "商品销量", requiredMode = Schema.RequiredMode.REQUIRED, example = "1024")
     private Integer salesCount;
 
+    // ========== 物流相关字段 =========
+
+    @Schema(description = "配送方式数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private List<Integer> deliveryTypes;
+
     @Schema(description = "用户 App - 商品 SPU 明细的 SKU 信息")
     @Data
     public static class Sku {

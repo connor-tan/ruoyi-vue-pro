@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -44,6 +45,16 @@ public interface SchoolYearMapper extends BaseMapperX<SchoolYearDO> {
         return selectOne(new LambdaQueryWrapperX<SchoolYearDO>()
                 .eq(SchoolYearDO::getSchoolId, schoolId)
                 .eq(SchoolYearDO::getYearCatalogId, yearCatalogId));
+    }
+
+    default SchoolYearDO selectCurrentBySchoolId(Long schoolId, LocalDate today) {
+        return selectOne(new LambdaQueryWrapperX<SchoolYearDO>()
+                .eq(SchoolYearDO::getSchoolId, schoolId)
+                .le(SchoolYearDO::getStartDate, today)
+                .ge(SchoolYearDO::getEndDate, today)
+                .orderByDesc(SchoolYearDO::getStartDate)
+                .orderByDesc(SchoolYearDO::getId)
+                .last("LIMIT 1"));
     }
 
     default List<SchoolYearDO> selectListBySchoolIdsAndYearStarts(Collection<Long> schoolIds,

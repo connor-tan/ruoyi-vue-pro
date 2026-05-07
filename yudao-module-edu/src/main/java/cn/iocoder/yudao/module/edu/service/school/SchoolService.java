@@ -2,6 +2,9 @@ package cn.iocoder.yudao.module.edu.service.school;
 
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolClassSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolGradeSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.GradeCatalogSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassRespVO;
@@ -79,6 +82,14 @@ public interface SchoolService {
      */
     List<SchoolSimpleRespVO> getSchoolSimpleList();
 
+    /**
+     * 获得 App 学校精简列表。
+     *
+     * @param areaId 地区编号
+     * @return 学校精简列表
+     */
+    List<AppSchoolSimpleRespVO> getAppSchoolSimpleList(Long areaId);
+
     // ==================== 子表（年级定义） ====================
 
     /**
@@ -141,6 +152,14 @@ public interface SchoolService {
      * @return 学校年级精简列表
      */
     List<SchoolGradeSimpleRespVO> getSchoolGradeList(Long schoolId);
+
+    /**
+     * 获得 App 学校年级精简列表。
+     *
+     * @param schoolId 学校编号
+     * @return 学校年级精简列表
+     */
+    List<AppSchoolGradeSimpleRespVO> getAppSchoolGradeSimpleList(Long schoolId);
 
     // ==================== 子表（学年） ====================
 
@@ -254,5 +273,14 @@ public interface SchoolService {
      * @return 班级精简列表
      */
     List<SchoolClassSimpleRespVO> getSchoolClassList(Long schoolId, Long schoolYearId);
+
+    /**
+     * 获得 App 学校当前学年班级精简列表。
+     *
+     * @param schoolId 学校编号
+     * @param schoolGradeId 学校年级编号
+     * @return 当前学年班级精简列表
+     */
+    List<AppSchoolClassSimpleRespVO> getAppCurrentSchoolClassSimpleList(Long schoolId, Long schoolGradeId);
 
 }

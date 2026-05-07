@@ -1,6 +1,9 @@
 package cn.iocoder.yudao.module.edu.service.student;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.exception.ServiceException;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindReqVO;
+import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
@@ -21,9 +24,11 @@ import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.edu.service.station.StationService;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
+import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -33,9 +38,13 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
@@ -141,6 +150,177 @@ class StudentServiceImplTest {
     }
 
     @Test
+    void bindAppStudent_shouldCreateStudentAndBindWhenNoSameNameStudent() {
+        mockParent();
+        mockSelectedBindContext(21L, 31L, 41L, "一年级", "2026级一年级1班");
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L)).thenReturn(List.of());
+        doAnswer(invocation -> {
+            StudentDO student = invocation.getArgument(0);
+            student.setId(100L);
+            return 1;
+        }).when(studentMapper).insert(any(StudentDO.class));
+
+        AppStudentBindRespVO result = service.bindAppStudent(9L, bindReq(false));
+
+        assertEquals("CREATED", result.getResult());
+        assertEquals(100L, result.getStudentId());
+        ArgumentCaptor<StudentDO> studentCaptor = ArgumentCaptor.forClass(StudentDO.class);
+        verify(studentMapper).insert(studentCaptor.capture());
+        assertEquals("小明", studentCaptor.getValue().getStudentName());
+        assertEquals(9L, studentCaptor.getValue().getBelongTo());
+        assertEquals(11L, studentCaptor.getValue().getCurrentSchoolId());
+        assertEquals(2026, studentCaptor.getValue().getEntryYear());
+        ArgumentCaptor<StudentClassDO> studentClassCaptor = ArgumentCaptor.forClass(StudentClassDO.class);
+        verify(studentClassMapper).insert(studentClassCaptor.capture());
+        assertEquals(100L, studentClassCaptor.getValue().getStudentId());
+        assertEquals(21L, studentClassCaptor.getValue().getClassId());
+        assertEquals(LocalDate.now(), studentClassCaptor.getValue().getStartDate());
+    }
+
+    @Test
+    void bindAppStudent_shouldBindExistingStudentWhenCurrentClassMatched() {
+        mockParent();
+        mockSelectedBindContext(21L, 31L, 41L, "一年级", "2026级一年级1班");
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
+                .thenReturn(List.of(student(1L, "小明", null, 11L, StudentStatusEnum.READING.getStatus())));
+        when(studentClassMapper.selectCurrentListByStudentId(1L))
+                .thenReturn(List.of(studentClassRecord(1001L, 1L, 21L, LocalDate.now().minusDays(10))));
+
+        AppStudentBindRespVO result = service.bindAppStudent(9L, bindReq(false));
+
+        assertEquals("BOUND", result.getResult());
+        assertEquals(1L, result.getStudentId());
+        ArgumentCaptor<StudentDO> studentCaptor = ArgumentCaptor.forClass(StudentDO.class);
+        verify(studentMapper).updateById(studentCaptor.capture());
+        assertEquals(1L, studentCaptor.getValue().getId());
+        assertEquals(9L, studentCaptor.getValue().getBelongTo());
+        verify(studentClassMapper, never()).insert(any(StudentClassDO.class));
+        verify(studentClassMapper, never()).updateById(any(StudentClassDO.class));
+        verify(studentClassMapper, never()).deletePhysicallyById(any(Long.class));
+    }
+
+    @Test
+    void bindAppStudent_shouldBlockWhenExistingStudentBelongsToOtherParent() {
+        mockParent();
+        mockSelectedBindContext(21L, 31L, 41L, "一年级", "2026级一年级1班");
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
+                .thenReturn(List.of(student(1L, "小明", 10L, 11L, StudentStatusEnum.READING.getStatus())));
+
+        assertThrows(ServiceException.class, () -> service.bindAppStudent(9L, bindReq(false)));
+        verify(studentMapper, never()).updateById(any(StudentDO.class));
+        verify(studentClassMapper, never()).insert(any(StudentClassDO.class));
+    }
+
+    @Test
+    void bindAppStudent_shouldBlockWhenSameNameStudentDuplicatedInSchool() {
+        mockParent();
+        mockSelectedBindContext(21L, 31L, 41L, "一年级", "2026级一年级1班");
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
+                .thenReturn(List.of(
+                        student(1L, "小明", null, 11L, StudentStatusEnum.READING.getStatus()),
+                        student(2L, "小明", null, 11L, StudentStatusEnum.READING.getStatus())));
+
+        assertThrows(ServiceException.class, () -> service.bindAppStudent(9L, bindReq(false)));
+        verify(studentMapper, never()).updateById(any(StudentDO.class));
+        verify(studentClassMapper, never()).insert(any(StudentClassDO.class));
+    }
+
+    @Test
+    void bindAppStudent_shouldConfirmAndForceUpdateWhenGradeMismatched() {
+        mockParent();
+        mockSelectedBindContext(21L, 31L, 41L, "一年级", "2026级一年级1班");
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
+                .thenReturn(List.of(student(1L, "小明", null, 11L, StudentStatusEnum.READING.getStatus())));
+        when(studentClassMapper.selectCurrentListByStudentId(1L))
+                .thenReturn(List.of(studentClassRecord(1001L, 1L, 22L, LocalDate.now().minusDays(10))));
+        when(schoolClassMapper.selectById(22L))
+                .thenReturn(schoolClass(22L, 11L, 101L, 32L, 2026, "2026级二年级1班"));
+        when(schoolGradeMapper.selectById(32L)).thenReturn(schoolGrade(32L, 11L, 42L));
+        when(gradeCatalogMapper.selectById(42L)).thenReturn(gradeCatalog(42L, "二年级", 2));
+
+        AppStudentBindRespVO confirmResult = service.bindAppStudent(9L, bindReq(false));
+
+        assertEquals("CONFIRM_REQUIRED", confirmResult.getResult());
+        assertEquals("GRADE_MISMATCH", confirmResult.getConflictType());
+        assertEquals("二年级", confirmResult.getCurrentGradeName());
+        assertEquals("一年级", confirmResult.getSelectedGradeName());
+
+        AppStudentBindRespVO forceResult = service.bindAppStudent(9L, bindReq(true));
+
+        assertEquals("BOUND", forceResult.getResult());
+        ArgumentCaptor<StudentClassDO> updateCaptor = ArgumentCaptor.forClass(StudentClassDO.class);
+        verify(studentClassMapper).updateById(updateCaptor.capture());
+        assertEquals(1001L, updateCaptor.getValue().getId());
+        assertEquals(LocalDate.now().minusDays(1), updateCaptor.getValue().getEndDate());
+        ArgumentCaptor<StudentClassDO> insertCaptor = ArgumentCaptor.forClass(StudentClassDO.class);
+        verify(studentClassMapper).insert(insertCaptor.capture());
+        assertEquals(1L, insertCaptor.getValue().getStudentId());
+        assertEquals(21L, insertCaptor.getValue().getClassId());
+    }
+
+    @Test
+    void bindAppStudent_shouldConfirmAndForceUpdateWhenClassMismatched() {
+        mockParent();
+        mockSelectedBindContext(21L, 31L, 41L, "一年级", "2026级一年级1班");
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
+                .thenReturn(List.of(student(1L, "小明", null, 11L, StudentStatusEnum.READING.getStatus())));
+        when(studentClassMapper.selectCurrentListByStudentId(1L))
+                .thenReturn(List.of(studentClassRecord(1001L, 1L, 23L, LocalDate.now().minusDays(10))));
+        when(schoolClassMapper.selectById(23L))
+                .thenReturn(schoolClass(23L, 11L, 101L, 31L, 2026, "2026级一年级2班"));
+
+        AppStudentBindRespVO confirmResult = service.bindAppStudent(9L, bindReq(false));
+
+        assertEquals("CONFIRM_REQUIRED", confirmResult.getResult());
+        assertEquals("CLASS_MISMATCH", confirmResult.getConflictType());
+        assertEquals("2026级一年级2班", confirmResult.getCurrentClassName());
+
+        AppStudentBindRespVO forceResult = service.bindAppStudent(9L, bindReq(true));
+
+        assertEquals("BOUND", forceResult.getResult());
+        verify(studentClassMapper).updateById(any(StudentClassDO.class));
+        verify(studentClassMapper).insert(any(StudentClassDO.class));
+    }
+
+    @Test
+    void bindAppStudent_shouldConfirmAndCreateCurrentClassWhenCurrentClassMissing() {
+        mockParent();
+        mockSelectedBindContext(21L, 31L, 41L, "一年级", "2026级一年级1班");
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
+                .thenReturn(List.of(student(1L, "小明", null, 11L, StudentStatusEnum.READING.getStatus())));
+        when(studentClassMapper.selectCurrentListByStudentId(1L)).thenReturn(List.of());
+
+        AppStudentBindRespVO confirmResult = service.bindAppStudent(9L, bindReq(false));
+
+        assertEquals("CONFIRM_REQUIRED", confirmResult.getResult());
+        assertEquals("CLASS_MISSING", confirmResult.getConflictType());
+
+        AppStudentBindRespVO forceResult = service.bindAppStudent(9L, bindReq(true));
+
+        assertEquals("BOUND", forceResult.getResult());
+        verify(studentClassMapper).insert(any(StudentClassDO.class));
+        verify(studentClassMapper, never()).updateById(any(StudentClassDO.class));
+        verify(studentClassMapper, never()).deletePhysicallyById(any(Long.class));
+    }
+
+    @Test
+    void bindAppStudent_shouldRejectClassOutsideCurrentSchoolYearEvenForceUpdate() {
+        mockParent();
+        when(schoolMapper.selectById(11L)).thenReturn(school(11L, "实验小学"));
+        when(schoolGradeMapper.selectById(31L)).thenReturn(schoolGrade(31L, 11L, 41L));
+        when(gradeCatalogMapper.selectById(41L)).thenReturn(gradeCatalog(41L, "一年级", 1));
+        when(schoolYearMapper.selectCurrentBySchoolId(eq(11L), any(LocalDate.class)))
+                .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().minusDays(30)));
+        when(schoolClassMapper.selectById(21L))
+                .thenReturn(schoolClass(21L, 11L, 102L, 31L, 2026, "历史学年一年级1班"));
+
+        assertThrows(ServiceException.class, () -> service.bindAppStudent(9L, bindReq(true)));
+        verify(studentMapper, never()).selectSimpleListByExactStudentNameAndSchoolId(any(), any());
+        verify(studentMapper, never()).updateById(any(StudentDO.class));
+        verify(studentClassMapper, never()).insert(any(StudentClassDO.class));
+    }
+
+    @Test
     void getSubscriptionStudentContextMap_shouldUseTargetYearClassWhenExists() {
         when(studentMapper.selectList(any(SFunction.class), any(Collection.class)))
                 .thenReturn(List.of(student(1L, "小明", 11L, StudentStatusEnum.PENDING_ADVANCE.getStatus())));
@@ -224,13 +404,44 @@ class StudentServiceImplTest {
     }
 
     private StudentDO student(Long id, String studentName, Long currentSchoolId, Integer status) {
+        return student(id, studentName, 9L, currentSchoolId, status);
+    }
+
+    private StudentDO student(Long id, String studentName, Long belongTo, Long currentSchoolId, Integer status) {
         return StudentDO.builder()
                 .id(id)
                 .studentName(studentName)
                 .currentSchoolId(currentSchoolId)
-                .belongTo(9L)
+                .belongTo(belongTo)
                 .status(status)
                 .build();
+    }
+
+    private AppStudentBindReqVO bindReq(Boolean forceUpdate) {
+        AppStudentBindReqVO reqVO = new AppStudentBindReqVO();
+        reqVO.setSchoolId(11L);
+        reqVO.setSchoolGradeId(31L);
+        reqVO.setClassId(21L);
+        reqVO.setStudentName(" 小明 ");
+        reqVO.setForceUpdate(forceUpdate);
+        return reqVO;
+    }
+
+    private void mockParent() {
+        MemberUserRespDTO parent = new MemberUserRespDTO();
+        parent.setId(9L);
+        when(memberUserApi.getUser(9L)).thenReturn(parent);
+    }
+
+    private void mockSelectedBindContext(Long classId, Long schoolGradeId, Long gradeCatalogId,
+                                         String gradeName, String className) {
+        when(schoolMapper.selectById(11L)).thenReturn(school(11L, "实验小学"));
+        when(schoolGradeMapper.selectById(schoolGradeId)).thenReturn(schoolGrade(schoolGradeId, 11L, gradeCatalogId));
+        when(gradeCatalogMapper.selectById(gradeCatalogId)).thenReturn(gradeCatalog(gradeCatalogId, gradeName, 1));
+        when(schoolYearMapper.selectCurrentBySchoolId(eq(11L), any(LocalDate.class)))
+                .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().minusDays(30)));
+        when(schoolClassMapper.selectById(classId))
+                .thenReturn(schoolClass(classId, 11L, 101L, schoolGradeId, 2026, className));
     }
 
     private SchoolDO school(Long id, String schoolName) {
@@ -247,6 +458,15 @@ class StudentServiceImplTest {
                 .build();
     }
 
+    private StudentClassDO studentClassRecord(Long id, Long studentId, Long classId, LocalDate startDate) {
+        return StudentClassDO.builder()
+                .id(id)
+                .studentId(studentId)
+                .classId(classId)
+                .startDate(startDate)
+                .build();
+    }
+
     private SchoolClassDO schoolClass(Long id, Long schoolGradeId, String className) {
         return SchoolClassDO.builder()
                 .id(id)
@@ -256,18 +476,29 @@ class StudentServiceImplTest {
     }
 
     private SchoolClassDO schoolClass(Long id, Long schoolId, Long schoolYearId, Long schoolGradeId, String className) {
+        return schoolClass(id, schoolId, schoolYearId, schoolGradeId, null, className);
+    }
+
+    private SchoolClassDO schoolClass(Long id, Long schoolId, Long schoolYearId, Long schoolGradeId,
+                                      Integer entryYear, String className) {
         return SchoolClassDO.builder()
                 .id(id)
                 .schoolId(schoolId)
                 .schoolYearId(schoolYearId)
                 .schoolGradeId(schoolGradeId)
+                .entryYear(entryYear)
                 .className(className)
                 .build();
     }
 
     private SchoolGradeDO schoolGrade(Long id, Long gradeCatalogId) {
+        return schoolGrade(id, null, gradeCatalogId);
+    }
+
+    private SchoolGradeDO schoolGrade(Long id, Long schoolId, Long gradeCatalogId) {
         return SchoolGradeDO.builder()
                 .id(id)
+                .schoolId(schoolId)
                 .gradeCatalogId(gradeCatalogId)
                 .build();
     }

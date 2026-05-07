@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.trade.service.order;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.module.promotion.api.combination.CombinationRecordApi;
 import cn.iocoder.yudao.module.promotion.api.combination.dto.CombinationRecordRespDTO;
@@ -35,6 +34,8 @@ import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionU
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.filterList;
 import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.minusTime;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_NOT_FOUND;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PICK_UP_DELIVERY_DUPLICATE;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PICK_UP_DELIVERY_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PICK_UP_FAIL_COMBINATION_NOT_SUCCESS;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PICK_UP_FAIL_NOT_VERIFY_USER;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PICK_UP_FAIL_STATUS_NOT_UNDELIVERED;
@@ -198,30 +199,42 @@ public class TradeOrderReceiveServiceImpl implements TradeOrderReceiveService {
     @Override
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.ADMIN_PICK_UP_RECEIVE)
     public void pickUpOrderByAdmin(Long userId, Long id) {
-        self.pickUpOrder(userId, tradeOrderMapper.selectById(id));
+        TradeOrderDO order = tradeOrderMapper.selectById(id);
+        self.pickUpOrder(userId, order, resolveUniquePickUpDelivery(order));
     }
 
     @Override
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.ADMIN_PICK_UP_RECEIVE)
     public void pickUpOrderByAdmin(Long userId, String pickUpVerifyCode) {
-        self.pickUpOrder(userId, tradeOrderMapper.selectOneByPickUpVerifyCode(pickUpVerifyCode));
+        TradeOrderDeliveryDO pickUpDelivery = tradeOrderDeliveryMapper.selectOneByPickUpVerifyCode(pickUpVerifyCode);
+        if (pickUpDelivery == null) {
+            throw exception(ORDER_PICK_UP_DELIVERY_NOT_FOUND);
+        }
+        self.pickUpOrder(userId, tradeOrderMapper.selectById(pickUpDelivery.getOrderId()), pickUpDelivery);
     }
 
     @Override
     public TradeOrderDO getByPickUpVerifyCode(String pickUpVerifyCode) {
-        return tradeOrderMapper.selectOneByPickUpVerifyCode(pickUpVerifyCode);
+        TradeOrderDeliveryDO pickUpDelivery = tradeOrderDeliveryMapper.selectOneByPickUpVerifyCode(pickUpVerifyCode);
+        return pickUpDelivery == null ? null : tradeOrderMapper.selectById(pickUpDelivery.getOrderId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void pickUpOrder(Long userId, TradeOrderDO order) {
+    public void pickUpOrder(Long userId, TradeOrderDO order, TradeOrderDeliveryDO pickUpDelivery) {
         if (order == null) {
             throw exception(ORDER_NOT_FOUND);
         }
-        if (ObjUtil.notEqual(DeliveryTypeEnum.PICK_UP.getType(), order.getDeliveryType())) {
+        if (pickUpDelivery == null) {
+            throw exception(ORDER_PICK_UP_DELIVERY_NOT_FOUND);
+        }
+        if (!DeliveryTypeEnum.PICK_UP.getType().equals(pickUpDelivery.getDeliveryType())) {
             throw exception(ORDER_RECEIVE_FAIL_DELIVERY_TYPE_NOT_PICK_UP);
         }
         if (!TradeOrderStatusEnum.isUndelivered(order.getStatus())) {
+            throw exception(ORDER_PICK_UP_FAIL_STATUS_NOT_UNDELIVERED);
+        }
+        if (!TradeOrderStatusEnum.isUndelivered(pickUpDelivery.getStatus())) {
             throw exception(ORDER_PICK_UP_FAIL_STATUS_NOT_UNDELIVERED);
         }
         if (TradeOrderTypeEnum.isCombination(order.getType())) {
@@ -231,16 +244,9 @@ public class TradeOrderReceiveServiceImpl implements TradeOrderReceiveService {
                 throw exception(ORDER_PICK_UP_FAIL_COMBINATION_NOT_SUCCESS);
             }
         }
-        DeliveryPickUpStoreDO deliveryPickUpStore = pickUpStoreService.getDeliveryPickUpStore(order.getPickUpStoreId());
+        DeliveryPickUpStoreDO deliveryPickUpStore = pickUpStoreService.getDeliveryPickUpStore(pickUpDelivery.getPickUpStoreId());
         if (deliveryPickUpStore == null || !CollUtil.contains(deliveryPickUpStore.getVerifyUserIds(), userId)) {
             throw exception(ORDER_PICK_UP_FAIL_NOT_VERIFY_USER);
-        }
-        List<TradeOrderDeliveryDO> deliveries = deliveryAccessSupport.getDeliveryListByOrderId(order.getId());
-        TradeOrderDeliveryDO pickUpDelivery = deliveryAccessSupport.findDeliveryByType(
-                deliveries, DeliveryTypeEnum.PICK_UP.getType());
-        if (pickUpDelivery == null) {
-            receiveOrder0(order);
-            return;
         }
         receiveDelivery0(order, pickUpDelivery, false);
         TradeOrderDO refreshedOrder = statusAggregateSupport.refreshOrderStatusByDeliveries(order);
@@ -248,6 +254,21 @@ public class TradeOrderReceiveServiceImpl implements TradeOrderReceiveService {
             TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.COMPLETED.getStatus());
             tradeOrderHandlers.forEach(handler -> handler.afterReceiveOrder(refreshedOrder));
         }
+    }
+
+    private TradeOrderDeliveryDO resolveUniquePickUpDelivery(TradeOrderDO order) {
+        if (order == null) {
+            throw exception(ORDER_NOT_FOUND);
+        }
+        List<TradeOrderDeliveryDO> deliveries = tradeOrderDeliveryMapper.selectListByOrderIdAndDeliveryType(
+                order.getId(), DeliveryTypeEnum.PICK_UP.getType());
+        if (CollUtil.isEmpty(deliveries)) {
+            throw exception(ORDER_PICK_UP_DELIVERY_NOT_FOUND);
+        }
+        if (deliveries.size() > 1) {
+            throw exception(ORDER_PICK_UP_DELIVERY_DUPLICATE);
+        }
+        return deliveries.get(0);
     }
 
 }

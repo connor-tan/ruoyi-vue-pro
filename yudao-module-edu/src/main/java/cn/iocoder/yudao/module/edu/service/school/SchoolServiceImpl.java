@@ -7,6 +7,9 @@ import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolClassSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolGradeSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.GradeCatalogSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassRespVO;
@@ -44,6 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -212,6 +216,21 @@ public class SchoolServiceImpl implements SchoolService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<AppSchoolSimpleRespVO> getAppSchoolSimpleList(Long areaId) {
+        List<SchoolDO> schools;
+        if (areaId == null) {
+            schools = schoolMapper.selectList(new LambdaQueryWrapperX<SchoolDO>().orderByAsc(SchoolDO::getId));
+        } else {
+            List<Long> areaIds = convertList(areaApi.getSelectableAreaIds(Math.toIntExact(areaId)), Long::valueOf);
+            if (CollUtil.isEmpty(areaIds)) {
+                return Collections.emptyList();
+            }
+            schools = schoolMapper.selectListByAreaIds(areaIds);
+        }
+        return schools.stream().map(this::buildAppSchoolSimpleResp).collect(Collectors.toList());
+    }
+
     // ==================== 子表（年级定义） ====================
 
     @Override
@@ -277,6 +296,12 @@ public class SchoolServiceImpl implements SchoolService {
     public List<SchoolGradeSimpleRespVO> getSchoolGradeList(Long schoolId) {
         validateSchoolExists(schoolId);
         return buildSchoolGradeSimpleRespList(schoolGradeMapper.selectListBySchoolId(schoolId));
+    }
+
+    @Override
+    public List<AppSchoolGradeSimpleRespVO> getAppSchoolGradeSimpleList(Long schoolId) {
+        validateSchoolExists(schoolId);
+        return buildAppSchoolGradeSimpleRespList(schoolGradeMapper.selectListBySchoolId(schoolId));
     }
 
     private SchoolGradeDO validateSchoolGradeExists(Long id) {
@@ -502,6 +527,22 @@ public class SchoolServiceImpl implements SchoolService {
         return buildSchoolClassSimpleRespList(schoolClasses);
     }
 
+    @Override
+    public List<AppSchoolClassSimpleRespVO> getAppCurrentSchoolClassSimpleList(Long schoolId, Long schoolGradeId) {
+        validateSchoolExists(schoolId);
+        SchoolGradeDO schoolGrade = validateSchoolGradeExists(schoolGradeId);
+        validateSchoolGradeBelongsToSchool(schoolGrade, schoolId);
+        SchoolYearDO currentSchoolYear = schoolYearMapper.selectCurrentBySchoolId(schoolId, LocalDate.now());
+        if (currentSchoolYear == null) {
+            return Collections.emptyList();
+        }
+        return schoolClassMapper.selectListBySchoolIdAndSchoolYearIdAndSchoolGradeId(
+                        schoolId, currentSchoolYear.getId(), schoolGradeId)
+                .stream()
+                .map(this::buildAppSchoolClassSimpleResp)
+                .collect(Collectors.toList());
+    }
+
     private SchoolClassDO validateSchoolClassExists(Long id) {
         SchoolClassDO schoolClass = schoolClassMapper.selectById(id);
         if (schoolClass == null) {
@@ -724,6 +765,14 @@ public class SchoolServiceImpl implements SchoolService {
         return respVO;
     }
 
+    private AppSchoolSimpleRespVO buildAppSchoolSimpleResp(SchoolDO school) {
+        AppSchoolSimpleRespVO respVO = new AppSchoolSimpleRespVO();
+        respVO.setId(school.getId());
+        respVO.setSchoolName(school.getSchoolName());
+        respVO.setAreaId(school.getAreaId());
+        return respVO;
+    }
+
     private List<SchoolGradeRespVO> buildSchoolGradeRespList(List<SchoolGradeDO> schoolGrades) {
         Map<Long, GradeCatalogDO> gradeCatalogMap = getGradeCatalogMap(convertList(schoolGrades, SchoolGradeDO::getGradeCatalogId));
         return schoolGrades.stream()
@@ -756,6 +805,24 @@ public class SchoolServiceImpl implements SchoolService {
         return schoolGrades.stream().map(schoolGrade -> {
             GradeCatalogDO gradeCatalog = gradeCatalogMap.get(schoolGrade.getGradeCatalogId());
             SchoolGradeSimpleRespVO respVO = new SchoolGradeSimpleRespVO();
+            respVO.setId(schoolGrade.getId());
+            respVO.setGradeCatalogId(schoolGrade.getGradeCatalogId());
+            if (gradeCatalog != null) {
+                respVO.setStage(gradeCatalog.getStage());
+                respVO.setGradeNo(gradeCatalog.getGradeNo());
+                respVO.setGradeName(gradeCatalog.getGradeName());
+                respVO.setAliasName(gradeCatalog.getAliasName());
+            }
+            return respVO;
+        }).collect(Collectors.toList());
+    }
+
+    private List<AppSchoolGradeSimpleRespVO> buildAppSchoolGradeSimpleRespList(List<SchoolGradeDO> schoolGrades) {
+        Map<Long, GradeCatalogDO> gradeCatalogMap = getGradeCatalogMap(
+                convertList(schoolGrades, SchoolGradeDO::getGradeCatalogId));
+        return schoolGrades.stream().map(schoolGrade -> {
+            GradeCatalogDO gradeCatalog = gradeCatalogMap.get(schoolGrade.getGradeCatalogId());
+            AppSchoolGradeSimpleRespVO respVO = new AppSchoolGradeSimpleRespVO();
             respVO.setId(schoolGrade.getId());
             respVO.setGradeCatalogId(schoolGrade.getGradeCatalogId());
             if (gradeCatalog != null) {
@@ -819,6 +886,16 @@ public class SchoolServiceImpl implements SchoolService {
             respVO.setSchoolYearName(schoolClass.getSchoolYearName());
             return respVO;
         }).collect(Collectors.toList());
+    }
+
+    private AppSchoolClassSimpleRespVO buildAppSchoolClassSimpleResp(SchoolClassDO schoolClass) {
+        AppSchoolClassSimpleRespVO respVO = new AppSchoolClassSimpleRespVO();
+        respVO.setId(schoolClass.getId());
+        respVO.setSchoolGradeId(schoolClass.getSchoolGradeId());
+        respVO.setSchoolYearId(schoolClass.getSchoolYearId());
+        respVO.setEntryYear(schoolClass.getEntryYear());
+        respVO.setClassName(schoolClass.getClassName());
+        return respVO;
     }
 
     private SchoolClassRespVO buildSchoolClassResp(SchoolClassDO schoolClass) {

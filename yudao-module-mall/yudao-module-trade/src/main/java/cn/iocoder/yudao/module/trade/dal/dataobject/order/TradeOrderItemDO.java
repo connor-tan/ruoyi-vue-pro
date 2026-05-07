@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.trade.dal.dataobject.order;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.aftersale.AfterSaleDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
+import cn.iocoder.yudao.module.trade.enums.delivery.PublicationDeliveryStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderItemAfterSaleStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -11,6 +12,7 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -251,6 +253,23 @@ public class TradeOrderItemDO extends BaseDO {
      * 是否突破刊物商品适用年级
      */
     private Boolean subscriptionGradeApplicabilityOverride;
+
+    // ========== 刊物发货履约 ==========
+
+    /**
+     * 刊物发货状态
+     *
+     * 枚举 {@link PublicationDeliveryStatusEnum}
+     */
+    private Integer publicationDeliveryStatus;
+    /**
+     * 刊物发货批次编号
+     */
+    private Long publicationDeliveryBatchId;
+    /**
+     * 刊物发货时间
+     */
+    private LocalDateTime publicationDeliveryTime;
 
     /**
      * 商品属性

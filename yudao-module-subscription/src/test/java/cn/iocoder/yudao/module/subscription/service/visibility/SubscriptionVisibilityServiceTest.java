@@ -5,6 +5,7 @@ import cn.iocoder.yudao.module.edu.api.student.EduStudentApi;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
 import cn.iocoder.yudao.module.product.api.publication.ProductPublicationApi;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
+import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.*;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferGradeRelMapper;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferMapper;
@@ -74,6 +75,20 @@ class SubscriptionVisibilityServiceTest {
         assertEquals(SubscriptionVisibilityReasonEnum.BASE_MATCH.getReason(), decision.getReason());
         assertEquals(OFFER_SKU_ID, decision.getFinalSkus().get(0).getOfferSku().getId());
         assertFalse(decision.getGradeApplicabilityOverride());
+    }
+
+    @Test
+    void calculate_shouldRejectPublication_whenProductSpuDisabled() {
+        ProductPublicationRespDTO publication = publicationWithGrades(List.of(GRADE_ID));
+        publication.setStatus(ProductSpuStatusEnum.DISABLE.getStatus());
+        mockCommonFacts(publication, List.of(), Map.of());
+
+        SubscriptionVisibilityResultBO result = visibilityService.calculate(1L, STUDENT_ID, WINDOW_ID);
+
+        assertTrue(result.getVisibleOffers().isEmpty());
+        SubscriptionVisibilityResultBO.OfferDecision decision = result.getDecisions().get(0);
+        assertFalse(decision.getVisible());
+        assertEquals(SubscriptionVisibilityReasonEnum.PRODUCT_NOT_ENABLED.getReason(), decision.getReason());
     }
 
     @Test
@@ -218,7 +233,7 @@ class SubscriptionVisibilityServiceTest {
         ProductPublicationRespDTO publication = new ProductPublicationRespDTO();
         publication.setId(PRODUCT_SPU_ID);
         publication.setName("测试刊物");
-        publication.setStatus(CommonStatusEnum.ENABLE.getStatus());
+        publication.setStatus(ProductSpuStatusEnum.ENABLE.getStatus());
         ProductPublicationRespDTO.PublicationSpuExtDTO spuExt = new ProductPublicationRespDTO.PublicationSpuExtDTO();
         spuExt.setPublisherId(10L);
         spuExt.setPublicationTypeId(11L);
@@ -232,7 +247,7 @@ class SubscriptionVisibilityServiceTest {
         ProductPublicationRespDTO publication = new ProductPublicationRespDTO();
         publication.setId(PRODUCT_SPU_ID);
         publication.setName("测试刊物");
-        publication.setStatus(CommonStatusEnum.ENABLE.getStatus());
+        publication.setStatus(ProductSpuStatusEnum.ENABLE.getStatus());
         ProductPublicationRespDTO.PublicationSpuExtDTO spuExt = new ProductPublicationRespDTO.PublicationSpuExtDTO();
         spuExt.setPublisherId(10L);
         spuExt.setPublicationTypeId(11L);

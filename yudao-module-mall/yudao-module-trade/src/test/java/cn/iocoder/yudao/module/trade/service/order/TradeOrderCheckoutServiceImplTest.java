@@ -12,11 +12,21 @@ import cn.iocoder.yudao.module.subscription.api.order.SubscriptionOrderEligibili
 import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
 import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityRespDTO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderDeliveryRespVO;
+import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderCreateReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementRespVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
+import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderDeliveryMapper;
+import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderItemMapper;
+import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderMapper;
+import cn.iocoder.yudao.module.trade.dal.redis.no.TradeNoRedisDAO;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
+import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
 import cn.iocoder.yudao.module.trade.service.cart.CartService;
+import cn.iocoder.yudao.module.trade.service.order.handler.TradeOrderHandler;
 import cn.iocoder.yudao.module.trade.service.order.support.TradeOrderDeliveryGroupSupport;
 import cn.iocoder.yudao.module.trade.service.price.TradePriceService;
 import cn.iocoder.yudao.module.trade.service.price.bo.TradePriceCalculateReqBO;
@@ -28,7 +38,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -50,9 +62,18 @@ class TradeOrderCheckoutServiceImplTest {
     private static final long PRODUCT_SPU_ID = 40L;
     private static final long NORMAL_SKU_ID = 31L;
     private static final long NORMAL_SPU_ID = 41L;
+    private static final long PICK_UP_STORE_ID = 1000L;
     private static final int PRODUCT_PRICE = 1500;
     private static final int EXPRESS_DELIVERY_PRICE = 500;
 
+    @Mock
+    private TradeOrderMapper tradeOrderMapper;
+    @Mock
+    private TradeOrderDeliveryMapper tradeOrderDeliveryMapper;
+    @Mock
+    private TradeOrderItemMapper tradeOrderItemMapper;
+    @Mock
+    private TradeNoRedisDAO tradeNoRedisDAO;
     @Mock
     private CartService cartService;
     @Mock
@@ -65,10 +86,21 @@ class TradeOrderCheckoutServiceImplTest {
     private TradePriceService tradePriceService;
     @Mock
     private MemberAddressApi addressApi;
+    @Mock
+    private cn.iocoder.yudao.module.pay.api.order.PayOrderApi payOrderApi;
+    @Mock
+    private TradeOrderProperties tradeOrderProperties;
+    @Mock
+    private TradeOrderHandler tradeOrderHandler;
     @Spy
     private TradeOrderDeliveryGroupSupport deliveryGroupSupport = new TradeOrderDeliveryGroupSupport();
     @InjectMocks
     private TradeOrderCheckoutServiceImpl tradeOrderCheckoutService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(tradeOrderCheckoutService, "tradeOrderHandlers", List.of(tradeOrderHandler));
+    }
 
     @Test
     void settlementOrder_shouldAggregateSameStudentOfferSkuBeforeEligibilityCheck() {
@@ -127,7 +159,9 @@ class TradeOrderCheckoutServiceImplTest {
 
         AppTradeOrderSettlementReqVO reqVO = new AppTradeOrderSettlementReqVO();
         reqVO.setPointStatus(false);
-        reqVO.setPickUpStoreId(1000L);
+        reqVO.setPickUpStoreId(PICK_UP_STORE_ID);
+        reqVO.setReceiverName("自提人");
+        reqVO.setReceiverMobile("13900001111");
         reqVO.setItems(List.of(
                 publicationItem(DeliveryTypeEnum.STATION.getType()),
                 normalItem(DeliveryTypeEnum.PICK_UP.getType())));
@@ -137,7 +171,63 @@ class TradeOrderCheckoutServiceImplTest {
         assertEquals(Set.of(DeliveryTypeEnum.STATION.getType(), DeliveryTypeEnum.PICK_UP.getType()),
                 Set.copyOf(respVO.getDeliveries().stream()
                         .map(AppTradeOrderDeliveryRespVO::getDeliveryType).toList()));
+        AppTradeOrderDeliveryRespVO pickUpDelivery = respVO.getDeliveries().stream()
+                .filter(delivery -> DeliveryTypeEnum.PICK_UP.getType().equals(delivery.getDeliveryType()))
+                .findFirst().orElseThrow();
+        assertEquals(PICK_UP_STORE_ID, pickUpDelivery.getPickUpStoreId());
+        assertEquals("自提人", pickUpDelivery.getReceiverName());
+        assertEquals("13900001111", pickUpDelivery.getReceiverMobile());
         assertEquals(0, respVO.getPrice().getDeliveryPrice());
+    }
+
+    @Test
+    void createOrder_shouldPersistPickUpFactsOnDeliveryGroupForMixedOrder() {
+        mockNoDefaultAddress();
+        mockProducts(Map.of(
+                        PRODUCT_SKU_ID, productSku(PRODUCT_SKU_ID, PRODUCT_SPU_ID),
+                        NORMAL_SKU_ID, productSku(NORMAL_SKU_ID, NORMAL_SPU_ID)),
+                Map.of(
+                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.STATION.getType())),
+                        NORMAL_SPU_ID, normalSpu(List.of(DeliveryTypeEnum.PICK_UP.getType()))));
+        when(subscriptionOrderEligibilityApi.validateOrder(any())).thenReturn(eligibility());
+        mockCalculateOrderPrice();
+        when(tradeNoRedisDAO.generate(anyString())).thenReturn("NO202605070001");
+        when(tradeOrderMapper.insert(any(TradeOrderDO.class))).thenAnswer(invocation -> {
+            TradeOrderDO order = invocation.getArgument(0);
+            order.setId(1L);
+            return 1;
+        });
+        when(tradeOrderDeliveryMapper.insert(any(TradeOrderDeliveryDO.class))).thenAnswer(invocation -> {
+            TradeOrderDeliveryDO delivery = invocation.getArgument(0);
+            delivery.setId(100L + delivery.getDeliveryType());
+            return 1;
+        });
+        when(tradeOrderProperties.getPayAppKey()).thenReturn("mall");
+        when(tradeOrderProperties.getPayExpireTime()).thenReturn(Duration.ofMinutes(30));
+        when(payOrderApi.createOrder(any())).thenReturn(99L);
+
+        AppTradeOrderCreateReqVO reqVO = new AppTradeOrderCreateReqVO();
+        reqVO.setPointStatus(false);
+        reqVO.setPickUpStoreId(PICK_UP_STORE_ID);
+        reqVO.setReceiverName("自提人");
+        reqVO.setReceiverMobile("13900001111");
+        reqVO.setItems(List.of(
+                publicationItem(DeliveryTypeEnum.STATION.getType()),
+                normalItem(DeliveryTypeEnum.PICK_UP.getType())));
+        TradeOrderDO order = tradeOrderCheckoutService.createOrder(USER_ID, reqVO);
+
+        assertEquals(DeliveryTypeEnum.MIXED.getType(), order.getDeliveryType());
+        verify(tradeOrderDeliveryMapper, times(2)).insert(any(TradeOrderDeliveryDO.class));
+        ArgumentCaptor<TradeOrderDeliveryDO> deliveryCaptor = ArgumentCaptor.forClass(TradeOrderDeliveryDO.class);
+        verify(tradeOrderDeliveryMapper, times(2)).insert(deliveryCaptor.capture());
+        TradeOrderDeliveryDO pickUpDelivery = deliveryCaptor.getAllValues().stream()
+                .filter(delivery -> DeliveryTypeEnum.PICK_UP.getType().equals(delivery.getDeliveryType()))
+                .findFirst().orElseThrow();
+        assertEquals(PICK_UP_STORE_ID, pickUpDelivery.getPickUpStoreId());
+        assertEquals("自提人", pickUpDelivery.getReceiverName());
+        assertEquals("13900001111", pickUpDelivery.getReceiverMobile());
+        assertTrue(pickUpDelivery.getPickUpVerifyCode().matches("\\d{8}"));
+        assertEquals(TradeOrderStatusEnum.UNPAID.getStatus(), pickUpDelivery.getStatus());
     }
 
     @Test

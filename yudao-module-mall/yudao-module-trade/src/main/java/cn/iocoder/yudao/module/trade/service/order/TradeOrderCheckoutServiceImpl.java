@@ -118,6 +118,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         TradePriceCalculateRespBO calculateRespBO = calculatePrice(userId, settlementReqVO);
         TradeOrderDeliveryBuildResult deliveryBuildResult = deliveryGroupSupport.buildDeliveryBuildResult(
                 calculateRespBO, address, false);
+        fillPickUpGroupFacts(deliveryBuildResult, settlementReqVO, false);
         deliveryGroupSupport.applyPreviewDeliveryIdsToOrderItems(calculateRespBO, deliveryBuildResult);
 
         return TradeOrderConvert.INSTANCE.convert(calculateRespBO, address,
@@ -369,6 +370,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         MemberAddressRespDTO address = getAddress(userId, createReqVO.getAddressId());
         TradeOrderDeliveryBuildResult deliveryBuildResult = deliveryGroupSupport.buildDeliveryBuildResult(
                 calculateRespBO, address, true);
+        fillPickUpGroupFacts(deliveryBuildResult, createReqVO, true);
         TradeOrderDO order = buildTradeOrder(userId, createReqVO, calculateRespBO, deliveryBuildResult);
         List<TradeOrderItemDO> previewOrderItems = buildTradeOrderItems(order, calculateRespBO);
 
@@ -406,11 +408,27 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
             order.setReceiverName(address.getName()).setReceiverMobile(address.getMobile())
                     .setReceiverAreaId(address.getAreaId()).setReceiverDetailAddress(address.getDetailAddress());
         } else if (Objects.equals(deliveryBuildResult.summaryDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
-            order.setReceiverName(createReqVO.getReceiverName()).setReceiverMobile(createReqVO.getReceiverMobile());
-            order.setPickUpVerifyCode(RandomUtil.randomNumbers(8));
-            order.setPickUpStoreId(createReqVO.getPickUpStoreId());
+            TradeOrderDeliveryGroupDraft pickUpGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.PICK_UP.getType());
+            order.setReceiverName(pickUpGroup.getReceiverName()).setReceiverMobile(pickUpGroup.getReceiverMobile());
+            order.setPickUpVerifyCode(pickUpGroup.getPickUpVerifyCode());
+            order.setPickUpStoreId(pickUpGroup.getPickUpStoreId());
         }
         return order;
+    }
+
+    private void fillPickUpGroupFacts(TradeOrderDeliveryBuildResult deliveryBuildResult,
+                                      AppTradeOrderSettlementReqVO reqVO,
+                                      boolean generateVerifyCode) {
+        TradeOrderDeliveryGroupDraft pickUpGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.PICK_UP.getType());
+        if (pickUpGroup == null) {
+            return;
+        }
+        pickUpGroup.setPickUpStoreId(reqVO.getPickUpStoreId());
+        pickUpGroup.setReceiverName(reqVO.getReceiverName());
+        pickUpGroup.setReceiverMobile(reqVO.getReceiverMobile());
+        if (generateVerifyCode) {
+            pickUpGroup.setPickUpVerifyCode(RandomUtil.randomNumbers(8));
+        }
     }
 
     private List<TradeOrderItemDO> buildTradeOrderItems(TradeOrderDO tradeOrderDO,

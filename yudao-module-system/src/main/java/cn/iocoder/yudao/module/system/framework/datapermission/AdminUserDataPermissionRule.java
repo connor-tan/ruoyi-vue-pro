@@ -22,8 +22,7 @@ public class AdminUserDataPermissionRule implements DataPermissionRule {
     @Override
     public Expression getExpression(String tableName, Alias tableAlias) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        assert userId != null;
-        if (tableName.equals("system_users") && !userId.equals(1L)) {
+        if (userId != null && tableName.equals("system_users") && !userId.equals(1L)) {
             return new NotEqualsTo(MyBatisUtils.buildColumn(tableName, tableAlias, "id"), new LongValue(1));
         }
         return null;
