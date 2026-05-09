@@ -11,7 +11,6 @@ import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
-import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.product.service.history.ProductBrowseHistoryService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
@@ -35,7 +34,7 @@ import java.util.Set;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SPU_NOT_ENABLE;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SPU_NOT_EXISTS;
@@ -50,8 +49,6 @@ public class AppProductSpuController {
     private ProductSpuService productSpuService;
     @Resource
     private ProductSkuService productSkuService;
-    @Resource
-    private ProductCategoryService categoryService;
     @Resource
     private ProductBrowseHistoryService productBrowseHistoryService;
 
@@ -68,7 +65,7 @@ public class AppProductSpuController {
         // 拼接返回
         list.forEach(spu -> spu.setSalesCount(spu.getSalesCount() + spu.getVirtualSalesCount()));
         List<AppProductSpuRespVO> voList = BeanUtils.toBean(list, AppProductSpuRespVO.class);
-        fillBizScene(voList);
+        fillCategories(voList);
         return success(voList);
     }
 
@@ -84,7 +81,7 @@ public class AppProductSpuController {
         // 拼接返回
         pageResult.getList().forEach(spu -> spu.setSalesCount(spu.getSalesCount() + spu.getVirtualSalesCount()));
         PageResult<AppProductSpuRespVO> voPageResult = BeanUtils.toBean(pageResult, AppProductSpuRespVO.class);
-        fillBizScene(voPageResult.getList());
+        fillCategories(voPageResult.getList());
         return success(voPageResult);
     }
 
@@ -113,21 +110,23 @@ public class AppProductSpuController {
         spu.setSalesCount(spu.getSalesCount() + spu.getVirtualSalesCount());
         AppProductSpuDetailRespVO spuVO = BeanUtils.toBean(spu, AppProductSpuDetailRespVO.class)
                 .setSkus(BeanUtils.toBean(skus, AppProductSpuDetailRespVO.Sku.class));
-        ProductCategoryDO category = categoryService.getCategory(spuVO.getCategoryId());
-        spuVO.setBizScene(category == null ? null : category.getBizScene());
+        Map<Long, List<ProductCategoryDO>> categoryMap = productSpuService.getCategoryListMapBySpuIds(List.of(spuVO.getId()));
+        List<ProductCategoryDO> categories = categoryMap.get(spuVO.getId());
+        spuVO.setCategoryIds(convertList(categories, ProductCategoryDO::getId));
+        spuVO.setCategories(BeanUtils.toBean(categories, AppProductSpuDetailRespVO.Category.class));
         return success(spuVO);
     }
 
-    private void fillBizScene(List<AppProductSpuRespVO> spus) {
+    private void fillCategories(List<AppProductSpuRespVO> spus) {
         if (CollUtil.isEmpty(spus)) {
             return;
         }
-        Map<Long, ProductCategoryDO> categoryMap = convertMap(
-                categoryService.getEnableCategoryList(convertList(spus, AppProductSpuRespVO::getCategoryId)),
-                ProductCategoryDO::getId);
+        Map<Long, List<ProductCategoryDO>> categoryMap = productSpuService.getCategoryListMapBySpuIds(
+                convertSet(spus, AppProductSpuRespVO::getId));
         spus.forEach(spu -> {
-            ProductCategoryDO category = categoryMap.get(spu.getCategoryId());
-            spu.setBizScene(category == null ? null : category.getBizScene());
+            List<ProductCategoryDO> categories = categoryMap.get(spu.getId());
+            spu.setCategoryIds(convertList(categories, ProductCategoryDO::getId));
+            spu.setCategories(BeanUtils.toBean(categories, AppProductSpuRespVO.Category.class));
         });
     }
 

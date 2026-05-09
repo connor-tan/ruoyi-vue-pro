@@ -19,6 +19,16 @@ public interface ErrorCodeConstants {
     ErrorCode CATEGORY_BIZ_SCENE_REQUIRED = new ErrorCode(1_008_001_006, "商品分类业务场景不能为空");
     ErrorCode CATEGORY_BIZ_SCENE_INVALID = new ErrorCode(1_008_001_007, "商品分类业务场景不合法");
     ErrorCode CATEGORY_PARENT_BIZ_SCENE_INCONSISTENT = new ErrorCode(1_008_001_008, "父子分类业务场景必须一致");
+    ErrorCode CATEGORY_UPDATE_FAIL_REFERENCED_BIZ_SCENE = new ErrorCode(1_008_001_009, "商品分类已被商品引用，不能修改业务场景");
+    ErrorCode CATEGORY_UPDATE_FAIL_REFERENCED_STATUS = new ErrorCode(1_008_001_010, "商品分类已被商品引用，不能禁用");
+    ErrorCode CATEGORY_UPDATE_FAIL_REFERENCED_PARENT = new ErrorCode(1_008_001_011, "商品分类已被商品引用，不能修改上级分类");
+    ErrorCode CATEGORY_UPDATE_FAIL_CHILDREN_PARENT = new ErrorCode(1_008_001_012, "商品分类存在子分类，不能修改上级分类");
+    ErrorCode CATEGORY_PUBLICATION_ROOT_EXISTS = new ErrorCode(1_008_001_013, "刊物顶级分类已存在，新增刊物分类必须挂在刊物根分类下");
+    ErrorCode CATEGORY_PUBLICATION_MUST_UNDER_ROOT = new ErrorCode(1_008_001_014, "刊物分类必须挂在刊物根分类下");
+    ErrorCode CATEGORY_PUBLICATION_ROOT_DUPLICATED = new ErrorCode(1_008_001_015, "刊物顶级分类数据异常，请保留唯一刊物根分类");
+    ErrorCode CATEGORY_PUBLICATION_ROOT_UPDATE_FORBIDDEN = new ErrorCode(1_008_001_016, "刊物根分类不能修改业务场景或上级分类");
+    ErrorCode CATEGORY_PUBLICATION_ROOT_DISABLE_FORBIDDEN = new ErrorCode(1_008_001_017, "刊物根分类不能禁用");
+    ErrorCode CATEGORY_PUBLICATION_ROOT_DELETE_FORBIDDEN = new ErrorCode(1_008_001_018, "刊物根分类不能删除");
 
     // ========== 商品品牌相关编号 1-008-002-000 ==========
     ErrorCode BRAND_NOT_EXISTS = new ErrorCode(1_008_002_000, "品牌不存在");
@@ -44,6 +54,8 @@ public interface ErrorCodeConstants {
     ErrorCode NORMAL_PRODUCT_DELIVERY_REQUIRED = new ErrorCode(1_008_005_006, "普通商品配送方式不能为空");
     ErrorCode NORMAL_PRODUCT_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_005_007, "普通商品配送方式只允许快递发货或用户自提");
     ErrorCode NORMAL_PRODUCT_DELIVERY_TEMPLATE_REQUIRED = new ErrorCode(1_008_005_008, "普通商品选择快递发货时，运费模板不能为空");
+    ErrorCode SPU_SAVE_FAIL_CATEGORY_REQUIRED = new ErrorCode(1_008_005_009, "商品分类不能为空");
+    ErrorCode SPU_SAVE_FAIL_CATEGORY_BIZ_SCENE_INCONSISTENT = new ErrorCode(1_008_005_010, "商品分类业务场景必须与商品业务场景一致");
 
     // ========== 商品 SKU 1-008-006-000 ==========
     ErrorCode SKU_NOT_EXISTS = new ErrorCode(1_008_006_000, "商品 SKU 不存在");

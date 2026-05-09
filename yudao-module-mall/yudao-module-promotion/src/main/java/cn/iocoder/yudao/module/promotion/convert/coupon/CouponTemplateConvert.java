@@ -33,7 +33,7 @@ public interface CouponTemplateConvert {
 
     PageResult<CouponTemplateRespVO> convertPage(PageResult<CouponTemplateDO> page);
 
-    CouponTemplatePageReqVO convert(AppCouponTemplatePageReqVO pageReqVO, List<Integer> canTakeTypes, Integer productScope, Long productScopeValue);
+    CouponTemplatePageReqVO convert(AppCouponTemplatePageReqVO pageReqVO, List<Integer> canTakeTypes, Integer productScope, List<Long> productScopeValues);
 
     PageResult<AppCouponTemplateRespVO> convertAppPage(PageResult<CouponTemplateDO> pageResult);
 

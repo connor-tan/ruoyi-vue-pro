@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.edu.api.gradecatalog.EduGradeCatalogApi;
 import cn.iocoder.yudao.module.edu.api.gradecatalog.dto.EduGradeCatalogRespDTO;
+import cn.iocoder.yudao.module.product.api.category.ProductCategoryApi;
 import cn.iocoder.yudao.module.product.api.publication.ProductPublicationApi;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
@@ -47,6 +48,8 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     @Resource
     private ProductPublicationApi productPublicationApi;
     @Resource
+    private ProductCategoryApi productCategoryApi;
+    @Resource
     private EduGradeCatalogApi gradeCatalogApi;
     @Resource
     private SubscriptionRuleMapper ruleMapper;
@@ -67,7 +70,7 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public SubscriptionOfferBatchCreateRespVO batchCreateByQuery(SubscriptionOfferBatchCreateByQueryReqVO reqVO) {
-        SubscriptionOfferAvailablePageReqVO query = reqVO.getQuery();
+        SubscriptionOfferAvailablePageReqVO query = normalizeAvailableQuery(reqVO.getQuery());
         query.setWindowId(reqVO.getWindowId());
         query.setCandidateStatus(CANDIDATE_STATUS_CAN_ADD);
         SubscriptionWindowDO window = windowService.validateWindowExists(reqVO.getWindowId());
@@ -83,11 +86,21 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     @Override
     public PageResult<SubscriptionOfferAvailableRespVO> getAvailablePage(SubscriptionOfferAvailablePageReqVO reqVO) {
         SubscriptionWindowDO window = windowService.validateWindowExists(reqVO.getWindowId());
+        SubscriptionOfferAvailablePageReqVO query = normalizeAvailableQuery(reqVO);
         int offset = (reqVO.getPageNo() - 1) * reqVO.getPageSize();
         List<SubscriptionOfferAvailableRespVO> candidates =
-                queryAvailableCandidates(reqVO, window, offset, reqVO.getPageSize());
-        Long total = offerMapper.selectAvailableCandidateCount(reqVO, window.getTargetPeriod());
+                queryAvailableCandidates(query, window, offset, reqVO.getPageSize());
+        Long total = offerMapper.selectAvailableCandidateCount(query, window.getTargetPeriod());
         return new PageResult<>(candidates, total == null ? 0L : total);
+    }
+
+    private SubscriptionOfferAvailablePageReqVO normalizeAvailableQuery(SubscriptionOfferAvailablePageReqVO reqVO) {
+        SubscriptionOfferAvailablePageReqVO query = BeanUtils.toBean(reqVO, SubscriptionOfferAvailablePageReqVO.class);
+        if (CollUtil.isNotEmpty(query.getCategoryIds())) {
+            query.setCategoryIds(new ArrayList<>(
+                    productCategoryApi.getSelfAndDescendantCategoryIds(query.getCategoryIds())));
+        }
+        return query;
     }
 
     private SubscriptionOfferBatchCreateRespVO batchCreateOffer0(SubscriptionWindowDO window, Collection<Long> productSpuIds,
@@ -143,6 +156,8 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
                 offerMapper.selectAvailableCandidates(reqVO, window.getTargetPeriod(), offset, limit);
         candidates.forEach(candidate -> {
             candidate.setMatchedGradeCatalogIds(parseGradeCatalogIds(candidate.getMatchedGradeCatalogIdText()));
+            candidate.setCategoryIds(parseIdText(candidate.getCategoryIdText()));
+            candidate.setCategoryNames(parseText(candidate.getCategoryNameText()));
             fillCandidateDisabledReason(candidate);
         });
         Set<Long> gradeCatalogIds = candidates.stream()
@@ -159,12 +174,25 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     }
 
     private List<Long> parseGradeCatalogIds(String text) {
+        return parseIdText(text);
+    }
+
+    private List<Long> parseIdText(String text) {
         if (text == null || text.isBlank()) {
             return Collections.emptyList();
         }
         return Arrays.stream(text.split(","))
                 .filter(item -> item != null && !item.isBlank())
                 .map(Long::valueOf)
+                .toList();
+    }
+
+    private List<String> parseText(String text) {
+        if (text == null || text.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(text.split(","))
+                .filter(item -> item != null && !item.isBlank())
                 .toList();
     }
 
@@ -318,8 +346,9 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
         SubscriptionOfferRespVO respVO = BeanUtils.toBean(offer, SubscriptionOfferRespVO.class);
         if (publication != null) {
             respVO.setProductName(publication.getName());
-            respVO.setCategoryId(publication.getCategoryId());
-            respVO.setCategoryName(publication.getCategoryName());
+            respVO.setCategoryIds(publication.getCategoryIds());
+            respVO.setCategoryNames(convertList(publication.getCategories(), ProductPublicationRespDTO.Category::getName));
+            respVO.setCategories(publication.getCategories());
             respVO.setPicUrl(publication.getPicUrl());
             respVO.setPrice(publication.getPrice());
             respVO.setPublication(publication);

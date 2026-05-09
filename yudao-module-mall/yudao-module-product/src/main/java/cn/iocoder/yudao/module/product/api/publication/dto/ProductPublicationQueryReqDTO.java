@@ -2,6 +2,8 @@ package cn.iocoder.yudao.module.product.api.publication.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 刊物商品查询请求 DTO
  */
@@ -14,9 +16,9 @@ public class ProductPublicationQueryReqDTO {
     private String productName;
 
     /**
-     * 商品分类编号
+     * 商品分类编号数组
      */
-    private Long categoryId;
+    private List<Long> categoryIds;
 
     /**
      * 出版社编号

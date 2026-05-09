@@ -16,6 +16,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Mapper
 public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
@@ -35,11 +36,11 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
         Integer tabType = reqVO.getTabType();
         LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<ProductSpuDO>()
                 .likeIfPresent(ProductSpuDO::getName, reqVO.getName())
-                .eqIfPresent(ProductSpuDO::getCategoryId, reqVO.getCategoryId())
-                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds)
+                .eqIfPresent(ProductSpuDO::getBizScene, reqVO.getBizScene())
                 .betweenIfPresent(ProductSpuDO::getCreateTime, reqVO.getCreateTime())
                 .orderByDesc(ProductSpuDO::getSort)
                 .orderByDesc(ProductSpuDO::getId);
+        appendCategoryExists(queryWrapper, categoryIds);
         appendTabQuery(tabType, queryWrapper);
         return selectPage(reqVO, queryWrapper);
     }
@@ -49,9 +50,9 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
      *
      * @return 触发警戒库存的 SPU 数量
      */
-    default Long selectCountByTab(Integer tabType, Collection<Long> categoryIds) {
+    default Long selectCountByTab(Integer tabType, String bizScene) {
         LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<ProductSpuDO>()
-                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds);
+                .eqIfPresent(ProductSpuDO::getBizScene, bizScene);
         appendTabQuery(tabType, queryWrapper);
         return selectCount(queryWrapper);
     }
@@ -61,10 +62,12 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
      */
     default PageResult<ProductSpuDO> selectPage(AppProductSpuPageReqVO pageReqVO, Set<Long> categoryIds) {
         LambdaQueryWrapperX<ProductSpuDO> query = new LambdaQueryWrapperX<ProductSpuDO>()
+                .inIfPresent(ProductSpuDO::getId, pageReqVO.getIds())
                 // 关键字匹配，目前只匹配商品名
                 .likeIfPresent(ProductSpuDO::getName, pageReqVO.getKeyword())
-                // 分类
-                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds);
+                .eqIfPresent(ProductSpuDO::getBizScene, pageReqVO.getBizScene());
+        // 分类
+        appendCategoryExists(query, categoryIds);
         // 上架状态 且有库存
         query.eq(ProductSpuDO::getStatus, ProductSpuStatusEnum.ENABLE.getStatus());
 
@@ -82,6 +85,24 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
             query.orderByDesc(ProductSpuDO::getSort).orderByDesc(ProductSpuDO::getId);
         }
         return selectPage(pageReqVO, query);
+    }
+
+    static void appendCategoryExists(LambdaQueryWrapperX<ProductSpuDO> query, Collection<Long> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return;
+        }
+        String categoryIdText = categoryIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+        if (categoryIdText.isEmpty()) {
+            return;
+        }
+        query.exists("SELECT 1 FROM product_spu_category_rel rel"
+                + " WHERE rel.deleted = b'0'"
+                + " AND rel.spu_id = product_spu.id"
+                + " AND rel.category_id IN (" + categoryIdText + ")");
     }
 
     /**

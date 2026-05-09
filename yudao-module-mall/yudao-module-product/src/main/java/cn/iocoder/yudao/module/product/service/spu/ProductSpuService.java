@@ -6,6 +6,7 @@ import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuPageReq
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuUpdateStatusReqVO;
 import cn.iocoder.yudao.module.product.controller.app.spu.vo.AppProductSpuPageReqVO;
+import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import jakarta.validation.Valid;
 import org.springframework.scheduling.annotation.Async;
@@ -88,6 +89,14 @@ public interface ProductSpuService {
     List<ProductSpuDO> getSpuListByStatus(Integer status);
 
     /**
+     * 获得商品 SPU 的分类列表 Map
+     *
+     * @param spuIds SPU 编号数组
+     * @return SPU 编号与分类列表的映射
+     */
+    Map<Long, List<ProductCategoryDO>> getCategoryListMapBySpuIds(Collection<Long> spuIds);
+
+    /**
      * 获得商品 SPU 分页，提供给挂你兰后台使用
      *
      * @param pageReqVO 分页查询
@@ -131,6 +140,14 @@ public interface ProductSpuService {
      * @return SPU 数量
      */
     Long getSpuCountByCategoryId(Long categoryId);
+
+    /**
+     * 通过分类 categoryIds 查询 SPU 个数
+     *
+     * @param categoryIds 分类 categoryIds
+     * @return SPU 数量
+     */
+    Long getSpuCountByCategoryIds(Collection<Long> categoryIds);
 
 
     /**

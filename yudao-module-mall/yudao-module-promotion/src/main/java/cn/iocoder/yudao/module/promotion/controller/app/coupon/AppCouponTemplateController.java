@@ -1,9 +1,11 @@
 package cn.iocoder.yudao.module.promotion.controller.app.coupon;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.object.ObjectUtils;
+import cn.iocoder.yudao.module.product.api.category.ProductCategoryApi;
 import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
 import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
 import cn.iocoder.yudao.module.promotion.controller.app.coupon.vo.template.AppCouponTemplatePageReqVO;
@@ -45,6 +47,8 @@ public class AppCouponTemplateController {
 
     @Resource
     private ProductSpuApi productSpuApi;
+    @Resource
+    private ProductCategoryApi productCategoryApi;
 
     @GetMapping("/get")
     @Operation(summary = "获得优惠劵模版")
@@ -73,14 +77,25 @@ public class AppCouponTemplateController {
             @RequestParam(value = "spuId", required = false) Long spuId,
             @RequestParam(value = "productScope", required = false) Integer productScope,
             @RequestParam(value = "count", required = false, defaultValue = "10") Integer count) {
-        // 1.1 处理查询条件：商品范围编号
-        Long productScopeValue = getProductScopeValue(productScope, spuId);
-        // 1.2 处理查询条件：领取方式 = 直接领取
+        // 1.1 处理查询条件：领取方式 = 直接领取
         List<Integer> canTakeTypes = singletonList(CouponTakeTypeEnum.USER.getType());
+
+        // 1.2 商品详情场景：返回全场券、指定商品券、命中任一分类或父分类的分类券
+        if (productScope == null && spuId != null) {
+            List<CouponTemplateDO> list = getCouponTemplateListBySpu(canTakeTypes, spuId, count);
+            Map<Long, Boolean> canCanTakeMap = couponService.getUserCanCanTakeMap(getLoginUserId(), list);
+            return success(CouponTemplateConvert.INSTANCE.convertAppList(list, canCanTakeMap));
+        }
+
+        // 1.3 处理查询条件：商品范围编号
+        List<Long> productScopeValues = getProductScopeValues(productScope, spuId);
+        if (isSpecificScopeWithoutValues(productScope, productScopeValues)) {
+            return success(Collections.emptyList());
+        }
 
         // 2. 查询
         List<CouponTemplateDO> list = couponTemplateService.getCouponTemplateList(canTakeTypes, productScope,
-                productScopeValue, count);
+                productScopeValues, count);
 
         // 3.1 领取数量
         Map<Long, Boolean> canCanTakeMap = couponService.getUserCanCanTakeMap(getLoginUserId(), list);
@@ -108,13 +123,16 @@ public class AppCouponTemplateController {
     @PermitAll
     public CommonResult<PageResult<AppCouponTemplateRespVO>> getCouponTemplatePage(AppCouponTemplatePageReqVO pageReqVO) {
         // 1.1 处理查询条件：商品范围编号
-        Long productScopeValue = getProductScopeValue(pageReqVO.getProductScope(), pageReqVO.getSpuId());
+        List<Long> productScopeValues = getProductScopeValues(pageReqVO.getProductScope(), pageReqVO.getSpuId());
+        if (isSpecificScopeWithoutValues(pageReqVO.getProductScope(), productScopeValues)) {
+            return success(PageResult.empty());
+        }
         // 1.2 处理查询条件：领取方式 = 直接领取
         List<Integer> canTakeTypes = singletonList(CouponTakeTypeEnum.USER.getType());
 
         // 2. 分页查询
         PageResult<CouponTemplateDO> pageResult = couponTemplateService.getCouponTemplatePage(
-                CouponTemplateConvert.INSTANCE.convert(pageReqVO, canTakeTypes, pageReqVO.getProductScope(), productScopeValue));
+                CouponTemplateConvert.INSTANCE.convert(pageReqVO, canTakeTypes, pageReqVO.getProductScope(), productScopeValues));
 
         // 3.1 领取数量
         Map<Long, Boolean> canCanTakeMap = couponService.getUserCanCanTakeMap(getLoginUserId(), pageResult.getList());
@@ -127,20 +145,38 @@ public class AppCouponTemplateController {
      *
      * @param productScope 商品范围
      * @param spuId        商品 SPU 编号
-     * @return 商品范围编号
+     * @return 商品范围编号数组
      */
-    private Long getProductScopeValue(Integer productScope, Long spuId) {
+    private List<Long> getProductScopeValues(Integer productScope, Long spuId) {
         // 通用券：没有商品范围
         if (ObjectUtils.equalsAny(productScope, PromotionProductScopeEnum.ALL.getScope(), null)) {
             return null;
         }
+        if (spuId == null) {
+            return Collections.emptyList();
+        }
         // 品类券：查询商品的品类编号
-        if (Objects.equals(productScope, PromotionProductScopeEnum.CATEGORY.getScope()) && spuId != null) {
+        if (Objects.equals(productScope, PromotionProductScopeEnum.CATEGORY.getScope())) {
             ProductSpuRespDTO spu = productSpuApi.getSpu(spuId);
-            return spu != null ? spu.getCategoryId() : null;
+            return spu == null ? Collections.emptyList()
+                    : new ArrayList<>(productCategoryApi.getSelfAndAncestorCategoryIds(spu.getCategoryIds()));
         }
         // 商品劵：直接返回
-        return spuId;
+        return Objects.equals(productScope, PromotionProductScopeEnum.SPU.getScope())
+                ? List.of(spuId) : Collections.emptyList();
+    }
+
+    private List<CouponTemplateDO> getCouponTemplateListBySpu(List<Integer> canTakeTypes, Long spuId, Integer count) {
+        ProductSpuRespDTO spu = productSpuApi.getSpu(spuId);
+        if (spu == null) {
+            return Collections.emptyList();
+        }
+        List<Long> categoryScopeIds = new ArrayList<>(productCategoryApi.getSelfAndAncestorCategoryIds(spu.getCategoryIds()));
+        return couponTemplateService.getCouponTemplateListBySpu(canTakeTypes, spuId, categoryScopeIds, count);
+    }
+
+    private boolean isSpecificScopeWithoutValues(Integer productScope, List<Long> productScopeValues) {
+        return productScope != null && !PromotionProductScopeEnum.isAll(productScope) && CollUtil.isEmpty(productScopeValues);
     }
 
 }

@@ -230,9 +230,13 @@ public class TradePriceCalculateRespBO {
          */
         private String picUrl;
         /**
-         * 分类编号
+         * 分类编号数组
          */
-        private Long categoryId;
+        private List<Long> categoryIds;
+        /**
+         * 分类名称数组
+         */
+        private List<String> categoryNames;
         /**
          * 业务场景
          */

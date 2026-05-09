@@ -141,15 +141,15 @@ public class RewardActivityServiceImpl implements RewardActivityService {
             if (PromotionProductScopeEnum.isCategory(item.getProductScope())) {
                 // 校验分类是否冲突
                 if (PromotionProductScopeEnum.isCategory(rewardActivity.getProductScope())) {
-                    if (!intersectionDistinct(item.getProductScopeValues(), rewardActivity.getProductScopeValues()).isEmpty()) {
+                    if (!intersectionDistinct(getCategoryMatchIds(item.getProductScopeValues()),
+                            getCategoryMatchIds(rewardActivity.getProductScopeValues())).isEmpty()) {
                         throw exception(REWARD_ACTIVITY_SCOPE_EXISTS, item.getName(), "商品分类范围重叠");
                     }
                 }
                 // 校验商品分类是否冲突
                 if (PromotionProductScopeEnum.isSpu(rewardActivity.getProductScope())) {
-                    List<ProductSpuRespDTO> spuList = productSpuApi.getSpuList(rewardActivity.getProductScopeValues());
                     if (!intersectionDistinct(item.getProductScopeValues(),
-                            convertSet(spuList, ProductSpuRespDTO::getCategoryId)).isEmpty()) {
+                            getSpuCategoryIds(rewardActivity.getProductScopeValues())).isEmpty()) {
                         throw exception(REWARD_ACTIVITY_SCOPE_EXISTS, item.getName(), "该活动商品分类范围已包含本活动所选商品");
                     }
                 }
@@ -164,9 +164,8 @@ public class RewardActivityServiceImpl implements RewardActivityService {
                 }
                 // 校验商品分类是否冲突
                 if (PromotionProductScopeEnum.isCategory(rewardActivity.getProductScope())) {
-                    List<ProductSpuRespDTO> spuList = productSpuApi.getSpuList(item.getProductScopeValues());
                     if (!intersectionDistinct(rewardActivity.getProductScopeValues(),
-                            convertSet(spuList, ProductSpuRespDTO::getCategoryId)).isEmpty()) {
+                            getSpuCategoryIds(item.getProductScopeValues())).isEmpty()) {
                         throw exception(REWARD_ACTIVITY_SCOPE_EXISTS, item.getName(), "本活动商品分类范围包含了该活动所选商品");
                     }
                 }
@@ -174,11 +173,24 @@ public class RewardActivityServiceImpl implements RewardActivityService {
         }
     }
 
+    private Set<Long> getSpuCategoryIds(Collection<Long> spuIds) {
+        List<ProductSpuRespDTO> spuList = productSpuApi.getSpuList(spuIds);
+        Set<Long> categoryIds = spuList.stream()
+                .filter(spu -> CollUtil.isNotEmpty(spu.getCategoryIds()))
+                .flatMap(spu -> spu.getCategoryIds().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        return productCategoryApi.getSelfAndAncestorCategoryIds(categoryIds);
+    }
+
+    private Set<Long> getCategoryMatchIds(Collection<Long> categoryIds) {
+        return productCategoryApi.getSelfAndDescendantCategoryIds(categoryIds);
+    }
+
     private void validateProductScope(Integer productScope, List<Long> productScopeValues) {
         if (Objects.equals(PromotionProductScopeEnum.SPU.getScope(), productScope)) {
             productSpuApi.validateSpuList(productScopeValues);
         } else if (Objects.equals(PromotionProductScopeEnum.CATEGORY.getScope(), productScope)) {
-            productCategoryApi.validateCategoryList(productScopeValues);
+            productCategoryApi.validateCategoryScopeList(productScopeValues);
         }
     }
 
@@ -202,8 +214,12 @@ public class RewardActivityServiceImpl implements RewardActivityService {
         Map<Long, ProductSpuRespDTO> spuMap = convertMap(spuList, ProductSpuRespDTO::getId);
 
         // 2. 查询出指定 spuId 的 spu 参加的活动
+        Set<Long> matchCategoryIds = productCategoryApi.getSelfAndAncestorCategoryIds(spuList.stream()
+                .filter(spu -> CollUtil.isNotEmpty(spu.getCategoryIds()))
+                .flatMap(spu -> spu.getCategoryIds().stream())
+                .collect(java.util.stream.Collectors.toSet()));
         List<RewardActivityDO> activityList = rewardActivityMapper.selectListBySpuIdAndStatusAndNow(
-                spuIds, convertSet(spuList, ProductSpuRespDTO::getCategoryId), CommonStatusEnum.ENABLE.getStatus());
+                spuIds, matchCategoryIds, CommonStatusEnum.ENABLE.getStatus());
         if (CollUtil.isEmpty(activityList)) {
             return Collections.emptyList();
         }
@@ -222,7 +238,8 @@ public class RewardActivityServiceImpl implements RewardActivityService {
                     }
                 } else if (PromotionProductScopeEnum.isCategory(activityDTO.getProductScope())) {
                     ProductSpuRespDTO spu = spuMap.get(spuId);
-                    if (spu != null && CollUtil.contains(activityDTO.getProductScopeValues(), spu.getCategoryId())) {
+                    if (spu != null && CollUtil.containsAny(activityDTO.getProductScopeValues(),
+                            productCategoryApi.getSelfAndAncestorCategoryIds(spu.getCategoryIds()))) {
                         activityDTO.getSpuIds().add(spuId);
                     }
                 }

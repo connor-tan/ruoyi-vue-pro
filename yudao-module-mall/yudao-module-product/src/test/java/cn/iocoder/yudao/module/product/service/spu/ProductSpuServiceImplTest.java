@@ -97,14 +97,15 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
             o.setVolume(RandomUtil.randomDouble(10,2, RoundingMode.HALF_UP));
         });
         ProductSpuSaveReqVO createReqVO = randomPojo(ProductSpuSaveReqVO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
+            o.setCategoryIds(List.of(generateId()));
             o.setBrandId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
             o.setGiveIntegral(generaInt()); // 限制范围为正整数
             o.setVirtualSalesCount(generaInt()); // 限制范围为正整数
             o.setSkus(newArrayList(skuCreateOrUpdateReqVO,skuCreateOrUpdateReqVO,skuCreateOrUpdateReqVO));
         });
-        when(categoryService.getCategoryLevel(eq(createReqVO.getCategoryId()))).thenReturn(2);
+        when(categoryService.getCategoryLevel(eq(createReqVO.getCategoryIds().get(0)))).thenReturn(2);
         Long spu = productSpuService.createSpu(createReqVO);
         ProductSpuDO productSpuDO = productSpuMapper.selectById(spu);
         assertPojoEquals(createReqVO, productSpuDO);
@@ -114,7 +115,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
     public void testUpdateSpu_success() {
         // 准备参数
         ProductSpuDO createReqVO = randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -145,7 +146,8 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
         // 准备参数
         ProductSpuSaveReqVO reqVO = randomPojo(ProductSpuSaveReqVO.class, o -> {
             o.setId(createReqVO.getId()); // 设置更新的 ID
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
+            o.setCategoryIds(List.of(generateId()));
             o.setBrandId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
             o.setGiveIntegral(generaInt()); // 限制范围为正整数
@@ -155,7 +157,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
             o.setBrowseCount(generaInt()); // 限制范围为正整数
             o.setSkus(newArrayList(skuCreateOrUpdateReqVO,skuCreateOrUpdateReqVO,skuCreateOrUpdateReqVO));
         });
-        when(categoryService.getCategoryLevel(eq(reqVO.getCategoryId()))).thenReturn(2);
+        when(categoryService.getCategoryLevel(eq(reqVO.getCategoryIds().get(0)))).thenReturn(2);
         // 调用
         productSpuService.updateSpu(reqVO);
         // 校验是否更新正确
@@ -174,7 +176,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
     void deleteSpu() {
         // 准备参数
         ProductSpuDO createReqVO = randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -201,7 +203,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
     void getSpu() {
         // 准备参数
         ProductSpuDO createReqVO = randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -225,7 +227,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
     void getSpuList() {
         // 准备参数
         ArrayList<ProductSpuDO> createReqVOs = Lists.newArrayList(randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -239,7 +241,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
             o.setSalesCount(generaInt()); // 限制范围为正整数
             o.setBrowseCount(generaInt()); // 限制范围为正整数
         }), randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -264,7 +266,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
     void getSpuPage_alarmStock_empty() {
         // 准备参数
         ArrayList<ProductSpuDO> createReqVOs = Lists.newArrayList(randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -278,7 +280,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
             o.setSalesCount(generaInt()); // 限制范围为正整数
             o.setBrowseCount(generaInt()); // 限制范围为正整数
         }), randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -308,7 +310,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
     void getSpuPage_alarmStock() {
         // 准备参数
         ArrayList<ProductSpuDO> createReqVOs = Lists.newArrayList(randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -322,7 +324,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
             o.setSalesCount(generaInt()); // 限制范围为正整数
             o.setBrowseCount(generaInt()); // 限制范围为正整数
         }), randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -348,7 +350,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
     void testGetSpuPage() {
         // 准备参数
         ProductSpuDO createReqVO = randomPojo(ProductSpuDO.class,o->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -373,7 +375,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
         // 测试 BrandId 不匹配
         productSpuMapper.insert(cloneIgnoreId(createReqVO, o -> o.setBrandId(generateId())));
         // 测试 CategoryId 不匹配
-        productSpuMapper.insert(cloneIgnoreId(createReqVO, o -> o.setCategoryId(generateId())));
+        productSpuMapper.insert(cloneIgnoreId(createReqVO, o -> o.setBizScene("NORMAL")));
 
         // 调用
         ProductSpuPageReqVO productSpuPageReqVO = new ProductSpuPageReqVO();
@@ -384,7 +386,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
         //productSpuPageReqVO.setTabType(ProductSpuPageReqVO.IN_WAREHOUSE);
         //productSpuPageReqVO.setTabType(ProductSpuPageReqVO.SOLD_OUT);
         //productSpuPageReqVO.setName(createReqVO.getName());
-        //productSpuPageReqVO.setCategoryId(createReqVO.getCategoryId());
+        //productSpuPageReqVO.setCategoryIds(List.of(categoryId));
 
         PageResult<ProductSpuDO> spuPage = productSpuService.getSpuPage(productSpuPageReqVO);
 
@@ -428,7 +430,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
         Map<Long, Integer> stockIncrCounts = MapUtil.builder(1L, 10).put(2L, -20).build();
         // mock 方法（数据）
         productSpuMapper.insert(randomPojo(ProductSpuDO.class, o ->{
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围
@@ -444,7 +446,7 @@ public class ProductSpuServiceImplTest extends BaseDbUnitTest {
             o.setId(1L).setStock(20);
         }));
         productSpuMapper.insert(randomPojo(ProductSpuDO.class, o -> {
-            o.setCategoryId(generateId());
+            o.setBizScene("NORMAL");
             o.setBrandId(generateId());
             o.setDeliveryTemplateId(generateId());
             o.setSort(RandomUtil.randomInt(1,100)); // 限制排序范围

@@ -5,6 +5,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.product.api.category.ProductCategoryApi;
 import cn.iocoder.yudao.module.promotion.api.coupon.CouponApi;
 import cn.iocoder.yudao.module.promotion.api.coupon.dto.CouponRespDTO;
 import cn.iocoder.yudao.module.promotion.enums.common.PromotionDiscountTypeEnum;
@@ -18,7 +19,10 @@ import jakarta.annotation.Resource;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -38,6 +42,8 @@ public class TradeCouponPriceCalculator implements TradePriceCalculator {
 
     @Resource
     private CouponApi couponApi;
+    @Resource
+    private ProductCategoryApi productCategoryApi;
 
     @Override
     public void calculate(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result) {
@@ -149,12 +155,15 @@ public class TradeCouponPriceCalculator implements TradePriceCalculator {
     private List<TradePriceCalculateRespBO.OrderItem> filterMatchCouponOrderItems(TradePriceCalculateRespBO result,
                                                                                   CouponRespDTO coupon) {
         Predicate<TradePriceCalculateRespBO.OrderItem> matchPredicate = TradePriceCalculateRespBO.OrderItem::getSelected;
+        Map<Long, Set<Long>> categoryScopeIdsMap = new HashMap<>();
         if (PromotionProductScopeEnum.SPU.getScope().equals(coupon.getProductScope())) {
             matchPredicate = matchPredicate // 额外加如下条件
                     .and(orderItem -> coupon.getProductScopeValues().contains(orderItem.getSpuId()));
         } else if (PromotionProductScopeEnum.CATEGORY.getScope().equals(coupon.getProductScope())) {
             matchPredicate = matchPredicate // 额外加如下条件
-                    .and(orderItem -> coupon.getProductScopeValues().contains(orderItem.getCategoryId()));
+                    .and(orderItem -> CollUtil.containsAny(coupon.getProductScopeValues(),
+                            categoryScopeIdsMap.computeIfAbsent(orderItem.getSpuId(),
+                                    key -> productCategoryApi.getSelfAndAncestorCategoryIds(orderItem.getCategoryIds()))));
         }
         return filterList(result.getItems(), matchPredicate);
     }

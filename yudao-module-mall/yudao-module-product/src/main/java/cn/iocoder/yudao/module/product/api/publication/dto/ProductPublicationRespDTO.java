@@ -11,11 +11,11 @@ public class ProductPublicationRespDTO {
 
     private String name;
 
-    private Long categoryId;
-
-    private String categoryName;
-
     private String bizScene;
+
+    private List<Long> categoryIds;
+
+    private List<Category> categories;
 
     private String picUrl;
 
@@ -34,6 +34,17 @@ public class ProductPublicationRespDTO {
     private PublicationSpuExtDTO publicationExt;
 
     private List<PublicationSkuDTO> skus;
+
+    @Data
+    public static class Category {
+
+        private Long id;
+
+        private String name;
+
+        private String bizScene;
+
+    }
 
     @Data
     public static class PublicationSpuExtDTO {

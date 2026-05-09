@@ -13,8 +13,9 @@ public class SubscriptionOfferRespVO {
     private Long windowId;
     private Long productSpuId;
     private String productName;
-    private Long categoryId;
-    private String categoryName;
+    private List<Long> categoryIds;
+    private List<String> categoryNames;
+    private List<ProductPublicationRespDTO.Category> categories;
     private String picUrl;
     private Integer price;
     private Long publisherId;

@@ -33,6 +33,9 @@ public class ProductCategoryRespVO {
     @Schema(description = "分类描述", example = "描述")
     private String description;
 
+    @Schema(description = "分类自身或子孙分类是否已被商品引用", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Boolean spuReferenced;
+
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime createTime;
 

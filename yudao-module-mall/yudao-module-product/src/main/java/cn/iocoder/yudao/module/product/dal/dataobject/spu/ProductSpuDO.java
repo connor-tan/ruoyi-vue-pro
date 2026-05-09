@@ -3,9 +3,9 @@ package cn.iocoder.yudao.module.product.dal.dataobject.spu;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.mybatis.core.type.IntegerListTypeHandler;
 import cn.iocoder.yudao.module.product.dal.dataobject.brand.ProductBrandDO;
-import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -56,11 +56,11 @@ public class ProductSpuDO extends BaseDO {
     private String description;
 
     /**
-     * 商品分类编号
+     * 业务场景
      *
-     * 关联 {@link ProductCategoryDO#getId()}
+     * 枚举 {@link BizSceneEnum}
      */
-    private Long categoryId;
+    private String bizScene;
     /**
      * 商品品牌编号
      *

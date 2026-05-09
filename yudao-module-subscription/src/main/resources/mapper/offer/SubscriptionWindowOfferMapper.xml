@@ -22,8 +22,8 @@
     <sql id="AvailableCandidateColumns">
         spu.id AS productSpuId,
         spu.name AS productName,
-        spu.category_id AS categoryId,
-        category.name AS categoryName,
+        GROUP_CONCAT(DISTINCT category_rel.category_id ORDER BY category_rel.sort, category_rel.category_id) AS categoryIdText,
+        GROUP_CONCAT(DISTINCT category.name ORDER BY category_rel.sort, category.name) AS categoryNameText,
         spu.pic_url AS picUrl,
         spu.price AS price,
         spu.stock AS stock,
@@ -58,10 +58,13 @@
                  INNER JOIN product_spu spu
                             ON spu.id = ext.spu_id
                                 AND spu.deleted = b'0'
+                                AND spu.biz_scene = 'PUBLICATION'
+                 INNER JOIN product_spu_category_rel category_rel
+                            ON category_rel.spu_id = spu.id
+                                AND category_rel.deleted = b'0'
                  INNER JOIN product_category category
-                            ON category.id = spu.category_id
+                            ON category.id = category_rel.category_id
                                 AND category.deleted = b'0'
-                                AND category.biz_scene = 'PUBLICATION'
                  LEFT JOIN product_publisher publisher
                            ON publisher.id = ext.publisher_id
                                AND publisher.deleted = b'0'
@@ -94,8 +97,17 @@
         <if test="req != null and req.productName != null and req.productName != ''">
           AND spu.name LIKE CONCAT('%', #{req.productName}, '%')
         </if>
-        <if test="req != null and req.categoryId != null">
-          AND spu.category_id = #{req.categoryId}
+        <if test="req != null and req.categoryIds != null and req.categoryIds.size() > 0">
+          AND EXISTS (
+              SELECT 1
+              FROM product_spu_category_rel filter_category_rel
+              WHERE filter_category_rel.spu_id = spu.id
+                AND filter_category_rel.deleted = b'0'
+                AND filter_category_rel.category_id IN
+                <foreach collection="req.categoryIds" item="categoryId" open="(" separator="," close=")">
+                    #{categoryId}
+                </foreach>
+          )
         </if>
         <if test="req != null and req.gradeCatalogId != null">
           AND EXISTS (
@@ -112,7 +124,7 @@
     </sql>
 
     <sql id="AvailableCandidateGroupHaving">
-        GROUP BY spu.id, spu.name, spu.category_id, category.name, spu.pic_url, spu.price, spu.stock,
+        GROUP BY spu.id, spu.name, spu.pic_url, spu.price, spu.stock,
                  ext.publisher_id, publisher.name, ext.publication_type_id, publication_type.name,
                  ext.issue_cycle, offer.id, spu.status
         <choose>

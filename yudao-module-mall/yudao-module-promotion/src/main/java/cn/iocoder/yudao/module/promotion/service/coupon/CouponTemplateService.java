@@ -102,12 +102,24 @@ public interface CouponTemplateService {
      *
      * @param canTakeTypes      可领取的类型列表
      * @param productScope      商品使用范围类型
-     * @param productScopeValue 商品使用范围编号
+     * @param productScopeValues 商品使用范围编号数组
      * @param count             查询数量
      * @return 优惠券模板列表
      */
     List<CouponTemplateDO> getCouponTemplateList(List<Integer> canTakeTypes, Integer productScope,
-                                                 Long productScopeValue, Integer count);
+                                                 List<Long> productScopeValues, Integer count);
+
+    /**
+     * 获得当前商品可领取的优惠券模板列表。
+     *
+     * @param canTakeTypes 可领取的类型列表
+     * @param spuId 商品 SPU 编号
+     * @param categoryScopeIds 商品叶子分类及父级分类编号
+     * @param count 查询数量
+     * @return 优惠券模板列表
+     */
+    List<CouponTemplateDO> getCouponTemplateListBySpu(List<Integer> canTakeTypes, Long spuId,
+                                                      List<Long> categoryScopeIds, Integer count);
 
     /**
      * 获得优惠券模版列表

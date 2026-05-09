@@ -8,10 +8,7 @@
                  INNER JOIN product_spu spu
                             ON spu.id = ext.spu_id
                                 AND spu.deleted = b'0'
-                 INNER JOIN product_category category
-                            ON category.id = spu.category_id
-                                AND category.deleted = b'0'
-                                AND category.biz_scene = 'PUBLICATION'
+                                AND spu.biz_scene = 'PUBLICATION'
         <if test="req != null and req.gradeCatalogId != null">
                  INNER JOIN product_sku sku
                             ON sku.spu_id = spu.id
@@ -34,8 +31,17 @@
         <if test="req != null and req.productName != null and req.productName != ''">
           AND spu.name LIKE CONCAT('%', #{req.productName}, '%')
         </if>
-        <if test="req != null and req.categoryId != null">
-          AND spu.category_id = #{req.categoryId}
+        <if test="req != null and req.categoryIds != null and req.categoryIds.size() > 0">
+          AND EXISTS (
+              SELECT 1
+              FROM product_spu_category_rel category_rel
+              WHERE category_rel.spu_id = spu.id
+                AND category_rel.deleted = b'0'
+                AND category_rel.category_id IN
+                <foreach collection="req.categoryIds" item="categoryId" open="(" separator="," close=")">
+                    #{categoryId}
+                </foreach>
+          )
         </if>
         GROUP BY ext.spu_id
         ORDER BY MAX(spu.sort) DESC, ext.spu_id DESC

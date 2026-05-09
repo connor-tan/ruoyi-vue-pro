@@ -108,7 +108,7 @@ public class CouponTemplateServiceImpl implements CouponTemplateService {
         if (Objects.equals(PromotionProductScopeEnum.SPU.getScope(), productScope)) {
             productSpuApi.validateSpuList(productScopeValues);
         } else if (Objects.equals(PromotionProductScopeEnum.CATEGORY.getScope(), productScope)) {
-            productCategoryApi.validateCategoryList(productScopeValues);
+            productCategoryApi.validateCategoryScopeList(productScopeValues);
         }
     }
 
@@ -137,8 +137,14 @@ public class CouponTemplateServiceImpl implements CouponTemplateService {
 
     @Override
     public List<CouponTemplateDO> getCouponTemplateList(List<Integer> canTakeTypes, Integer productScope,
-                                                        Long productScopeValue, Integer count) {
-        return couponTemplateMapper.selectList(canTakeTypes, productScope, productScopeValue, count);
+                                                        List<Long> productScopeValues, Integer count) {
+        return couponTemplateMapper.selectList(canTakeTypes, productScope, productScopeValues, count);
+    }
+
+    @Override
+    public List<CouponTemplateDO> getCouponTemplateListBySpu(List<Integer> canTakeTypes, Long spuId,
+                                                             List<Long> categoryScopeIds, Integer count) {
+        return couponTemplateMapper.selectListBySpu(canTakeTypes, spuId, categoryScopeIds, count);
     }
 
     @Override

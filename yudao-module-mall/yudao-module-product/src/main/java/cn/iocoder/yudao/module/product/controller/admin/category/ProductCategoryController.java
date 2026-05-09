@@ -60,7 +60,11 @@ public class ProductCategoryController {
     @PreAuthorize("@ss.hasPermission('product:category:query')")
     public CommonResult<ProductCategoryRespVO> getCategory(@RequestParam("id") Long id) {
         ProductCategoryDO category = categoryService.getCategory(id);
-        return success(BeanUtils.toBean(category, ProductCategoryRespVO.class));
+        ProductCategoryRespVO respVO = BeanUtils.toBean(category, ProductCategoryRespVO.class);
+        if (respVO != null) {
+            respVO.setSpuReferenced(categoryService.isCategoryReferencedBySpu(id));
+        }
+        return success(respVO);
     }
 
     @GetMapping("/list")

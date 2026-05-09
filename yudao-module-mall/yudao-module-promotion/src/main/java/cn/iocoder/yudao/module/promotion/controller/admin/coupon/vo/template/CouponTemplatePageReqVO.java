@@ -42,7 +42,7 @@ public class CouponTemplatePageReqVO extends PageParam {
     @InEnum(value = PromotionProductScopeEnum.class, message = "商品范围，必须是 {value}")
     private Integer productScope;
 
-    @Schema(description = "商品范围编号", example = "1")
-    private Long productScopeValue;
+    @Schema(description = "商品范围编号数组", example = "1,2,3")
+    private List<Long> productScopeValues;
 
 }

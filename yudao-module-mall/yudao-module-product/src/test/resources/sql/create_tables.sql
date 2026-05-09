@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `product_spu` (
     `introduction` varchar(256) NOT NULL COMMENT '商品简介',
     `description` text NOT NULL COMMENT '商品详情',
     `bar_code` varchar(64) NOT NULL COMMENT '条形码',
-    `category_id` bigint NOT NULL COMMENT '商品分类编号',
+    `biz_scene` varchar(32) NOT NULL DEFAULT 'NORMAL' COMMENT '业务场景',
     `brand_id` int DEFAULT NULL COMMENT '商品品牌编号',
     `pic_url` varchar(256) NOT NULL COMMENT '商品封面图',
     `slider_pic_urls` varchar(2000)  DEFAULT '' COMMENT '商品轮播图地址\n 数组，以逗号分隔\n 最多上传15张',
@@ -66,6 +66,20 @@ CREATE TABLE IF NOT EXISTS `product_spu` (
     "tenant_id" bigint not null default  '0',
     PRIMARY KEY("id")
 ) COMMENT '商品spu';
+
+CREATE TABLE IF NOT EXISTS `product_spu_category_rel` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '关系编号',
+    `spu_id` bigint NOT NULL COMMENT '商品 SPU 编号',
+    `category_id` bigint NOT NULL COMMENT '商品分类编号',
+    `sort` int NOT NULL DEFAULT '0' COMMENT '排序',
+    "creator" varchar(64) DEFAULT '',
+    "create_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updater" varchar(64) DEFAULT '',
+    "update_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted" bit NOT NULL DEFAULT FALSE,
+    "tenant_id" bigint not null default  '0',
+    PRIMARY KEY("id")
+) COMMENT '商品 SPU 分类关系';
 
 CREATE TABLE IF NOT EXISTS `product_category` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '分类编号',
@@ -209,32 +223,15 @@ CREATE TABLE IF NOT EXISTS `product_property_value` (
     PRIMARY KEY("id")
 ) COMMENT '规格值';
 
-DROP TABLE IF EXISTS `product_comment` (
+CREATE TABLE IF NOT EXISTS `product_comment` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '评论编号，主键自增',
-    `user_id` bigint DEFAULT NULL COMMENT '评价人的用户编号关联 MemberUserDO 的 id 编号',
-    `user_nickname` varchar(255) DEFAULT NULL COMMENT '评价人名称',
-    `user_avatar` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '评价人头像',
-    `anonymous` bit(1) DEFAULT NULL COMMENT '是否匿名',
-    `order_id` bigint DEFAULT NULL COMMENT '交易订单编号关联 TradeOrderDO 的 id 编号',
-    `order_item_id` bigint DEFAULT NULL COMMENT '交易订单项编号关联 TradeOrderItemDO 的 id 编号',
-    `spu_id` bigint DEFAULT NULL COMMENT '商品 SPU 编号关联 ProductSpuDO 的 id',
-    `spu_name` varchar(255) DEFAULT NULL COMMENT '商品 SPU 名称',
-    `sku_id` bigint DEFAULT NULL COMMENT '商品 SKU 编号关联 ProductSkuDO 的 id 编号',
-    `visible` bit(1) DEFAULT NULL COMMENT '是否可见true:显示false:隐藏',
-    `scores` tinyint DEFAULT NULL COMMENT '评分星级1-5分',
-    `description_scores` tinyint DEFAULT NULL COMMENT '描述星级1-5 星',
-    `benefit_scores` tinyint DEFAULT NULL COMMENT '服务星级1-5 星',
-    `content` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '评论内容',
-    `pic_urls` varchar(4096) DEFAULT NULL COMMENT '评论图片地址数组',
-    `reply_status` bit(1) DEFAULT NULL COMMENT '商家是否回复',
-    `reply_user_id` bigint DEFAULT NULL COMMENT '回复管理员编号关联 AdminUserDO 的 id 编号',
-    `reply_content` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '商家回复内容',
-    `reply_time` datetime DEFAULT NULL COMMENT '商家回复时间',
-    `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
-    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
-    `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
-    `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
-    PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '商品评论';
+    `spu_id` bigint DEFAULT NULL COMMENT '商品 SPU 编号',
+    `sku_id` bigint DEFAULT NULL COMMENT '商品 SKU 编号',
+    "creator" varchar(64) DEFAULT '',
+    "create_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updater" varchar(64) DEFAULT '',
+    "update_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted" bit NOT NULL DEFAULT FALSE,
+    "tenant_id" bigint not null default  '0',
+    PRIMARY KEY("id")
+) COMMENT '商品评论';

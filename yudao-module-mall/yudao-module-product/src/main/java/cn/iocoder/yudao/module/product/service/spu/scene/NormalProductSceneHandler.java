@@ -3,7 +3,6 @@ package cn.iocoder.yudao.module.product.service.spu.scene;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
-import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.service.brand.ProductBrandService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
@@ -42,7 +41,7 @@ public class NormalProductSceneHandler implements ProductSceneHandler {
     }
 
     @Override
-    public void validateForSave(ProductCategoryDO category, ProductSpuSaveReqVO reqVO) {
+    public void validateForSave(ProductSpuSaveReqVO reqVO) {
         if (reqVO.getBrandId() == null) {
             throw exception(NORMAL_PRODUCT_BRAND_REQUIRED);
         }

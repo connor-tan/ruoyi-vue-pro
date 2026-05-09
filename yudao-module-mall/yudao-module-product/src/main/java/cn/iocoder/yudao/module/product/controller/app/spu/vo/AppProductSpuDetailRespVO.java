@@ -24,11 +24,14 @@ public class AppProductSpuDetailRespVO {
     @Schema(description = "商品详情", requiredMode = Schema.RequiredMode.REQUIRED, example = "我是商品描述")
     private String description;
 
-    @Schema(description = "商品分类编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    private Long categoryId;
-
     @Schema(description = "业务场景", requiredMode = Schema.RequiredMode.REQUIRED, example = "PUBLICATION")
     private String bizScene;
+
+    @Schema(description = "商品分类编号数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "[1,2]")
+    private List<Long> categoryIds;
+
+    @Schema(description = "商品分类数组")
+    private List<Category> categories;
 
     @Schema(description = "商品封面图", requiredMode = Schema.RequiredMode.REQUIRED)
     private String picUrl;
@@ -66,6 +69,21 @@ public class AppProductSpuDetailRespVO {
 
     @Schema(description = "配送方式数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private List<Integer> deliveryTypes;
+
+    @Schema(description = "商品分类")
+    @Data
+    public static class Category {
+
+        @Schema(description = "分类编号", example = "1")
+        private Long id;
+
+        @Schema(description = "分类名称", example = "校刊")
+        private String name;
+
+        @Schema(description = "业务场景", example = "PUBLICATION")
+        private String bizScene;
+
+    }
 
     @Schema(description = "用户 App - 商品 SPU 明细的 SKU 信息")
     @Data

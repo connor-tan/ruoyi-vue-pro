@@ -31,6 +31,12 @@ public interface ProductCategoryMapper extends BaseMapperX<ProductCategoryDO> {
         return selectCount(ProductCategoryDO::getParentId, parentId);
     }
 
+    default List<ProductCategoryDO> selectListByBizSceneAndParentId(String bizScene, Long parentId) {
+        return selectList(new LambdaQueryWrapperX<ProductCategoryDO>()
+                .eq(ProductCategoryDO::getBizScene, bizScene)
+                .eq(ProductCategoryDO::getParentId, parentId));
+    }
+
     default List<ProductCategoryDO> selectListByStatus(Integer status) {
         return selectList(ProductCategoryDO::getStatus, status);
     }

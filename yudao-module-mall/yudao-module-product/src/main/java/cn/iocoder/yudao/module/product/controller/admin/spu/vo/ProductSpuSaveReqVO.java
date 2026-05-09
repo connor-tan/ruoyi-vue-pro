@@ -31,9 +31,13 @@ public class ProductSpuSaveReqVO {
     @NotEmpty(message = "商品详情不能为空")
     private String description;
 
-    @Schema(description = "商品分类编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "商品分类不能为空")
-    private Long categoryId;
+    @Schema(description = "业务场景", requiredMode = Schema.RequiredMode.REQUIRED, example = "PUBLICATION")
+    @NotEmpty(message = "业务场景不能为空")
+    private String bizScene;
+
+    @Schema(description = "商品分类编号数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "[1,2]")
+    @NotEmpty(message = "商品分类不能为空")
+    private List<Long> categoryIds;
 
     @Schema(description = "商品品牌编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long brandId;
@@ -92,9 +96,6 @@ public class ProductSpuSaveReqVO {
     @Schema(description = "刊物扩展")
     @Valid
     private PublicationSpuExtSaveReqVO publicationExt;
-
-    @Schema(description = "业务场景，仅用于回显", example = "PUBLICATION")
-    private String bizScene;
 
     @Schema(description = "刊物扩展")
     @Data

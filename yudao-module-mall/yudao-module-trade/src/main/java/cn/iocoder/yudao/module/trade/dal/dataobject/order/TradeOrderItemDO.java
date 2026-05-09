@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.trade.dal.dataobject.order;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
 import cn.iocoder.yudao.module.trade.dal.dataobject.aftersale.AfterSaleDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
 import cn.iocoder.yudao.module.trade.enums.delivery.PublicationDeliveryStatusEnum;
@@ -66,6 +67,16 @@ public class TradeOrderItemDO extends BaseDO {
      * 冗余 ProductSkuDO 的 spuName 编号
      */
     private String spuName;
+    /**
+     * 商品分类编号快照
+     */
+    @TableField(typeHandler = LongListTypeHandler.class)
+    private List<Long> categoryIds;
+    /**
+     * 商品分类名称快照
+     */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<String> categoryNames;
     /**
      * 商品 SKU 编号
      *

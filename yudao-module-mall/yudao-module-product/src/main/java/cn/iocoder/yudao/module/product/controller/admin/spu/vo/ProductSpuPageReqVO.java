@@ -8,6 +8,7 @@ import lombok.ToString;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
@@ -48,11 +49,11 @@ public class ProductSpuPageReqVO extends PageParam {
     @Schema(description = "前端请求的tab类型", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer tabType;
 
-    @Schema(description = "商品分类编号", example = "1")
-    private Long categoryId;
-
     @Schema(description = "业务场景", example = "PUBLICATION")
     private String bizScene;
+
+    @Schema(description = "商品分类编号数组", example = "1,2,3")
+    private List<Long> categoryIds;
 
     @Schema(description = "创建时间", example = "[2022-07-01 00:00:00, 2022-07-01 23:59:59]")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)

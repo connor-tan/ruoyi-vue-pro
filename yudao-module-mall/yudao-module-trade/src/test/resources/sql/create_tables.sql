@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS "trade_order_item"
     "cart_id"           int      NULL,
     "spu_id"            bigint   NOT NULL,
     "spu_name"          varchar  NOT NULL,
+    "category_ids"      varchar,
+    "category_names"    varchar,
     "sku_id"            bigint   NOT NULL,
     "properties"        varchar,
     "pic_url"           varchar,

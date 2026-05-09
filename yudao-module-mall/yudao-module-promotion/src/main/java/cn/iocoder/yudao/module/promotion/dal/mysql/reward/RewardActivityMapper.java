@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.promotion.dal.mysql.reward;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
@@ -34,7 +35,7 @@ public interface RewardActivityMapper extends BaseMapperX<RewardActivityDO> {
                                                                     Collection<Long> categoryIds,
                                                                     Integer status) {
         LocalDateTime now = LocalDateTime.now();
-        Function<Collection<Long>, String> productScopeValuesFindInSetFunc = ids -> ids.stream()
+        Function<Collection<Long>, String> productScopeValuesFindInSetFunc = ids -> CollUtil.isEmpty(ids) ? "1 = 0" : ids.stream()
                 .map(id -> StrUtil.format("FIND_IN_SET({}, product_scope_values) ", id))
                 .collect(Collectors.joining(" OR "));
         return selectList(new LambdaQueryWrapperX<RewardActivityDO>()

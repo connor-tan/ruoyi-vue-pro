@@ -7,14 +7,17 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.promotion.controller.admin.coupon.vo.template.CouponTemplatePageReqVO;
 import cn.iocoder.yudao.module.promotion.dal.dataobject.coupon.CouponTemplateDO;
+import cn.iocoder.yudao.module.promotion.enums.common.PromotionProductScopeEnum;
 import cn.iocoder.yudao.module.promotion.enums.coupon.CouponTemplateValidityTypeEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * 优惠劵模板 Mapper
@@ -34,8 +37,8 @@ public interface CouponTemplateMapper extends BaseMapperX<CouponTemplateDO> {
                 .eqIfPresent(CouponTemplateDO::getDiscountType, reqVO.getDiscountType())
                 .betweenIfPresent(CouponTemplateDO::getCreateTime, reqVO.getCreateTime())
                 .eqIfPresent(CouponTemplateDO::getProductScope, reqVO.getProductScope())
-                .and(reqVO.getProductScopeValue() != null, w -> w.apply("FIND_IN_SET({0}, product_scope_values)",
-                        reqVO.getProductScopeValue()))
+                .and(CollUtil.isNotEmpty(reqVO.getProductScopeValues()),
+                        w -> w.apply(buildFindInSetSql(reqVO.getProductScopeValues())))
                 .and(canTakeConsumer != null, canTakeConsumer)
                 .orderByDesc(CouponTemplateDO::getId));
     }
@@ -56,13 +59,32 @@ public interface CouponTemplateMapper extends BaseMapperX<CouponTemplateDO> {
         return selectList(CouponTemplateDO::getTakeType, takeType, CouponTemplateDO::getStatus, CommonStatusEnum.ENABLE.getStatus());
     }
 
-    default List<CouponTemplateDO> selectList(List<Integer> canTakeTypes, Integer productScope, Long productScopeValue, Integer count) {
+    default List<CouponTemplateDO> selectList(List<Integer> canTakeTypes, Integer productScope, List<Long> productScopeValues, Integer count) {
         // 构建可领取的查询条件
         Consumer<LambdaQueryWrapper<CouponTemplateDO>> canTakeConsumer = buildCanTakeQueryConsumer(canTakeTypes);
+        List<Long> filteredProductScopeValues = productScopeValues == null ? List.of() : productScopeValues.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
         return selectList(new LambdaQueryWrapperX<CouponTemplateDO>()
                 .eqIfPresent(CouponTemplateDO::getProductScope, productScope)
-                .and(productScopeValue != null, w -> w.apply("FIND_IN_SET({0}, product_scope_values)",
-                        productScopeValue))
+                .and(CollUtil.isNotEmpty(filteredProductScopeValues), w -> w.apply(buildFindInSetSql(filteredProductScopeValues)))
+                .and(canTakeConsumer != null, canTakeConsumer)
+                .last(" LIMIT " + count)
+                .orderByDesc(CouponTemplateDO::getId));
+    }
+
+    default List<CouponTemplateDO> selectListBySpu(List<Integer> canTakeTypes, Long spuId,
+                                                   List<Long> categoryScopeIds, Integer count) {
+        Consumer<LambdaQueryWrapper<CouponTemplateDO>> canTakeConsumer = buildCanTakeQueryConsumer(canTakeTypes);
+        String spuScopeSql = spuId == null ? "1 = 0" : buildFindInSetSql(List.of(spuId));
+        String categoryScopeSql = CollUtil.isEmpty(categoryScopeIds) ? "1 = 0" : buildFindInSetSql(categoryScopeIds);
+        return selectList(new LambdaQueryWrapperX<CouponTemplateDO>()
+                .and(w -> w.eq(CouponTemplateDO::getProductScope, PromotionProductScopeEnum.ALL.getScope())
+                        .or(i -> i.eq(CouponTemplateDO::getProductScope, PromotionProductScopeEnum.SPU.getScope())
+                                .apply(spuScopeSql))
+                        .or(i -> i.eq(CouponTemplateDO::getProductScope, PromotionProductScopeEnum.CATEGORY.getScope())
+                                .apply(categoryScopeSql)))
                 .and(canTakeConsumer != null, canTakeConsumer)
                 .last(" LIMIT " + count)
                 .orderByDesc(CouponTemplateDO::getId));
@@ -79,6 +101,14 @@ public interface CouponTemplateMapper extends BaseMapperX<CouponTemplateDO> {
                             .apply(" (take_count < total_count OR total_count = " + CouponTemplateDO.TOTAL_COUNT_MAX + ")"); // 4. 剩余数量大于 0，或者无限领取
         }
         return canTakeConsumer;
+    }
+
+    static String buildFindInSetSql(Collection<Long> productScopeValues) {
+        return productScopeValues.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .map(value -> "FIND_IN_SET(" + value + ", product_scope_values)")
+                .collect(Collectors.joining(" OR "));
     }
 
 }

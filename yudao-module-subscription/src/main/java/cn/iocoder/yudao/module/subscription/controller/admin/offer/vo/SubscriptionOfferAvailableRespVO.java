@@ -12,9 +12,9 @@ public class SubscriptionOfferAvailableRespVO {
 
     private String productName;
 
-    private Long categoryId;
+    private List<Long> categoryIds;
 
-    private String categoryName;
+    private List<String> categoryNames;
 
     private String picUrl;
 
@@ -54,5 +54,11 @@ public class SubscriptionOfferAvailableRespVO {
 
     @JsonIgnore
     private String matchedGradeCatalogIdText;
+
+    @JsonIgnore
+    private String categoryIdText;
+
+    @JsonIgnore
+    private String categoryNameText;
 
 }

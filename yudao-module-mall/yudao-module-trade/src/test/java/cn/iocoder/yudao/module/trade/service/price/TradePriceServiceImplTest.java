@@ -68,7 +68,9 @@ public class TradePriceServiceImplTest extends BaseMockitoUnitTest {
         );
         when(productSkuApi.getSkuList(Mockito.eq(asSet(100L, 200L, 300L)))).thenReturn(skuList);
         when(productSpuApi.getSpuList(Mockito.eq(asSet(1001L))))
-                .thenReturn(singletonList(new ProductSpuRespDTO().setId(1001L).setName("小菜").setCategoryId(666L)
+                .thenReturn(singletonList(new ProductSpuRespDTO().setId(1001L).setName("小菜")
+                        .setCategoryIds(List.of(666L))
+                        .setCategories(singletonList(new ProductSpuRespDTO.Category().setId(666L).setName("分类")))
                         .setStatus(ProductSpuStatusEnum.ENABLE.getStatus())));
 
         // 调用
@@ -98,7 +100,7 @@ public class TradePriceServiceImplTest extends BaseMockitoUnitTest {
         assertEquals(1000, calculateRespBO.getItems().get(0).getPayPrice());
         assertEquals("小菜", calculateRespBO.getItems().get(0).getSpuName());
         assertEquals("https://t.cn/1.png", calculateRespBO.getItems().get(0).getPicUrl());
-        assertEquals(666L, calculateRespBO.getItems().get(0).getCategoryId());
+        assertEquals(List.of(666L), calculateRespBO.getItems().get(0).getCategoryIds());
         assertEquals(skuList.get(0).getProperties(), calculateRespBO.getItems().get(0).getProperties());
         // 断言：SKU 2
         assertEquals(1001L, calculateRespBO.getItems().get(1).getSpuId());
@@ -114,7 +116,7 @@ public class TradePriceServiceImplTest extends BaseMockitoUnitTest {
         assertEquals(6000, calculateRespBO.getItems().get(1).getPayPrice());
         assertEquals("小菜", calculateRespBO.getItems().get(1).getSpuName());
         assertEquals("https://t.cn/2.png", calculateRespBO.getItems().get(1).getPicUrl());
-        assertEquals(666L, calculateRespBO.getItems().get(1).getCategoryId());
+        assertEquals(List.of(666L), calculateRespBO.getItems().get(1).getCategoryIds());
         assertEquals(skuList.get(1).getProperties(), calculateRespBO.getItems().get(1).getProperties());
         // 断言：SKU 3
         assertEquals(1001L, calculateRespBO.getItems().get(2).getSpuId());
@@ -130,7 +132,7 @@ public class TradePriceServiceImplTest extends BaseMockitoUnitTest {
         assertEquals(18000, calculateRespBO.getItems().get(2).getPayPrice());
         assertEquals("小菜", calculateRespBO.getItems().get(2).getSpuName());
         assertEquals("https://t.cn/3.png", calculateRespBO.getItems().get(2).getPicUrl());
-        assertEquals(666L, calculateRespBO.getItems().get(2).getCategoryId());
+        assertEquals(List.of(666L), calculateRespBO.getItems().get(2).getCategoryIds());
         assertEquals(skuList.get(2).getProperties(), calculateRespBO.getItems().get(2).getProperties());
     }
 

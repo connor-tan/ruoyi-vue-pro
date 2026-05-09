@@ -27,13 +27,17 @@ public class ProductSpuRespDTO {
     private String name;
 
     /**
-     * 商品分类编号
-     */
-    private Long categoryId;
-    /**
      * 业务场景
      */
     private String bizScene;
+    /**
+     * 商品分类编号数组
+     */
+    private List<Long> categoryIds;
+    /**
+     * 商品分类数组
+     */
+    private List<Category> categories;
     /**
      * 商品封面图
      */
@@ -104,5 +108,23 @@ public class ProductSpuRespDTO {
      * true - 自行设置
      */
     private Boolean subCommissionType;
+
+    @Data
+    public static class Category {
+
+        /**
+         * 分类编号
+         */
+        private Long id;
+        /**
+         * 分类名称
+         */
+        private String name;
+        /**
+         * 业务场景
+         */
+        private String bizScene;
+
+    }
 
 }

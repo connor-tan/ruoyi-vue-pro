@@ -12,6 +12,7 @@ import cn.iocoder.yudao.module.edu.api.publication.dto.EduPublicationPublisherRe
 import cn.iocoder.yudao.module.edu.api.publication.dto.EduPublicationTypeRespDTO;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationQueryReqDTO;
+import cn.iocoder.yudao.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuRespVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuRespVO;
@@ -21,13 +22,15 @@ import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublica
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSkuGradeRelDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSpuExtDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
+import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuCategoryRelDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuExtMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuGradeRelMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSpuExtMapper;
+import cn.iocoder.yudao.module.product.dal.mysql.category.ProductCategoryMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.sku.ProductSkuMapper;
+import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuCategoryRelMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
-import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIdentifierRuleEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationTargetPeriodEnum;
@@ -59,7 +62,9 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
     @Resource
     private ProductSkuMapper productSkuMapper;
     @Resource
-    private ProductCategoryService productCategoryService;
+    private ProductSpuCategoryRelMapper productSpuCategoryRelMapper;
+    @Resource
+    private ProductCategoryMapper productCategoryMapper;
     @Resource
     private EduPublicationPublisherApi publicationPublisherApi;
     @Resource
@@ -90,18 +95,13 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             return Collections.emptyList();
         }
         List<ProductSpuDO> spus = productSpuMapper.selectByIds(spuIds);
-        Map<Long, ProductCategoryDO> categoryMap = convertMap(
-                productCategoryService.getCategoryList(convertSet(spus, ProductSpuDO::getCategoryId)),
-                ProductCategoryDO::getId);
         List<ProductSpuDO> publicationSpus = spus.stream()
-                .filter(spu -> {
-                    ProductCategoryDO category = categoryMap.get(spu.getCategoryId());
-                    return category != null && BizSceneEnum.isPublication(category.getBizScene());
-                })
+                .filter(spu -> BizSceneEnum.isPublication(spu.getBizScene()))
                 .toList();
         if (CollUtil.isEmpty(publicationSpus)) {
             return Collections.emptyList();
         }
+        Map<Long, List<ProductCategoryDO>> categoryMap = getCategoryListMap(convertSet(publicationSpus, ProductSpuDO::getId));
 
         Map<Long, ProductPublicationSpuExtDO> spuExtMap = convertMap(
                 publicationSpuExtMapper.selectByIds(convertSet(publicationSpus, ProductSpuDO::getId)),
@@ -128,6 +128,9 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
 
     @Override
     public List<ProductPublicationRespDTO> getPublicationList(ProductPublicationQueryReqDTO reqDTO) {
+        if (reqDTO != null && CollUtil.isNotEmpty(reqDTO.getCategoryIds())) {
+            reqDTO.setCategoryIds(new ArrayList<>(resolveFilterCategoryIds(reqDTO.getCategoryIds())));
+        }
         List<Long> spuIds = publicationSpuExtMapper.selectSpuIdsByQuery(reqDTO);
         if (CollUtil.isEmpty(spuIds)) {
             return Collections.emptyList();
@@ -135,9 +138,42 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         return getPublicationList(spuIds);
     }
 
+    private Set<Long> resolveFilterCategoryIds(Collection<Long> categoryIds) {
+        Set<Long> resolvedCategoryIds = new LinkedHashSet<>(categoryIds);
+        Set<Long> parentIds = new LinkedHashSet<>(categoryIds);
+        for (int i = 0; i < Byte.MAX_VALUE && CollUtil.isNotEmpty(parentIds); i++) {
+            List<ProductCategoryDO> children = productCategoryMapper.selectList(new ProductCategoryListReqVO()
+                    .setStatus(CommonStatusEnum.ENABLE.getStatus())
+                    .setParentIds(parentIds));
+            Set<Long> childIds = convertSet(children, ProductCategoryDO::getId);
+            childIds.removeAll(resolvedCategoryIds);
+            if (CollUtil.isEmpty(childIds)) {
+                break;
+            }
+            resolvedCategoryIds.addAll(childIds);
+            parentIds = childIds;
+        }
+        return resolvedCategoryIds;
+    }
+
+    private Map<Long, List<ProductCategoryDO>> getCategoryListMap(Collection<Long> spuIds) {
+        List<ProductSpuCategoryRelDO> rels = productSpuCategoryRelMapper.selectListBySpuIds(spuIds);
+        if (CollUtil.isEmpty(rels)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, ProductCategoryDO> categoryMap = convertMap(
+                productCategoryMapper.selectByIds(convertSet(rels, ProductSpuCategoryRelDO::getCategoryId)),
+                ProductCategoryDO::getId);
+        Map<Long, List<ProductSpuCategoryRelDO>> relMap = convertMultiMap(rels, ProductSpuCategoryRelDO::getSpuId);
+        Map<Long, List<ProductCategoryDO>> result = new LinkedHashMap<>(relMap.size());
+        relMap.forEach((spuId, spuRels) -> result.put(spuId,
+                convertList(spuRels, rel -> categoryMap.get(rel.getCategoryId()))));
+        return result;
+    }
+
     private ProductPublicationRespDTO buildPublicationResp(
             ProductSpuDO spu,
-            Map<Long, ProductCategoryDO> categoryMap,
+            Map<Long, List<ProductCategoryDO>> categoryMap,
             Map<Long, ProductPublicationSpuExtDO> spuExtMap,
             Map<Long, EduPublicationPublisherRespDTO> publisherMap,
             Map<Long, EduPublicationTypeRespDTO> publicationTypeMap,
@@ -146,9 +182,9 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             Map<Long, List<ProductPublicationSkuGradeRelDO>> skuGradeMap,
             Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap) {
         ProductPublicationRespDTO dto = BeanUtils.toBean(spu, ProductPublicationRespDTO.class);
-        ProductCategoryDO category = categoryMap.get(spu.getCategoryId());
-        dto.setBizScene(category == null ? null : category.getBizScene());
-        dto.setCategoryName(category == null ? null : category.getName());
+        List<ProductCategoryDO> categories = categoryMap.get(spu.getId());
+        dto.setCategoryIds(convertList(categories, ProductCategoryDO::getId));
+        dto.setCategories(BeanUtils.toBean(categories, ProductPublicationRespDTO.Category.class));
 
         ProductPublicationSpuExtDO spuExt = spuExtMap.get(spu.getId());
         if (spuExt != null) {

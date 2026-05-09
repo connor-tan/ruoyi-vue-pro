@@ -11,7 +11,6 @@ import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
-import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.product.service.publication.ProductPublicationService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
@@ -30,11 +29,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static cn.iocoder.yudao.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
-import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.pojo.PageParam.PAGE_SIZE_NONE;
 
@@ -48,8 +45,6 @@ public class ProductSpuController {
     private ProductSpuService productSpuService;
     @Resource
     private ProductSkuService productSkuService;
-    @Resource
-    private ProductCategoryService categoryService;
     @Resource
     private ProductPublicationService productPublicationService;
 
@@ -98,7 +93,7 @@ public class ProductSpuController {
         // 查询商品 SKU
         List<ProductSkuDO> skus = productSkuService.getSkuListBySpuId(spu.getId());
         ProductSpuRespVO respVO = ProductSpuConvert.INSTANCE.convert(spu, skus);
-        fillBizScene(List.of(respVO));
+        fillCategories(List.of(respVO));
         productPublicationService.fillAdminDetail(respVO, respVO.getSkus());
         return success(respVO);
     }
@@ -120,7 +115,7 @@ public class ProductSpuController {
     public CommonResult<List<ProductSpuRespVO>> getSpuList(@RequestParam("spuIds") Collection<Long> spuIds) {
         List<ProductSpuRespVO> respVOList = ProductSpuConvert.INSTANCE.convertForSpuDetailRespListVO(
                 productSpuService.getSpuList(spuIds), productSkuService.getSkuListBySpuId(spuIds));
-        fillBizScene(respVOList);
+        fillCategories(respVOList);
         respVOList.forEach(item -> productPublicationService.fillAdminDetail(item, item.getSkus()));
         return success(respVOList);
     }
@@ -131,7 +126,7 @@ public class ProductSpuController {
     public CommonResult<PageResult<ProductSpuRespVO>> getSpuPage(@Valid ProductSpuPageReqVO pageVO) {
         PageResult<ProductSpuDO> pageResult = productSpuService.getSpuPage(pageVO);
         PageResult<ProductSpuRespVO> respPage = BeanUtils.toBean(pageResult, ProductSpuRespVO.class);
-        fillBizScene(respPage.getList());
+        fillCategories(respPage.getList());
         return success(respPage);
     }
 
@@ -150,23 +145,24 @@ public class ProductSpuController {
                                HttpServletResponse response) throws IOException {
         reqVO.setPageSize(PAGE_SIZE_NONE);
         List<ProductSpuDO> list = productSpuService.getSpuPage(reqVO).getList();
+        List<ProductSpuRespVO> respList = BeanUtils.toBean(list, ProductSpuRespVO.class);
+        fillCategories(respList);
         // 导出 Excel
         ExcelUtils.write(response, "商品列表.xls", "数据", ProductSpuRespVO.class,
-                BeanUtils.toBean(list, ProductSpuRespVO.class));
+                respList);
     }
 
-    private void fillBizScene(List<ProductSpuRespVO> spus) {
+    private void fillCategories(List<ProductSpuRespVO> spus) {
         if (spus == null || spus.isEmpty()) {
             return;
         }
-        Set<Long> categoryIds = convertSet(spus, ProductSpuRespVO::getCategoryId);
-        Map<Long, ProductCategoryDO> categoryMap = convertMap(categoryService.getCategoryList(
-                new cn.iocoder.yudao.module.product.controller.admin.category.vo.ProductCategoryListReqVO()), ProductCategoryDO::getId);
+        Map<Long, List<ProductCategoryDO>> categoryMap = productSpuService.getCategoryListMapBySpuIds(
+                convertSet(spus, ProductSpuRespVO::getId));
         spus.forEach(spu -> {
-            ProductCategoryDO category = categoryMap.get(spu.getCategoryId());
-            if (category != null) {
-                spu.setBizScene(category.getBizScene());
-            }
+            List<ProductCategoryDO> categories = categoryMap.get(spu.getId());
+            spu.setCategoryIds(cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList(
+                    categories, ProductCategoryDO::getId));
+            spu.setCategories(BeanUtils.toBean(categories, ProductSpuRespVO.Category.class));
         });
     }
 
