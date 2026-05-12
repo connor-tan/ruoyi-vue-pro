@@ -18,6 +18,9 @@ public class TradePublicationDeliveryCandidatePageReqVO extends PageParam {
     @Schema(description = "站点编号", example = "200")
     private Long stationId;
 
+    @Schema(description = "配送方式", example = "1")
+    private Integer deliveryType;
+
     @Schema(description = "订刊窗口编号", example = "1")
     private Long windowId;
 
@@ -29,5 +32,11 @@ public class TradePublicationDeliveryCandidatePageReqVO extends PageParam {
 
     @Schema(description = "商品 SKU 编号", example = "1000")
     private Long skuId;
+
+    @Schema(description = "订刊期次编号", example = "10000")
+    private Long issueId;
+
+    @Schema(description = "期号", example = "1")
+    private Integer issueNo;
 
 }

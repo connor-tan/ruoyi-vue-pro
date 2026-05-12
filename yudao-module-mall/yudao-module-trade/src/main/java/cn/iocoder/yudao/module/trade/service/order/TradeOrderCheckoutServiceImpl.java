@@ -59,6 +59,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getSumValue;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
@@ -107,6 +108,8 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
     private TradeOrderProperties tradeOrderProperties;
     @Resource
     private TradeOrderDeliveryGroupSupport deliveryGroupSupport;
+    @Resource
+    private TradeOrderPublicationIssueService publicationIssueService;
 
     @Override
     public AppTradeOrderSettlementRespVO settlementOrder(Long userId, AppTradeOrderSettlementReqVO settlementReqVO) {
@@ -247,7 +250,16 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                 .setSubscriptionOfferSkuId(eligibility.getOfferSkuId())
                 .setSubscriptionVisibilityReason(eligibility.getVisibilityReason())
                 .setSubscriptionMatchedRuleId(eligibility.getMatchedRuleId())
-                .setSubscriptionGradeApplicabilityOverride(eligibility.getGradeApplicabilityOverride());
+                .setSubscriptionGradeApplicabilityOverride(eligibility.getGradeApplicabilityOverride())
+                .setPublicationIssueMode(eligibility.getIssueMode())
+                .setPublicationIssueTotalCount(eligibility.getIssueCount())
+                .setPublicationIssues(convertList(eligibility.getIssues(), issue ->
+                        new TradePriceCalculateReqBO.PublicationIssueSnapshot()
+                                .setIssueId(issue.getIssueId())
+                                .setIssueNo(issue.getIssueNo())
+                                .setIssueName(issue.getIssueName())
+                                .setPlannedPublishDate(issue.getPlannedPublishDate())
+                                .setPlannedDeliveryDate(issue.getPlannedDeliveryDate())));
     }
 
     Integer accumulatePublicationPurchaseCount(Map<TradeOrderSubscriptionPurchaseKey, Integer> purchaseCountMap,
@@ -384,6 +396,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         orderItems.forEach(orderItem -> orderItem.setOrderId(order.getId()));
         tradeOrderItemMapper.insertBatch(orderItems);
 
+        publicationIssueService.createOrderIssues(order, orderItems, calculateRespBO.getItems());
         afterCreateTradeOrder(order, orderItems, createReqVO);
         return order;
     }

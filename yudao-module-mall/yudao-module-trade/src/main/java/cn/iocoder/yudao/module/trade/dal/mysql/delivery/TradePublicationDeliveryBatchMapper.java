@@ -15,10 +15,13 @@ public interface TradePublicationDeliveryBatchMapper extends BaseMapperX<TradePu
                 .likeIfPresent(TradePublicationDeliveryBatchDO::getBatchNo, reqVO.getBatchNo())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getSchoolId, reqVO.getSchoolId())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getStationId, reqVO.getStationId())
+                .eqIfPresent(TradePublicationDeliveryBatchDO::getDeliveryType, reqVO.getDeliveryType())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getWindowId, reqVO.getWindowId())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getOfferId, reqVO.getOfferId())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getOfferSkuId, reqVO.getOfferSkuId())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getSkuId, reqVO.getSkuId())
+                .eqIfPresent(TradePublicationDeliveryBatchDO::getIssueId, reqVO.getIssueId())
+                .eqIfPresent(TradePublicationDeliveryBatchDO::getIssueNo, reqVO.getIssueNo())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(TradePublicationDeliveryBatchDO::getDeliveryTime, reqVO.getDeliveryTime())
                 .orderByDesc(TradePublicationDeliveryBatchDO::getId));

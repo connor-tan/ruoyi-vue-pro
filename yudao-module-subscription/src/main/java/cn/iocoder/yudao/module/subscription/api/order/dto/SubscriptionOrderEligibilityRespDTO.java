@@ -2,6 +2,9 @@ package cn.iocoder.yudao.module.subscription.api.order.dto;
 
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.util.List;
+
 @Data
 public class SubscriptionOrderEligibilityRespDTO {
 
@@ -32,5 +35,19 @@ public class SubscriptionOrderEligibilityRespDTO {
     private Boolean gradeApplicabilityOverride;
     private Integer maxQuantityPerStudent;
     private Integer orderedQuantity;
+    private String issueMode;
+    private Integer issueCount;
+    private List<Issue> issues;
+
+    @Data
+    public static class Issue {
+
+        private Long issueId;
+        private Integer issueNo;
+        private String issueName;
+        private LocalDate plannedPublishDate;
+        private LocalDate plannedDeliveryDate;
+
+    }
 
 }

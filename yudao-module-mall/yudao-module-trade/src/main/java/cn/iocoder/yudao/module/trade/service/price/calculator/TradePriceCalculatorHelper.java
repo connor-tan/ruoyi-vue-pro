@@ -88,7 +88,16 @@ public class TradePriceCalculatorHelper {
                     .setSubscriptionOfferSkuId(item.getSubscriptionOfferSkuId())
                     .setSubscriptionVisibilityReason(item.getSubscriptionVisibilityReason())
                     .setSubscriptionMatchedRuleId(item.getSubscriptionMatchedRuleId())
-                    .setSubscriptionGradeApplicabilityOverride(item.getSubscriptionGradeApplicabilityOverride());
+                    .setSubscriptionGradeApplicabilityOverride(item.getSubscriptionGradeApplicabilityOverride())
+                    .setPublicationIssueMode(item.getPublicationIssueMode())
+                    .setPublicationIssueTotalCount(item.getPublicationIssueTotalCount())
+                    .setPublicationIssues(CollectionUtils.convertList(item.getPublicationIssues(), issue ->
+                            new TradePriceCalculateRespBO.PublicationIssueSnapshot()
+                                    .setIssueId(issue.getIssueId())
+                                    .setIssueNo(issue.getIssueNo())
+                                    .setIssueName(issue.getIssueName())
+                                    .setPlannedPublishDate(issue.getPlannedPublishDate())
+                                    .setPlannedDeliveryDate(issue.getPlannedDeliveryDate())));
             if (StrUtil.isBlank(orderItem.getPicUrl())) {
                 orderItem.setPicUrl(spu.getPicUrl());
             }

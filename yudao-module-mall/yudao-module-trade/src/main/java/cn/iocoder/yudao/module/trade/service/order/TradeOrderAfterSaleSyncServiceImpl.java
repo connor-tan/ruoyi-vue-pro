@@ -8,6 +8,7 @@ import cn.iocoder.yudao.module.trade.enums.order.TradeOrderItemAfterSaleStatusEn
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderRefundStatusEnum;
 import cn.iocoder.yudao.module.trade.service.order.handler.TradeOrderHandler;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ITEM_
  * 交易订单售后同步 Service 实现类
  */
 @Service
+@Slf4j
 public class TradeOrderAfterSaleSyncServiceImpl implements TradeOrderAfterSaleSyncService {
 
     @Resource
@@ -31,6 +33,8 @@ public class TradeOrderAfterSaleSyncServiceImpl implements TradeOrderAfterSaleSy
     private List<TradeOrderHandler> tradeOrderHandlers;
     @Resource
     private TradeOrderLifecycleService tradeOrderLifecycleService;
+    @Resource
+    private TradeOrderPublicationIssueService publicationIssueService;
 
     @Override
     public void updateOrderItemWhenAfterSaleCreate(Long id, Long afterSaleId) {
@@ -44,6 +48,14 @@ public class TradeOrderAfterSaleSyncServiceImpl implements TradeOrderAfterSaleSy
         updateOrderItemAfterSaleStatus(id, TradeOrderItemAfterSaleStatusEnum.APPLY.getStatus(),
                 TradeOrderItemAfterSaleStatusEnum.SUCCESS.getStatus(), null);
         TradeOrderItemDO orderItem = tradeOrderItemMapper.selectById(id);
+        if (isPublicationOrderItem(orderItem)) {
+            if (refundPrice < orderItem.getPayPrice()) {
+                log.warn("[updateOrderItemWhenAfterSaleSuccess][刊物订单项({})发生部分退款，跳过期次取消，refundPrice({}) payPrice({})]",
+                        id, refundPrice, orderItem.getPayPrice());
+            } else {
+                publicationIssueService.cancelUnfinishedByOrderItemId(id);
+            }
+        }
         TradeOrderDO order = tradeOrderMapper.selectById(orderItem.getOrderId());
         tradeOrderHandlers.forEach(handler -> handler.afterCancelOrderItem(order, orderItem));
 
@@ -70,6 +82,11 @@ public class TradeOrderAfterSaleSyncServiceImpl implements TradeOrderAfterSaleSy
         if (updateCount <= 0) {
             throw exception(ORDER_ITEM_UPDATE_AFTER_SALE_STATUS_FAIL);
         }
+    }
+
+    private boolean isPublicationOrderItem(TradeOrderItemDO orderItem) {
+        return orderItem.getSubscriptionOfferSkuId() != null
+                || (orderItem.getPublicationIssueTotalCount() != null && orderItem.getPublicationIssueTotalCount() > 0);
     }
 
     private boolean isAllOrderItemAfterSaleSuccess(Long id) {

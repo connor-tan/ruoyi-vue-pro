@@ -45,6 +45,10 @@ public class TradePublicationDeliveryBatchItemDO extends BaseDO {
      */
     private Long orderItemId;
     /**
+     * 订单刊物期次编号
+     */
+    private Long orderIssueId;
+    /**
      * 配送组编号
      *
      * 关联 {@link TradeOrderDeliveryDO#getId()}
@@ -58,6 +62,22 @@ public class TradePublicationDeliveryBatchItemDO extends BaseDO {
      * 商品数量
      */
     private Integer count;
+    /**
+     * 期号
+     */
+    private Integer issueNo;
+    /**
+     * 期次名称
+     */
+    private String issueName;
+    /**
+     * 物流公司
+     */
+    private Long logisticsId;
+    /**
+     * 物流单号
+     */
+    private String logisticsNo;
     /**
      * 学生编号
      */

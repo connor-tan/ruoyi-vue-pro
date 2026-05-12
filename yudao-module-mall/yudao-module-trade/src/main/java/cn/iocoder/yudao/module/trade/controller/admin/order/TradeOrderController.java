@@ -11,9 +11,11 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderLogDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderAdminAdjustService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderFulfillmentService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderLogService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderPublicationIssueService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderReceiveService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +35,7 @@ import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMultiMap;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
@@ -53,6 +56,8 @@ public class TradeOrderController {
     private TradeOrderQueryService tradeOrderQueryService;
     @Resource
     private TradeOrderLogService tradeOrderLogService;
+    @Resource
+    private TradeOrderPublicationIssueService publicationIssueService;
 
     @Resource
     private MemberUserApi memberUserApi;
@@ -77,7 +82,13 @@ public class TradeOrderController {
         List<TradeOrderDeliveryDO> deliveries = tradeOrderQueryService.getOrderDeliveryListByOrderId(
                 convertSet(pageResult.getList(), TradeOrderDO::getId));
         // 最终组合
-        return success(TradeOrderConvert.INSTANCE.convertPage(pageResult, orderItems, deliveries, userMap));
+        PageResult<TradeOrderPageItemRespVO> respPage = TradeOrderConvert.INSTANCE.convertPage(pageResult, orderItems,
+                deliveries, userMap);
+        Map<Long, List<TradeOrderPublicationIssueDO>> issueMap = convertMultiMap(
+                publicationIssueService.getIssueListByOrderIds(convertSet(pageResult.getList(), TradeOrderDO::getId)),
+                TradeOrderPublicationIssueDO::getOrderId);
+        respPage.getList().forEach(order -> fillPublicationIssues(order.getItems(), issueMap.get(order.getId())));
+        return success(respPage);
     }
 
     @GetMapping("/summary")
@@ -106,7 +117,10 @@ public class TradeOrderController {
         MemberUserRespDTO brokerageUser = order.getBrokerageUserId() != null ?
                 memberUserApi.getUser(order.getBrokerageUserId()) : null;
         List<TradeOrderLogDO> orderLogs = tradeOrderLogService.getOrderLogListByOrderId(id);
-        return success(TradeOrderConvert.INSTANCE.convert(order, orderItems, deliveries, orderLogs, user, brokerageUser));
+        TradeOrderDetailRespVO respVO = TradeOrderConvert.INSTANCE.convert(order, orderItems, deliveries, orderLogs,
+                user, brokerageUser);
+        fillPublicationIssues(respVO.getItems(), publicationIssueService.getIssueListByOrderId(id));
+        return success(respVO);
     }
 
     @GetMapping("/get-express-track-list")
@@ -183,7 +197,21 @@ public class TradeOrderController {
         MemberUserRespDTO brokerageUser = tradeOrder.getBrokerageUserId() != null ?
                 memberUserApi.getUser(tradeOrder.getBrokerageUserId()) : null;
         List<TradeOrderLogDO> orderLogs = tradeOrderLogService.getOrderLogListByOrderId(tradeOrder.getId());
-        return success(TradeOrderConvert.INSTANCE.convert(tradeOrder, orderItems, deliveries, orderLogs, user, brokerageUser));
+        TradeOrderDetailRespVO respVO = TradeOrderConvert.INSTANCE.convert(tradeOrder, orderItems, deliveries,
+                orderLogs, user, brokerageUser);
+        fillPublicationIssues(respVO.getItems(), publicationIssueService.getIssueListByOrderId(tradeOrder.getId()));
+        return success(respVO);
+    }
+
+    private void fillPublicationIssues(List<? extends TradeOrderItemBaseVO> items,
+                                       List<TradeOrderPublicationIssueDO> issues) {
+        if (items == null || issues == null) {
+            return;
+        }
+        Map<Long, List<TradeOrderPublicationIssueDO>> issueMap = convertMultiMap(issues,
+                TradeOrderPublicationIssueDO::getOrderItemId);
+        items.forEach(item -> item.setPublicationIssues(
+                TradeOrderConvert.INSTANCE.convertPublicationIssues(issueMap.get(item.getId()))));
     }
 
 }

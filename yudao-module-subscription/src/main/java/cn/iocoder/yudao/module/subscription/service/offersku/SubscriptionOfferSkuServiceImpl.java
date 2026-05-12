@@ -10,6 +10,7 @@ import cn.iocoder.yudao.module.subscription.controller.admin.offersku.vo.Subscri
 import cn.iocoder.yudao.module.subscription.controller.admin.offersku.vo.SubscriptionOfferSkuSaveReqVO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferSkuDO;
+import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionOfferSkuIssueMapper;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferSkuMapper;
 import cn.iocoder.yudao.module.subscription.service.offer.SubscriptionOfferService;
 import cn.iocoder.yudao.module.subscription.service.window.SubscriptionWindowService;
@@ -34,6 +35,8 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
 
     @Resource
     private SubscriptionWindowOfferSkuMapper offerSkuMapper;
+    @Resource
+    private SubscriptionOfferSkuIssueMapper offerSkuIssueMapper;
     @Resource
     private SubscriptionOfferService offerService;
     @Resource
@@ -198,6 +201,10 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         respVO.setProductSkuName(productSku.getName());
         respVO.setPrice(productSku.getPrice());
         respVO.setStock(productSku.getStock());
+        ProductPublicationRespDTO.PublicationSpuExtDTO spuExt = publication == null ? null : publication.getPublicationExt();
+        respVO.setIssueMode(spuExt == null ? null : spuExt.getIssueMode());
+        respVO.setIssueCount(offerSkuIssueMapper.selectEnabledListByOfferSkuId(offerSku.getId(),
+                CommonStatusEnum.ENABLE.getStatus()).size());
         respVO.setApplicableGradeCatalogIds(productSku.getApplicableGradeCatalogIds());
         respVO.setApplicableGradeNames(productSku.getApplicableGradeNames());
         ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();

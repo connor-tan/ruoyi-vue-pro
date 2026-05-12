@@ -53,6 +53,8 @@ public class TradeOrderLifecycleServiceImpl implements TradeOrderLifecycleServic
     private PayOrderApi payOrderApi;
     @Resource
     private TradeOrderProperties tradeOrderProperties;
+    @Resource
+    private TradeOrderPublicationIssueService publicationIssueService;
 
     @Resource
     @Lazy
@@ -137,6 +139,7 @@ public class TradeOrderLifecycleServiceImpl implements TradeOrderLifecycleServic
         }
 
         List<TradeOrderItemDO> orderItems = tradeOrderItemMapper.selectListByOrderId(order.getId());
+        publicationIssueService.cancelByOrderId(order.getId());
         tradeOrderHandlers.forEach(handler -> handler.afterCancelOrder(order, orderItems));
 
         TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.CANCELED.getStatus());
@@ -153,6 +156,7 @@ public class TradeOrderLifecycleServiceImpl implements TradeOrderLifecycleServic
                 .setCancelType(TradeOrderCancelTypeEnum.AFTER_SALE_CLOSE.getType()).setCancelTime(LocalDateTime.now()));
 
         List<TradeOrderItemDO> orderItems = tradeOrderItemMapper.selectListByOrderId(order.getId());
+        publicationIssueService.cancelByOrderId(order.getId());
         tradeOrderHandlers.forEach(handler -> handler.afterCancelOrder(order, orderItems));
     }
 

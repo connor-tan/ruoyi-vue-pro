@@ -32,6 +32,9 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderLogDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
+import cn.iocoder.yudao.module.trade.enums.delivery.PublicationDeliveryStatusEnum;
+import cn.iocoder.yudao.module.trade.enums.delivery.PublicationFulfillmentStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderItemAfterSaleStatusEnum;
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackRespDTO;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
@@ -82,6 +85,12 @@ public interface TradeOrderConvert {
             orderItem.setUserId(tradeOrderDO.getUserId());
             orderItem.setAfterSaleStatus(TradeOrderItemAfterSaleStatusEnum.NONE.getStatus());
             orderItem.setCommentStatus(false);
+            if (orderItem.getPublicationIssueTotalCount() != null) {
+                orderItem.setPublicationIssueDeliveredCount(0);
+                orderItem.setPublicationIssueReceivedCount(0);
+                orderItem.setPublicationFulfillmentStatus(PublicationFulfillmentStatusEnum.UNDELIVERED.getStatus());
+                orderItem.setPublicationDeliveryStatus(PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+            }
             return orderItem;
         });
     }
@@ -212,6 +221,10 @@ public interface TradeOrderConvert {
     AppTradeOrderDeliveryRespVO convert04(TradeOrderDeliveryDO bean);
 
     TradeOrderDeliveryRespVO convert05(TradeOrderDeliveryDO bean);
+
+    List<AppTradeOrderItemRespVO.PublicationIssue> convertPublicationIssues02(List<TradeOrderPublicationIssueDO> list);
+
+    List<TradeOrderItemBaseVO.PublicationIssue> convertPublicationIssues(List<TradeOrderPublicationIssueDO> list);
 
     @Mappings({
             @Mapping(target = "skuId", source = "tradeOrderItemDO.skuId"),

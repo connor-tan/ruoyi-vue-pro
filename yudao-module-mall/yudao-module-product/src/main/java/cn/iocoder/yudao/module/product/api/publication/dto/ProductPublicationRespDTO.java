@@ -59,6 +59,8 @@ public class ProductPublicationRespDTO {
 
         private String publicationTypeIdentifierRule;
 
+        private String issueMode;
+
         private String issueCycle;
 
         private String issn;

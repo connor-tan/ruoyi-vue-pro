@@ -33,6 +33,10 @@ public class TradePublicationDeliveryBatchDO extends BaseDO {
      */
     private Long schoolId;
     /**
+     * 配送方式
+     */
+    private Integer deliveryType;
+    /**
      * 学校名称快照
      */
     private String schoolNameSnapshot;
@@ -72,6 +76,18 @@ public class TradePublicationDeliveryBatchDO extends BaseDO {
      * 目标周期
      */
     private String targetPeriod;
+    /**
+     * 订刊期次编号；独立刊物可为空。
+     */
+    private Long issueId;
+    /**
+     * 期号
+     */
+    private Integer issueNo;
+    /**
+     * 期次名称
+     */
+    private String issueName;
     /**
      * 本批次数量
      */

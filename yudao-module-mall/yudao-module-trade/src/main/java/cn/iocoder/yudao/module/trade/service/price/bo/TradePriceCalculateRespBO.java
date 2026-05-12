@@ -5,6 +5,7 @@ import cn.iocoder.yudao.module.promotion.enums.common.PromotionTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -402,6 +403,36 @@ public class TradePriceCalculateRespBO {
          * 是否突破刊物商品适用年级
          */
         private Boolean subscriptionGradeApplicabilityOverride;
+
+        /**
+         * 刊物期次模式
+         */
+        private String publicationIssueMode;
+
+        /**
+         * 刊物总期数
+         */
+        private Integer publicationIssueTotalCount;
+
+        /**
+         * 下单期次快照
+         */
+        private List<PublicationIssueSnapshot> publicationIssues;
+
+    }
+
+    @Data
+    public static class PublicationIssueSnapshot {
+
+        private Long issueId;
+
+        private Integer issueNo;
+
+        private String issueName;
+
+        private LocalDate plannedPublishDate;
+
+        private LocalDate plannedDeliveryDate;
 
     }
 

@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContext
 import cn.iocoder.yudao.module.product.api.publication.ProductPublicationApi;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
+import cn.iocoder.yudao.module.publication.api.enums.PublicationIssueModeEnum;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.*;
 import cn.iocoder.yudao.module.subscription.dal.mysql.*;
 import cn.iocoder.yudao.module.subscription.enums.SubscriptionRuleEffectTypeEnum;
@@ -261,7 +262,9 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
             return spuExt != null && Objects.equals(expected, String.valueOf(spuExt.getPublicationTypeId()));
         }
         if (SubscriptionRuleFactorEnum.SKU_ISSUE_CYCLE.getCode().equals(factor)) {
-            return spuExt != null && Objects.equals(expected, spuExt.getIssueCycle());
+            return spuExt != null
+                    && PublicationIssueModeEnum.isPeriodical(spuExt.getIssueMode())
+                    && Objects.equals(expected, spuExt.getIssueCycle());
         }
         if (SubscriptionRuleFactorEnum.SKU_VOLUME_LABEL.getCode().equals(factor)) {
             return skuExt != null && Objects.equals(expected, skuExt.getVolumeLabel());

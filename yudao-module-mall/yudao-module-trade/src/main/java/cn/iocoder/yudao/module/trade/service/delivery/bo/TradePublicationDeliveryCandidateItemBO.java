@@ -2,11 +2,15 @@ package cn.iocoder.yudao.module.trade.service.delivery.bo;
 
 import lombok.Data;
 
+import java.time.LocalDate;
+
 /**
- * 刊物站点批次发货候选订单项
+ * 刊物期次批次发货候选订单期次。
  */
 @Data
 public class TradePublicationDeliveryCandidateItemBO {
+
+    private Long orderIssueId;
 
     private Long orderId;
 
@@ -17,6 +21,8 @@ public class TradePublicationDeliveryCandidateItemBO {
     private Long deliveryId;
 
     private Long userId;
+
+    private Integer deliveryType;
 
     private Integer count;
 
@@ -49,5 +55,13 @@ public class TradePublicationDeliveryCandidateItemBO {
     private Long classId;
 
     private String classNameSnapshot;
+
+    private Long issueId;
+
+    private Integer issueNo;
+
+    private String issueName;
+
+    private LocalDate plannedDeliveryDate;
 
 }

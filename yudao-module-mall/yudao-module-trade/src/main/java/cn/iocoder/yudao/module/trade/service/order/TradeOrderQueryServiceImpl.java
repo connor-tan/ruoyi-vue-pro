@@ -15,9 +15,11 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderDeliveryMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderItemMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderMapper;
+import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderPublicationIssueMapper;
 import cn.iocoder.yudao.module.trade.dal.redis.RedisKeyConstants;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderRefundStatusEnum;
@@ -56,6 +58,8 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
     private TradeOrderDeliveryMapper tradeOrderDeliveryMapper;
     @Resource
     private TradeOrderItemMapper tradeOrderItemMapper;
+    @Resource
+    private TradeOrderPublicationIssueMapper publicationIssueMapper;
 
     @Resource
     private DeliveryExpressService deliveryExpressService;
@@ -203,6 +207,24 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
         TradeOrderDeliveryDO delivery = deliveryAccessSupport.validateDeliveryExists(deliveryId);
         deliveryAccessSupport.validateDeliveryOrderOwned(delivery, userId, ORDER_NOT_FOUND);
         return getExpressTrackList(delivery);
+    }
+
+    @Override
+    public List<ExpressTrackRespDTO> getPublicationIssueExpressTrackList(Long orderIssueId, Long userId) {
+        TradeOrderPublicationIssueDO issue = publicationIssueMapper.selectByIdAndUserId(orderIssueId, userId);
+        if (issue == null) {
+            throw exception(ORDER_NOT_FOUND);
+        }
+        if (issue.getLogisticsId() == null || StrUtil.isBlank(issue.getLogisticsNo())) {
+            return Collections.emptyList();
+        }
+        TradeOrderDO order = tradeOrderMapper.selectById(issue.getOrderId());
+        DeliveryExpressDO express = deliveryExpressService.getDeliveryExpress(issue.getLogisticsId());
+        if (express == null) {
+            throw exception(EXPRESS_NOT_EXISTS);
+        }
+        return getSelf().getExpressTrackList(express.getCode(), issue.getLogisticsNo(),
+                order == null ? null : order.getReceiverMobile());
     }
 
     @Override

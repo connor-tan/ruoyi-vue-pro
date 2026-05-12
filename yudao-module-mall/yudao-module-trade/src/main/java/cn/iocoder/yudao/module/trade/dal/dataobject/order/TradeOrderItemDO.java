@@ -4,6 +4,7 @@ import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.mybatis.core.type.LongListTypeHandler;
 import cn.iocoder.yudao.module.trade.dal.dataobject.aftersale.AfterSaleDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.cart.CartDO;
+import cn.iocoder.yudao.module.trade.enums.delivery.PublicationFulfillmentStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.delivery.PublicationDeliveryStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderItemAfterSaleStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -281,6 +282,28 @@ public class TradeOrderItemDO extends BaseDO {
      * 刊物发货时间
      */
     private LocalDateTime publicationDeliveryTime;
+    /**
+     * 刊物期次模式
+     */
+    private String publicationIssueMode;
+    /**
+     * 刊物总期数
+     */
+    private Integer publicationIssueTotalCount;
+    /**
+     * 已发期数
+     */
+    private Integer publicationIssueDeliveredCount;
+    /**
+     * 已收期数
+     */
+    private Integer publicationIssueReceivedCount;
+    /**
+     * 刊物期次履约聚合状态
+     *
+     * 枚举 {@link PublicationFulfillmentStatusEnum}
+     */
+    private Integer publicationFulfillmentStatus;
 
     /**
      * 商品属性

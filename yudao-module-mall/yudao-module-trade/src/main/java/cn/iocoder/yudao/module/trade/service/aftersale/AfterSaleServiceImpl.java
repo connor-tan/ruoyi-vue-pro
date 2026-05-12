@@ -137,6 +137,9 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         if (createReqVO.getRefundPrice() > orderItem.getPayPrice()) {
             throw exception(AFTER_SALE_CREATE_FAIL_REFUND_PRICE_ERROR);
         }
+        if (isPublicationOrderItem(orderItem) && createReqVO.getRefundPrice() < orderItem.getPayPrice()) {
+            throw exception(AFTER_SALE_PUBLICATION_PARTIAL_REFUND_NOT_SUPPORTED);
+        }
 
         // 校验订单存在
         TradeOrderDO order = tradeOrderQueryService.getOrder(userId, orderItem.getOrderId());
@@ -166,6 +169,11 @@ public class AfterSaleServiceImpl implements AfterSaleService {
             }
         }
         return orderItem;
+    }
+
+    private boolean isPublicationOrderItem(TradeOrderItemDO orderItem) {
+        return orderItem.getSubscriptionOfferSkuId() != null
+                || ObjectUtil.defaultIfNull(orderItem.getPublicationIssueTotalCount(), 0) > 0;
     }
 
     private AfterSaleDO createAfterSale(AppAfterSaleCreateReqVO createReqVO,

@@ -107,6 +107,9 @@ public class ProductSpuSaveReqVO {
         @Schema(description = "刊物类型编号", example = "1")
         private Long publicationTypeId;
 
+        @Schema(description = "期次模式：PERIODICAL 期刊，SINGLE 独立刊物", example = "PERIODICAL")
+        private String issueMode;
+
         @Schema(description = "出刊周期", example = "MONTHLY")
         private String issueCycle;
 

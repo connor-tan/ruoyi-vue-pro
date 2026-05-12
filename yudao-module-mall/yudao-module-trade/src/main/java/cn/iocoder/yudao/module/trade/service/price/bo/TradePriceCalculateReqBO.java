@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -242,6 +243,36 @@ public class TradePriceCalculateReqBO {
          * 是否突破刊物商品适用年级
          */
         private Boolean subscriptionGradeApplicabilityOverride;
+
+        /**
+         * 刊物期次模式
+         */
+        private String publicationIssueMode;
+
+        /**
+         * 刊物总期数
+         */
+        private Integer publicationIssueTotalCount;
+
+        /**
+         * 下单期次快照
+         */
+        private List<PublicationIssueSnapshot> publicationIssues;
+
+    }
+
+    @Data
+    public static class PublicationIssueSnapshot {
+
+        private Long issueId;
+
+        private Integer issueNo;
+
+        private String issueName;
+
+        private LocalDate plannedPublishDate;
+
+        private LocalDate plannedDeliveryDate;
 
     }
 }

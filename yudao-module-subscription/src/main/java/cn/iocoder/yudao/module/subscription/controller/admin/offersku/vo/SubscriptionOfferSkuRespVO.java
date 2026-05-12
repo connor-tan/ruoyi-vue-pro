@@ -14,6 +14,8 @@ public class SubscriptionOfferSkuRespVO {
     private String productSkuName;
     private Integer price;
     private Integer stock;
+    private String issueMode;
+    private Integer issueCount;
     private String targetPeriod;
     private String volumeLabel;
     private String editionLabel;

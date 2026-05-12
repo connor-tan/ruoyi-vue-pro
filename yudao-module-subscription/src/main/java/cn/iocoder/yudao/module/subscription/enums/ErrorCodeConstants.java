@@ -24,6 +24,9 @@ public interface ErrorCodeConstants {
     ErrorCode OFFER_SKU_DUPLICATE = new ErrorCode(1_028_002_003, "窗口刊物中已存在该 SKU");
     ErrorCode OFFER_SKU_BELONG_ERROR = new ErrorCode(1_028_002_004, "窗口 SKU 不属于当前窗口刊物");
     ErrorCode OFFER_SKU_EFFECTIVE_REQUIRED = new ErrorCode(1_028_002_005, "启用窗口刊物必须至少保留一个启用、周期匹配且有库存的窗口 SKU");
+    ErrorCode OFFER_SKU_ISSUE_NOT_EXISTS = new ErrorCode(1_028_002_006, "窗口 SKU 期次不存在");
+    ErrorCode OFFER_SKU_ISSUE_DUPLICATE = new ErrorCode(1_028_002_007, "窗口 SKU 期号已存在");
+    ErrorCode OFFER_SKU_ISSUE_PERIODICAL_REQUIRED = new ErrorCode(1_028_002_008, "只有期刊窗口 SKU 才能维护期次计划");
 
     ErrorCode RULE_NOT_EXISTS = new ErrorCode(1_028_003_000, "订刊规则不存在");
     ErrorCode RULE_EFFECT_INVALID = new ErrorCode(1_028_003_001, "订刊规则作用类型不合法");
@@ -42,5 +45,6 @@ public interface ErrorCodeConstants {
     ErrorCode ORDER_OFFER_SKU_NOT_AVAILABLE = new ErrorCode(1_028_004_003, "窗口 SKU 不可订");
     ErrorCode ORDER_OFFER_SKU_PRODUCT_SKU_MISMATCH = new ErrorCode(1_028_004_004, "窗口 SKU 与商品 SKU 不匹配");
     ErrorCode ORDER_MAX_QUANTITY_EXCEEDED = new ErrorCode(1_028_004_005, "超过该刊物 SKU 的限购数量");
+    ErrorCode ORDER_PERIODICAL_ISSUE_REQUIRED = new ErrorCode(1_028_004_006, "期刊窗口 SKU 未配置有效期次，暂不能购买");
 
 }

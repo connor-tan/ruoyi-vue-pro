@@ -1,13 +1,18 @@
 package cn.iocoder.yudao.module.subscription.service.order;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
+import cn.iocoder.yudao.module.publication.api.enums.PublicationIssueModeEnum;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
 import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
 import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityRespDTO;
+import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionOfferSkuIssueDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferSkuDO;
 import cn.iocoder.yudao.module.subscription.service.offer.SubscriptionOfferService;
 import cn.iocoder.yudao.module.subscription.service.offersku.SubscriptionOfferSkuService;
+import cn.iocoder.yudao.module.subscription.service.offerskuissue.SubscriptionOfferSkuIssueService;
 import cn.iocoder.yudao.module.subscription.service.visibility.SubscriptionVisibilityResultBO;
 import cn.iocoder.yudao.module.subscription.service.visibility.SubscriptionVisibilityService;
 import cn.iocoder.yudao.module.trade.api.order.TradeSubscriptionOrderApi;
@@ -15,9 +20,11 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.List;
 import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.*;
 
 @Service
@@ -30,6 +37,8 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
     private SubscriptionOfferService offerService;
     @Resource
     private SubscriptionOfferSkuService offerSkuService;
+    @Resource
+    private SubscriptionOfferSkuIssueService offerSkuIssueService;
     @Resource
     private TradeSubscriptionOrderApi tradeSubscriptionOrderApi;
 
@@ -118,7 +127,51 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
         respDTO.setGradeApplicabilityOverride(Boolean.TRUE.equals(visibleSku.getGradeApplicabilityOverride()));
         respDTO.setMaxQuantityPerStudent(maxQuantity);
         respDTO.setOrderedQuantity(orderedQuantity);
+        fillIssueSnapshot(respDTO, visibility, offer, offerSku);
         return respDTO;
+    }
+
+    private void fillIssueSnapshot(SubscriptionOrderEligibilityRespDTO respDTO,
+                                   SubscriptionVisibilityResultBO visibility,
+                                   SubscriptionWindowOfferDO offer,
+                                   SubscriptionWindowOfferSkuDO offerSku) {
+        ProductPublicationRespDTO.PublicationSpuExtDTO spuExt = resolvePublicationExt(visibility, offer.getId());
+        String issueMode = PublicationIssueModeEnum.normalize(spuExt == null ? null : spuExt.getIssueMode());
+        respDTO.setIssueMode(issueMode);
+        if (PublicationIssueModeEnum.isSingle(issueMode)) {
+            respDTO.setIssueCount(1);
+            respDTO.setIssues(List.of(new SubscriptionOrderEligibilityRespDTO.Issue()
+                    .setIssueNo(1)
+                    .setIssueName("单次配送")));
+            return;
+        }
+        List<SubscriptionOfferSkuIssueDO> issues = offerSkuIssueService.getEnabledIssueList(offerSku.getId());
+        if (CollUtil.isEmpty(issues)) {
+            throw exception(ORDER_PERIODICAL_ISSUE_REQUIRED);
+        }
+        respDTO.setIssueCount(issues.size());
+        respDTO.setIssues(convertList(issues, issue -> new SubscriptionOrderEligibilityRespDTO.Issue()
+                .setIssueId(issue.getId())
+                .setIssueNo(issue.getIssueNo())
+                .setIssueName(issue.getIssueName())
+                .setPlannedPublishDate(issue.getPlannedPublishDate())
+                .setPlannedDeliveryDate(issue.getPlannedDeliveryDate())));
+    }
+
+    private ProductPublicationRespDTO.PublicationSpuExtDTO resolvePublicationExt(SubscriptionVisibilityResultBO visibility,
+                                                                                 Long offerId) {
+        if (visibility == null || visibility.getVisibleOffers() == null) {
+            return null;
+        }
+        return visibility.getVisibleOffers().stream()
+                .filter(visibleOffer -> visibleOffer.getOffer() != null
+                        && Objects.equals(visibleOffer.getOffer().getId(), offerId))
+                .map(SubscriptionVisibilityResultBO.VisibleOffer::getPublication)
+                .filter(Objects::nonNull)
+                .map(ProductPublicationRespDTO::getPublicationExt)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
 }

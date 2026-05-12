@@ -26,6 +26,9 @@ public class TradePublicationDeliveryBatchRespVO {
     @Schema(description = "学校名称快照", example = "实验小学")
     private String schoolNameSnapshot;
 
+    @Schema(description = "配送方式", example = "3")
+    private Integer deliveryType;
+
     @Schema(description = "站点编号", example = "200")
     private Long stationId;
 
@@ -52,6 +55,15 @@ public class TradePublicationDeliveryBatchRespVO {
 
     @Schema(description = "目标周期", example = "FULL_YEAR")
     private String targetPeriod;
+
+    @Schema(description = "订刊期次编号", example = "10000")
+    private Long issueId;
+
+    @Schema(description = "期号", example = "1")
+    private Integer issueNo;
+
+    @Schema(description = "期次名称", example = "第 1 期")
+    private String issueName;
 
     @Schema(description = "本批次数量", example = "20")
     private Integer totalCount;
@@ -98,6 +110,9 @@ public class TradePublicationDeliveryBatchRespVO {
         @Schema(description = "订单项编号", example = "10")
         private Long orderItemId;
 
+        @Schema(description = "订单期次编号", example = "1000")
+        private Long orderIssueId;
+
         @Schema(description = "配送组编号", example = "20")
         private Long deliveryId;
 
@@ -106,6 +121,18 @@ public class TradePublicationDeliveryBatchRespVO {
 
         @Schema(description = "商品数量", example = "1")
         private Integer count;
+
+        @Schema(description = "期号", example = "1")
+        private Integer issueNo;
+
+        @Schema(description = "期次名称", example = "第 1 期")
+        private String issueName;
+
+        @Schema(description = "物流公司编号", example = "1")
+        private Long logisticsId;
+
+        @Schema(description = "物流单号", example = "SF100000")
+        private String logisticsNo;
 
         @Schema(description = "学生编号", example = "1000")
         private Long studentId;

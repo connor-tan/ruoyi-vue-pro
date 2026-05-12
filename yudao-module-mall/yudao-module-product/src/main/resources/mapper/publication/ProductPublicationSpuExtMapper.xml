@@ -49,16 +49,17 @@
 
     <insert id="upsert">
         INSERT INTO product_publication_spu_ext (
-            spu_id, publisher_id, publication_type_id, issue_cycle, issn, cn_code, post_distribution_code,
+            spu_id, publisher_id, publication_type_id, issue_mode, issue_cycle, issn, cn_code, post_distribution_code,
             deleted
         )
         VALUES (
-            #{ext.spuId}, #{ext.publisherId}, #{ext.publicationTypeId}, #{ext.issueCycle}, #{ext.issn},
+            #{ext.spuId}, #{ext.publisherId}, #{ext.publicationTypeId}, #{ext.issueMode}, #{ext.issueCycle}, #{ext.issn},
             #{ext.cnCode}, #{ext.postDistributionCode}, b'0'
         )
         ON DUPLICATE KEY UPDATE
             publisher_id = VALUES(publisher_id),
             publication_type_id = VALUES(publication_type_id),
+            issue_mode = VALUES(issue_mode),
             issue_cycle = VALUES(issue_cycle),
             issn = VALUES(issn),
             cn_code = VALUES(cn_code),

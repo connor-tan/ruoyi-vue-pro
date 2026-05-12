@@ -1,11 +1,20 @@
 package cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.time.LocalDate;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "管理后台 - 刊物站点批次发货候选 Response VO")
 @Data
 public class TradePublicationDeliveryCandidateRespVO {
+
+    @Schema(description = "配送方式", example = "3")
+    private Integer deliveryType;
 
     @Schema(description = "学校编号", example = "100")
     private Long schoolId;
@@ -39,6 +48,19 @@ public class TradePublicationDeliveryCandidateRespVO {
 
     @Schema(description = "目标周期", example = "FULL_YEAR")
     private String targetPeriod;
+
+    @Schema(description = "订刊期次编号", example = "10000")
+    private Long issueId;
+
+    @Schema(description = "期号", example = "1")
+    private Integer issueNo;
+
+    @Schema(description = "期次名称", example = "第 1 期")
+    private String issueName;
+
+    @Schema(description = "计划配送日期")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY, timezone = TIME_ZONE_DEFAULT)
+    private LocalDate plannedDeliveryDate;
 
     @Schema(description = "待发货数量", example = "20")
     private Integer totalCount;

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderPublicationIssueMapper">
+
+    <sql id="PublicationIssueCandidateWhere">
+        FROM trade_order_publication_issue pi
+        INNER JOIN trade_order o ON o.id = pi.order_id AND o.deleted = FALSE
+        WHERE pi.deleted = FALSE
+          AND pi.canceled = FALSE
+          AND o.status = #{orderStatus}
+          AND pi.delivery_status = #{publicationDeliveryStatus}
+        <if test="reqVO.deliveryType != null">
+          AND pi.delivery_type = #{reqVO.deliveryType}
+        </if>
+        <if test="reqVO.schoolId != null">
+          AND pi.school_id = #{reqVO.schoolId}
+        </if>
+        <if test="reqVO.stationId != null">
+          AND pi.station_id = #{reqVO.stationId}
+        </if>
+        <if test="reqVO.windowId != null">
+          AND pi.window_id = #{reqVO.windowId}
+        </if>
+        <if test="reqVO.offerId != null">
+          AND pi.offer_id = #{reqVO.offerId}
+        </if>
+        <if test="reqVO.offerSkuId != null">
+          AND pi.offer_sku_id = #{reqVO.offerSkuId}
+        </if>
+        <if test="reqVO.skuId != null">
+          AND pi.sku_id = #{reqVO.skuId}
+        </if>
+        <if test="reqVO.issueId != null">
+          AND pi.issue_id = #{reqVO.issueId}
+        </if>
+        <if test="reqVO.issueNo != null">
+          AND pi.issue_no = #{reqVO.issueNo}
+        </if>
+    </sql>
+
+    <select id="selectPublicationDeliveryCandidatePage"
+            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
+        SELECT pi.delivery_type AS deliveryType,
+               pi.school_id AS schoolId,
+               pi.school_name_snapshot AS schoolNameSnapshot,
+               pi.station_id AS stationId,
+               pi.station_name_snapshot AS stationNameSnapshot,
+               pi.window_id AS windowId,
+               pi.window_name_snapshot AS windowNameSnapshot,
+               pi.offer_id AS offerId,
+               pi.offer_sku_id AS offerSkuId,
+               pi.sku_id AS skuId,
+               pi.product_name_snapshot AS productNameSnapshot,
+               pi.target_period AS targetPeriod,
+               pi.issue_id AS issueId,
+               pi.issue_no AS issueNo,
+               pi.issue_name AS issueName,
+               pi.planned_delivery_date AS plannedDeliveryDate,
+               COALESCE(SUM(pi.count), 0) AS totalCount,
+               COUNT(DISTINCT pi.order_id) AS orderCount,
+               COUNT(DISTINCT pi.student_id) AS studentCount
+        <include refid="PublicationIssueCandidateWhere"/>
+        GROUP BY pi.delivery_type,
+                 pi.school_id,
+                 pi.school_name_snapshot,
+                 pi.station_id,
+                 pi.station_name_snapshot,
+                 pi.window_id,
+                 pi.window_name_snapshot,
+                 pi.offer_id,
+                 pi.offer_sku_id,
+                 pi.sku_id,
+                 pi.product_name_snapshot,
+                 pi.target_period,
+                 pi.issue_id,
+                 pi.issue_no,
+                 pi.issue_name,
+                 pi.planned_delivery_date
+        ORDER BY pi.delivery_type ASC, pi.issue_no ASC, pi.station_id ASC, pi.offer_sku_id ASC, pi.sku_id ASC
+    </select>
+
+    <select id="selectPublicationDeliveryCandidateItemList"
+            resultType="cn.iocoder.yudao.module.trade.service.delivery.bo.TradePublicationDeliveryCandidateItemBO">
+        SELECT pi.id AS orderIssueId,
+               pi.order_id AS orderId,
+               pi.order_no AS orderNo,
+               pi.order_item_id AS orderItemId,
+               pi.delivery_id AS deliveryId,
+               pi.user_id AS userId,
+               pi.delivery_type AS deliveryType,
+               pi.count AS count,
+               pi.school_id AS schoolId,
+               pi.school_name_snapshot AS schoolNameSnapshot,
+               pi.station_id AS stationId,
+               pi.station_name_snapshot AS stationNameSnapshot,
+               pi.window_id AS windowId,
+               pi.window_name_snapshot AS windowNameSnapshot,
+               pi.offer_id AS offerId,
+               pi.offer_sku_id AS offerSkuId,
+               pi.sku_id AS skuId,
+               pi.product_name_snapshot AS productNameSnapshot,
+               pi.target_period AS targetPeriod,
+               pi.student_id AS studentId,
+               pi.student_name_snapshot AS studentNameSnapshot,
+               pi.class_id AS classId,
+               pi.class_name_snapshot AS classNameSnapshot,
+               pi.issue_id AS issueId,
+               pi.issue_no AS issueNo,
+               pi.issue_name AS issueName,
+               pi.planned_delivery_date AS plannedDeliveryDate
+        <include refid="PublicationIssueCandidateWhere"/>
+        ORDER BY pi.order_id ASC, pi.order_item_id ASC, pi.issue_no ASC, pi.id ASC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <select id="selectNotDeliveredCountByDeliveryId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM trade_order_publication_issue
+        WHERE deleted = FALSE
+          AND canceled = FALSE
+          AND delivery_id = #{deliveryId}
+          AND delivery_status &lt;&gt; #{deliveredStatus}
+    </select>
+
+    <select id="selectNotReceivedCountByDeliveryId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM trade_order_publication_issue
+        WHERE deleted = FALSE
+          AND canceled = FALSE
+          AND delivery_id = #{deliveryId}
+          AND receive_status &lt;&gt; #{receivedStatus}
+    </select>
+
+    <select id="selectDeliveredUnreceivedListByDeliveryId"
+            resultType="cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO">
+        SELECT *
+        FROM trade_order_publication_issue
+        WHERE deleted = FALSE
+          AND canceled = FALSE
+          AND delivery_id = #{deliveryId}
+          AND delivery_status = #{deliveredStatus}
+          AND receive_status = #{unreceivedStatus}
+        ORDER BY issue_no ASC, id ASC
+    </select>
+
+    <select id="selectAutoReceiveList"
+            resultType="cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO">
+        SELECT *
+        FROM trade_order_publication_issue
+        WHERE deleted = FALSE
+          AND canceled = FALSE
+          AND delivery_status = #{deliveredStatus}
+          AND receive_status = #{unreceivedStatus}
+          AND delivery_time IS NOT NULL
+          AND delivery_time &lt;= #{expireTime}
+        ORDER BY delivery_time ASC, id ASC
+    </select>
+
+</mapper>

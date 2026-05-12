@@ -1,10 +1,17 @@
 package cn.iocoder.yudao.module.trade.controller.app.order.vo.item;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import cn.iocoder.yudao.module.trade.controller.app.base.property.AppProductPropertyValueDetailRespVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
 @Schema(description = "用户 App - 订单交易项 Response VO")
 @Data
@@ -90,5 +97,46 @@ public class AppTradeOrderItemRespVO {
 
     @Schema(description = "订刊窗口 SKU 编号（offerSku）", example = "1")
     private Long subscriptionOfferSkuId;
+
+    @Schema(description = "刊物期次模式", example = "PERIODICAL")
+    private String publicationIssueMode;
+
+    @Schema(description = "刊物总期数", example = "12")
+    private Integer publicationIssueTotalCount;
+
+    @Schema(description = "刊物已发期数", example = "3")
+    private Integer publicationIssueDeliveredCount;
+
+    @Schema(description = "刊物已收期数", example = "2")
+    private Integer publicationIssueReceivedCount;
+
+    @Schema(description = "刊物期次履约状态", example = "20")
+    private Integer publicationFulfillmentStatus;
+
+    @Schema(description = "刊物期次列表")
+    private List<PublicationIssue> publicationIssues;
+
+    @Data
+    public static class PublicationIssue {
+
+        private Long id;
+        private Long issueId;
+        private Integer issueNo;
+        private String issueName;
+        @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY, timezone = TIME_ZONE_DEFAULT)
+        private LocalDate plannedPublishDate;
+        @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY, timezone = TIME_ZONE_DEFAULT)
+        private LocalDate plannedDeliveryDate;
+        private Integer deliveryStatus;
+        private Integer receiveStatus;
+        private Long deliveryBatchId;
+        @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
+        private LocalDateTime deliveryTime;
+        private Long logisticsId;
+        private String logisticsNo;
+        @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
+        private LocalDateTime receiveTime;
+
+    }
 
 }

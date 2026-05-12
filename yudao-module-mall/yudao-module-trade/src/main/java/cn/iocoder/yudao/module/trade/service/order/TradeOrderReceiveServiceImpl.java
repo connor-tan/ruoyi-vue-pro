@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.trade.service.order;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.promotion.api.combination.CombinationRecordApi;
 import cn.iocoder.yudao.module.promotion.api.combination.dto.CombinationRecordRespDTO;
 import cn.iocoder.yudao.module.promotion.enums.combination.CombinationRecordStatusEnum;
@@ -69,6 +70,8 @@ public class TradeOrderReceiveServiceImpl implements TradeOrderReceiveService {
     private TradeOrderDeliveryAccessSupport deliveryAccessSupport;
     @Resource
     private TradeOrderStatusAggregateSupport statusAggregateSupport;
+    @Resource
+    private TradeOrderPublicationIssueService publicationIssueService;
 
     @Resource
     @Lazy
@@ -96,6 +99,15 @@ public class TradeOrderReceiveServiceImpl implements TradeOrderReceiveService {
                 delivery, userId, ORDER_RECEIVE_FAIL_DELIVERY_NOT_OWNED);
         if (!TradeOrderStatusEnum.isDelivered(delivery.getStatus())) {
             throw exception(ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED);
+        }
+        if (BizSceneEnum.isPublication(delivery.getBizScene())) {
+            publicationIssueService.receiveDeliveryIssues(userId, deliveryId);
+            TradeOrderDO refreshedOrder = statusAggregateSupport.refreshOrderStatusByDeliveries(order);
+            if (TradeOrderStatusEnum.isCompleted(refreshedOrder.getStatus())) {
+                TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.COMPLETED.getStatus());
+                tradeOrderHandlers.forEach(handler -> handler.afterReceiveOrder(refreshedOrder));
+            }
+            return;
         }
         boolean changed = receiveDelivery0(order, delivery, true);
         if (changed) {
@@ -142,6 +154,11 @@ public class TradeOrderReceiveServiceImpl implements TradeOrderReceiveService {
                     delivery -> TradeOrderStatusEnum.isDelivered(delivery.getStatus()));
             boolean changed = false;
             for (TradeOrderDeliveryDO delivery : deliveredList) {
+                if (BizSceneEnum.isPublication(delivery.getBizScene())) {
+                    publicationIssueService.receiveDeliveryIssues(order.getUserId(), delivery.getId());
+                    changed = true;
+                    continue;
+                }
                 changed |= receiveDelivery0(order, delivery, true);
             }
             if (!changed) {

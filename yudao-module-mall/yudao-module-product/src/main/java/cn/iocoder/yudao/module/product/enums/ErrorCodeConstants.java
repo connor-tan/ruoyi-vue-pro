@@ -92,5 +92,6 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_DELIVERY_REQUIRED = new ErrorCode(1_008_010_010, "刊物商品配送方式不能为空");
     ErrorCode PUBLICATION_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_010_011, "刊物商品配送方式只允许快递发货或站点配送");
     ErrorCode PUBLICATION_DELIVERY_TEMPLATE_REQUIRED = new ErrorCode(1_008_010_012, "刊物商品选择快递发货时，运费模板不能为空");
+    ErrorCode PUBLICATION_ISSUE_MODE_INVALID = new ErrorCode(1_008_010_013, "刊物履约类型不合法");
 
 }

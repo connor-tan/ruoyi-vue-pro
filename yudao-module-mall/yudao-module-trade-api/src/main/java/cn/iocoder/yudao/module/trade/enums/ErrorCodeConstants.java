@@ -64,6 +64,12 @@ public interface ErrorCodeConstants {
             "订单包含多个待发货快递配送组，请进入订单详情按配送组发货");
     ErrorCode ORDER_PICK_UP_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_059, "交易订单自提失败，订单不存在可核销的自提配送组");
     ErrorCode ORDER_PICK_UP_DELIVERY_DUPLICATE = new ErrorCode(1_011_000_060, "交易订单自提失败，订单存在多个自提配送组，请联系运营处理");
+    ErrorCode ORDER_DELIVERY_FAIL_PUBLICATION_ISSUE_REQUIRED = new ErrorCode(1_011_000_061, "刊物快递订单必须通过刊物期次批次发货");
+    ErrorCode PUBLICATION_ISSUE_NOT_FOUND = new ErrorCode(1_011_000_062, "刊物订单期次不存在");
+    ErrorCode PUBLICATION_ISSUE_DELIVERY_DUPLICATE = new ErrorCode(1_011_000_063, "存在已发货的刊物期次，请刷新后重试");
+    ErrorCode PUBLICATION_ISSUE_RECEIVE_FAIL_STATUS = new ErrorCode(1_011_000_064, "刊物期次收货失败，期次不是已发货待收货状态");
+    ErrorCode PUBLICATION_EXPRESS_LOGISTICS_REQUIRED = new ErrorCode(1_011_000_065, "快递刊物期次发货必须填写物流公司和单号");
+    ErrorCode PUBLICATION_EXPRESS_BATCH_TOO_LARGE = new ErrorCode(1_011_000_066, "快递刊物期次单批最多支持 {} 条，请缩小筛选范围后再发货");
 
     // ========== After Sale 模块 1-011-000-100 ==========
     ErrorCode AFTER_SALE_NOT_FOUND = new ErrorCode(1_011_000_100, "售后单不存在");
@@ -84,6 +90,8 @@ public interface ErrorCodeConstants {
     ErrorCode AFTER_SALE_CANCEL_FAIL_STATUS_NOT_APPLY_OR_AGREE_OR_BUYER_DELIVERY =
             new ErrorCode(1_011_000_115, "取消售后单失败，售后单状态不是【待审核】或【卖家同意】或【商家待收货】");
     ErrorCode AFTER_SALE_CREATE_FAIL_ORDER_STATUS_COMBINATION_IN_PROGRESS = new ErrorCode(1_011_000_116, "订单拼团中，无法申请售后");
+    ErrorCode AFTER_SALE_PUBLICATION_PARTIAL_REFUND_NOT_SUPPORTED =
+            new ErrorCode(1_011_000_117, "刊物订单项暂不支持部分退款，请整项退款");
 
     // ========== Cart 模块 1-011-002-000 ==========
     ErrorCode CARD_ITEM_NOT_FOUND = new ErrorCode(1_011_002_000, "购物车项不存在");

@@ -113,6 +113,15 @@ public interface TradeOrderQueryService {
     List<ExpressTrackRespDTO> getDeliveryExpressTrackList(Long deliveryId, Long userId);
 
     /**
+     * 【前台】获得刊物订单期次物流轨迹
+     *
+     * @param orderIssueId 订单期次编号
+     * @param userId 用户编号
+     * @return 物流轨迹数组
+     */
+    List<ExpressTrackRespDTO> getPublicationIssueExpressTrackList(Long orderIssueId, Long userId);
+
+    /**
      * 【后台】获得订单的物流轨迹
      *
      * @param id 订单编号

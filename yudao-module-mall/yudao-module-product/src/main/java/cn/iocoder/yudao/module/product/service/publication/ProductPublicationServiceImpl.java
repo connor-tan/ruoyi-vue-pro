@@ -33,6 +33,7 @@ import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuCategoryRelMapper
 import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIdentifierRuleEnum;
+import cn.iocoder.yudao.module.publication.api.enums.PublicationIssueModeEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationTargetPeriodEnum;
 import cn.iocoder.yudao.module.system.api.dict.DictDataApi;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
@@ -190,6 +191,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (spuExt != null) {
             ProductPublicationRespDTO.PublicationSpuExtDTO spuExtDTO =
                     BeanUtils.toBean(spuExt, ProductPublicationRespDTO.PublicationSpuExtDTO.class);
+            spuExtDTO.setIssueMode(PublicationIssueModeEnum.normalize(spuExtDTO.getIssueMode()));
             EduPublicationPublisherRespDTO publisher = publisherMap.get(spuExt.getPublisherId());
             EduPublicationTypeRespDTO publicationType = publicationTypeMap.get(spuExt.getPublicationTypeId());
             spuExtDTO.setPublisherName(publisher == null ? null : publisher.getName());
@@ -238,8 +240,15 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (ext.getPublicationTypeId() == null) {
             throw exception(PUBLICATION_TYPE_REQUIRED);
         }
-        if (StrUtil.isBlank(ext.getIssueCycle())) {
+        if (!PublicationIssueModeEnum.isValid(ext.getIssueMode())) {
+            throw exception(PUBLICATION_ISSUE_MODE_INVALID);
+        }
+        ext.setIssueMode(PublicationIssueModeEnum.normalize(ext.getIssueMode()));
+        if (PublicationIssueModeEnum.isPeriodical(ext.getIssueMode()) && StrUtil.isBlank(ext.getIssueCycle())) {
             throw exception(PUBLICATION_ISSUE_CYCLE_REQUIRED);
+        }
+        if (PublicationIssueModeEnum.isSingle(ext.getIssueMode())) {
+            ext.setIssueCycle(null);
         }
         EduPublicationPublisherRespDTO publisher = getEnabledPublicationPublisher(ext.getPublisherId());
         EduPublicationTypeRespDTO type = getEnabledPublicationType(ext.getPublicationTypeId());

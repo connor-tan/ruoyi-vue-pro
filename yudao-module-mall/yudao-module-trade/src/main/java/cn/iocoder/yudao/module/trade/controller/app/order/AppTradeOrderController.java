@@ -11,6 +11,7 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.DeliveryExpressDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
+import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
 import cn.iocoder.yudao.module.trade.service.aftersale.AfterSaleService;
@@ -19,6 +20,7 @@ import cn.iocoder.yudao.module.trade.service.order.TradeOrderCheckoutService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderCommentService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderLifecycleService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderPaymentService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderPublicationIssueService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderReceiveService;
 import cn.iocoder.yudao.module.trade.service.price.TradePriceService;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMultiMap;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
@@ -60,6 +63,8 @@ public class AppTradeOrderController {
     private TradeOrderCommentService tradeOrderCommentService;
     @Resource
     private TradeOrderQueryService tradeOrderQueryService;
+    @Resource
+    private TradeOrderPublicationIssueService publicationIssueService;
     @Resource
     private DeliveryExpressService deliveryExpressService;
     @Resource
@@ -128,7 +133,10 @@ public class AppTradeOrderController {
         DeliveryExpressDO express = order.getLogisticsId() != null && order.getLogisticsId() > 0 ?
                 deliveryExpressService.getDeliveryExpress(order.getLogisticsId()) : null;
         // 2.3 最终组合
-        return success(TradeOrderConvert.INSTANCE.convert02(order, orderItems, deliveries, tradeOrderProperties, express));
+        AppTradeOrderDetailRespVO respVO = TradeOrderConvert.INSTANCE.convert02(order, orderItems, deliveries,
+                tradeOrderProperties, express);
+        fillPublicationIssues(respVO.getItems(), publicationIssueService.getIssueListByOrderId(order.getId()));
+        return success(respVO);
     }
 
     @GetMapping("/get-express-track-list")
@@ -148,6 +156,15 @@ public class AppTradeOrderController {
                 tradeOrderQueryService.getDeliveryExpressTrackList(deliveryId, getLoginUserId())));
     }
 
+    @GetMapping("/get-publication-issue-express-track-list")
+    @Operation(summary = "获得刊物订单期次的物流轨迹")
+    @Parameter(name = "orderIssueId", description = "订单刊物期次编号")
+    public CommonResult<List<AppOrderExpressTrackRespDTO>> getPublicationIssueExpressTrackList(
+            @RequestParam("orderIssueId") Long orderIssueId) {
+        return success(TradeOrderConvert.INSTANCE.convertList02(
+                tradeOrderQueryService.getPublicationIssueExpressTrackList(orderIssueId, getLoginUserId())));
+    }
+
     @GetMapping("/page")
     @Operation(summary = "获得交易订单分页")
     public CommonResult<PageResult<AppTradeOrderPageItemRespVO>> getOrderPage(AppTradeOrderPageReqVO reqVO) {
@@ -160,7 +177,14 @@ public class AppTradeOrderController {
         List<TradeOrderDeliveryDO> deliveries = tradeOrderQueryService.getOrderDeliveryListByOrderId(
                 convertSet(pageResult.getList(), TradeOrderDO::getId));
         // 最终组合
-        return success(TradeOrderConvert.INSTANCE.convertPage02(pageResult, orderItems, deliveries));
+        PageResult<AppTradeOrderPageItemRespVO> respPage = TradeOrderConvert.INSTANCE.convertPage02(pageResult,
+                orderItems, deliveries);
+        Map<Long, List<TradeOrderPublicationIssueDO>> issueMap = convertMultiMap(
+                publicationIssueService.getIssueListByOrderIds(convertSet(pageResult.getList(), TradeOrderDO::getId)),
+                TradeOrderPublicationIssueDO::getOrderId);
+        respPage.getList().forEach(order -> fillPublicationIssues(order.getItems(),
+                issueMap.get(order.getId())));
+        return success(respPage);
     }
 
     @GetMapping("/get-count")
@@ -202,6 +226,14 @@ public class AppTradeOrderController {
         return success(true);
     }
 
+    @PutMapping("/receive-publication-issue")
+    @Operation(summary = "确认刊物期次收货")
+    @Parameter(name = "orderIssueId", description = "订单刊物期次编号")
+    public CommonResult<Boolean> receivePublicationIssue(@RequestParam("orderIssueId") Long orderIssueId) {
+        publicationIssueService.receiveIssueByMember(getLoginUserId(), orderIssueId);
+        return success(true);
+    }
+
     @DeleteMapping("/cancel")
     @Operation(summary = "取消交易订单")
     @Parameter(name = "id", description = "交易订单编号")
@@ -225,13 +257,27 @@ public class AppTradeOrderController {
     @Parameter(name = "id", description = "交易订单项编号")
     public CommonResult<AppTradeOrderItemRespVO> getOrderItem(@RequestParam("id") Long id) {
         TradeOrderItemDO item = tradeOrderQueryService.getOrderItem(getLoginUserId(), id);
-        return success(TradeOrderConvert.INSTANCE.convert03(item));
+        AppTradeOrderItemRespVO respVO = TradeOrderConvert.INSTANCE.convert03(item);
+        if (item != null) {
+            fillPublicationIssues(List.of(respVO), publicationIssueService.getIssueListByOrderId(item.getOrderId()));
+        }
+        return success(respVO);
     }
 
     @PostMapping("/item/create-comment")
     @Operation(summary = "创建交易订单项的评价")
     public CommonResult<Long> createOrderItemComment(@RequestBody AppTradeOrderItemCommentCreateReqVO createReqVO) {
         return success(tradeOrderCommentService.createOrderItemCommentByMember(getLoginUserId(), createReqVO));
+    }
+
+    private void fillPublicationIssues(List<AppTradeOrderItemRespVO> items, List<TradeOrderPublicationIssueDO> issues) {
+        if (items == null || issues == null) {
+            return;
+        }
+        Map<Long, List<TradeOrderPublicationIssueDO>> issueMap = convertMultiMap(issues,
+                TradeOrderPublicationIssueDO::getOrderItemId);
+        items.forEach(item -> item.setPublicationIssues(
+                TradeOrderConvert.INSTANCE.convertPublicationIssues02(issueMap.get(item.getId()))));
     }
 
 }

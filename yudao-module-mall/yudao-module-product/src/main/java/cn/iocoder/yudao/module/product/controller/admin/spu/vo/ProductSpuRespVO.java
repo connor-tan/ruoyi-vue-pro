@@ -166,6 +166,9 @@ public class ProductSpuRespVO {
         @Schema(description = "刊物类型标识规则", example = "SKU_ISBN_REQUIRED")
         private String publicationTypeIdentifierRule;
 
+        @Schema(description = "期次模式：PERIODICAL 期刊，SINGLE 独立刊物", example = "PERIODICAL")
+        private String issueMode;
+
         @Schema(description = "出刊周期", example = "MONTHLY")
         private String issueCycle;
 
