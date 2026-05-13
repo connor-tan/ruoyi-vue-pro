@@ -10,7 +10,6 @@
             WHEN COUNT(DISTINCT CASE WHEN sku.status = 0 THEN sku.id END) = 0 THEN 'DISABLED'
             WHEN COUNT(DISTINCT CASE
                     WHEN sku.status = 0
-                         AND sku_ext.target_period = #{targetPeriod}
                          <if test="req != null and req.gradeCatalogId != null">
                          AND grade_rel.grade_catalog_id = #{req.gradeCatalogId}
                          </if>
@@ -37,14 +36,12 @@
         COUNT(DISTINCT CASE WHEN sku.status = 0 THEN sku.id END) AS enabledSkuCount,
         COUNT(DISTINCT CASE
             WHEN sku.status = 0
-                 AND sku_ext.target_period = #{targetPeriod}
                  <if test="req != null and req.gradeCatalogId != null">
                  AND grade_rel.grade_catalog_id = #{req.gradeCatalogId}
                  </if>
             THEN sku.id END) AS matchedSkuCount,
         GROUP_CONCAT(DISTINCT CASE
             WHEN sku.status = 0
-                 AND sku_ext.target_period = #{targetPeriod}
                  <if test="req != null and req.gradeCatalogId != null">
                  AND grade_rel.grade_catalog_id = #{req.gradeCatalogId}
                  </if>
@@ -78,9 +75,6 @@
                  LEFT JOIN product_sku sku
                            ON sku.spu_id = spu.id
                                AND sku.deleted = b'0'
-                 LEFT JOIN product_publication_sku_ext sku_ext
-                           ON sku_ext.sku_id = sku.id
-                               AND sku_ext.deleted = b'0'
                  LEFT JOIN product_publication_sku_grade_rel grade_rel
                            ON grade_rel.sku_id = sku.id
                                AND grade_rel.deleted = b'0'

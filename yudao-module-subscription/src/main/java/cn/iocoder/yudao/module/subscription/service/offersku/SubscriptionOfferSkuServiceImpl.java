@@ -13,7 +13,6 @@ import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOff
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionOfferSkuIssueMapper;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferSkuMapper;
 import cn.iocoder.yudao.module.subscription.service.offer.SubscriptionOfferService;
-import cn.iocoder.yudao.module.subscription.service.window.SubscriptionWindowService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,8 +39,6 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
     @Resource
     private SubscriptionOfferService offerService;
     @Resource
-    private SubscriptionWindowService windowService;
-    @Resource
     private ProductPublicationApi productPublicationApi;
     @Resource
     private SubscriptionOfferSkuAvailabilityValidator offerSkuAvailabilityValidator;
@@ -65,9 +62,9 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         SubscriptionWindowOfferDO offer = offerService.validateOfferExists(offerId);
         ProductPublicationRespDTO publication = productPublicationApi.getPublication(offer.getProductSpuId());
         if (publication == null || CollUtil.isEmpty(publication.getSkus())) {
+            offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(offerId);
             return 0;
         }
-        String windowTargetPeriod = windowService.validateWindowExists(offer.getWindowId()).getTargetPeriod();
         List<SubscriptionWindowOfferSkuDO> existedOfferSkus = offerSkuMapper.selectListByOfferId(offerId);
         Set<Long> existedProductSkuIds = convertSet(existedOfferSkus, SubscriptionWindowOfferSkuDO::getProductSkuId);
         AtomicInteger nextSort = new AtomicInteger(existedOfferSkus.stream()
@@ -78,8 +75,6 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         List<SubscriptionWindowOfferSkuDO> insertList = publication.getSkus().stream()
                 .filter(sku -> !existedProductSkuIds.contains(sku.getId()))
                 .filter(sku -> CommonStatusEnum.isEnable(sku.getStatus()))
-                .filter(sku -> sku.getPublicationExt() != null)
-                .filter(sku -> Objects.equals(windowTargetPeriod, sku.getPublicationExt().getTargetPeriod()))
                 .map(sku -> new SubscriptionWindowOfferSkuDO()
                         .setOfferId(offerId)
                         .setProductSkuId(sku.getId())
@@ -123,11 +118,6 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         ProductPublicationRespDTO.PublicationSkuDTO productSku = findPublicationSku(publication, reqVO.getProductSkuId());
         if (productSku == null) {
             throw exception(OFFER_SKU_PRODUCT_MISMATCH);
-        }
-        String windowTargetPeriod = windowService.validateWindowExists(offer.getWindowId()).getTargetPeriod();
-        if (productSku.getPublicationExt() == null
-                || !Objects.equals(windowTargetPeriod, productSku.getPublicationExt().getTargetPeriod())) {
-            throw exception(OFFER_SKU_TARGET_PERIOD_NOT_MATCHED);
         }
         SubscriptionWindowOfferSkuDO existed = offerSkuMapper.selectByOfferIdAndProductSkuIdAndIdNot(
                 reqVO.getOfferId(), reqVO.getProductSkuId(), reqVO.getId());
@@ -209,7 +199,6 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         respVO.setApplicableGradeNames(productSku.getApplicableGradeNames());
         ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();
         if (ext != null) {
-            respVO.setTargetPeriod(ext.getTargetPeriod());
             respVO.setVolumeLabel(ext.getVolumeLabel());
             respVO.setEditionLabel(ext.getEditionLabel());
             respVO.setIsbn(ext.getIsbn());

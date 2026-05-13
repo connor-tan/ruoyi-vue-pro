@@ -7,8 +7,14 @@ import lombok.Data;
 @Data
 public class SubscriptionOrderEligibilityReqDTO {
 
-    @NotNull(message = "用户编号不能为空")
     private Long userId;
+
+    /**
+     * 是否后台人工下单。
+     *
+     * 后台人工下单不要求学生绑定当前家长，但仍然复用订刊窗口、规则、SKU 和限购校验。
+     */
+    private Boolean admin;
 
     @NotNull(message = "学生编号不能为空")
     private Long studentId;

@@ -165,7 +165,6 @@ CREATE TABLE IF NOT EXISTS `product_publication_spu_ext` (
 
 CREATE TABLE IF NOT EXISTS `product_publication_sku_ext` (
     `sku_id` bigint NOT NULL COMMENT 'SKU 编号',
-    `target_period` varchar(32) NOT NULL COMMENT '售卖周期',
     `volume_label` varchar(64) DEFAULT NULL COMMENT '册别',
     `edition_label` varchar(64) DEFAULT NULL COMMENT '版本',
     `isbn` varchar(64) DEFAULT NULL COMMENT 'ISBN',

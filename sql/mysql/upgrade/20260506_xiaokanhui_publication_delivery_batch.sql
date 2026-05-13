@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS trade_publication_delivery_batch (
   offer_sku_id bigint NOT NULL COMMENT '订刊窗口 SKU 编号',
   sku_id bigint NOT NULL COMMENT '商品 SKU 编号',
   product_name_snapshot varchar(255) DEFAULT NULL COMMENT '刊物商品名称快照',
-  target_period varchar(32) DEFAULT NULL COMMENT '目标周期',
   total_count int NOT NULL DEFAULT 0 COMMENT '本批次数量',
   order_count int NOT NULL DEFAULT 0 COMMENT '涉及订单数',
   student_count int NOT NULL DEFAULT 0 COMMENT '涉及学生数',

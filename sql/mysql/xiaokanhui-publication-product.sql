@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS subscription_window (
   target_year_name_snapshot varchar(64) DEFAULT NULL COMMENT '目标学年名称快照',
   target_year_start int NOT NULL COMMENT '目标学年开始年份',
   target_year_end int NOT NULL COMMENT '目标学年结束年份',
-  target_period varchar(32) NOT NULL COMMENT '目标周期',
   start_time datetime NOT NULL COMMENT '开始时间',
   end_time datetime NOT NULL COMMENT '结束时间',
   grade_calc_rule varchar(32) NOT NULL COMMENT '年级计算规则',
@@ -47,7 +46,7 @@ CREATE TABLE IF NOT EXISTS subscription_window (
   tenant_id bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (id),
   KEY idx_subscription_window_open (status, start_time, end_time),
-  KEY idx_subscription_window_year_period (target_year_catalog_id, target_period)
+  KEY idx_subscription_window_year (target_year_catalog_id)
 ) COMMENT='订刊窗口';
 
 CREATE TABLE IF NOT EXISTS subscription_window_offer (
@@ -424,7 +423,6 @@ CREATE TABLE IF NOT EXISTS product_publication_spu_ext (
 
 CREATE TABLE IF NOT EXISTS product_publication_sku_ext (
   sku_id bigint NOT NULL COMMENT 'SKU 编号',
-  target_period varchar(32) NOT NULL COMMENT '售卖周期',
   volume_label varchar(64) DEFAULT NULL COMMENT '册别',
   edition_label varchar(64) DEFAULT NULL COMMENT '版本',
   isbn varchar(64) DEFAULT NULL COMMENT 'ISBN',

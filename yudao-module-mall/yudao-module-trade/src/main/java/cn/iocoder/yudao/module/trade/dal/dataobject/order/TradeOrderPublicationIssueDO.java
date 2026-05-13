@@ -57,7 +57,6 @@ public class TradeOrderPublicationIssueDO extends BaseDO {
 
     private Long windowId;
     private String windowNameSnapshot;
-    private String targetPeriod;
     private Long offerId;
     private Long offerSkuId;
 

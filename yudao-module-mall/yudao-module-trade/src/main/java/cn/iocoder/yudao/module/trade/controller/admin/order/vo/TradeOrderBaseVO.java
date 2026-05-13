@@ -29,6 +29,9 @@ public class TradeOrderBaseVO {
     @Schema(description = "订单来源", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer terminal;
 
+    @Schema(description = "业务订单来源", requiredMode = Schema.RequiredMode.REQUIRED, example = "APP")
+    private String orderSource;
+
     @Schema(description = "用户编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "2048")
     private Long userId;
 

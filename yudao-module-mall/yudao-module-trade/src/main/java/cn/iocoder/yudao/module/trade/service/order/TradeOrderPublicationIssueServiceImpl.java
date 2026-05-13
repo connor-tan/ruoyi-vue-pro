@@ -90,7 +90,6 @@ public class TradeOrderPublicationIssueServiceImpl implements TradeOrderPublicat
                         .setStationNameSnapshot(calculateItem.getSubscriptionStationNameSnapshot())
                         .setWindowId(orderItem.getSubscriptionWindowId())
                         .setWindowNameSnapshot(orderItem.getSubscriptionWindowNameSnapshot())
-                        .setTargetPeriod(orderItem.getSubscriptionTargetPeriod())
                         .setOfferId(orderItem.getSubscriptionOfferId())
                         .setOfferSkuId(orderItem.getSubscriptionOfferSkuId())
                         .setIssueId(issueSnapshot.getIssueId())

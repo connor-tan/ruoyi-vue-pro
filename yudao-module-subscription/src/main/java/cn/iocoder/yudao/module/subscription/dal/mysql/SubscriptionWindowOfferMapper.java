@@ -18,12 +18,10 @@ import java.util.List;
 public interface SubscriptionWindowOfferMapper extends BaseMapperX<SubscriptionWindowOfferDO> {
 
     List<SubscriptionOfferAvailableRespVO> selectAvailableCandidates(@Param("req") SubscriptionOfferAvailablePageReqVO reqVO,
-                                                                     @Param("targetPeriod") String targetPeriod,
                                                                      @Param("offset") Integer offset,
                                                                      @Param("limit") Integer limit);
 
-    Long selectAvailableCandidateCount(@Param("req") SubscriptionOfferAvailablePageReqVO reqVO,
-                                       @Param("targetPeriod") String targetPeriod);
+    Long selectAvailableCandidateCount(@Param("req") SubscriptionOfferAvailablePageReqVO reqVO);
 
     default PageResult<SubscriptionWindowOfferDO> selectPage(SubscriptionOfferPageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<SubscriptionWindowOfferDO>()

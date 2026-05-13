@@ -5,7 +5,6 @@ public enum SubscriptionRuleFactorEnum {
     STUDENT_SCHOOL("STUDENT_SCHOOL", "学生学校"),
     STUDENT_GRADE("STUDENT_GRADE", "学生年级"),
     OFFER_SKU("OFFER_SKU", "窗口 SKU"),
-    SKU_TARGET_PERIOD("SKU_TARGET_PERIOD", "SKU 周期"),
     SKU_PUBLISHER("SKU_PUBLISHER", "出版社"),
     SKU_PUBLICATION_TYPE("SKU_PUBLICATION_TYPE", "刊物类型"),
     SKU_ISSUE_CYCLE("SKU_ISSUE_CYCLE", "出刊周期"),

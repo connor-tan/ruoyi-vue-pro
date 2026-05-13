@@ -34,12 +34,18 @@ public class TradeMemberPointOrderHandler implements TradeOrderHandler {
 
     @Override
     public void afterOrderCreate(TradeOrderDO order, List<TradeOrderItemDO> orderItems) {
+        if (order.getUserId() == null) {
+            return;
+        }
         // 扣减用户积分（订单抵扣）。不在前置扣减的原因，是因为积分扣减时，需要记录关联业务
         reducePoint(order.getUserId(), order.getUsePoint(), MemberPointBizTypeEnum.ORDER_USE, order.getId());
     }
 
     @Override
     public void afterPayOrder(TradeOrderDO order, List<TradeOrderItemDO> orderItems) {
+        if (order.getUserId() == null) {
+            return;
+        }
         // 增加用户积分（订单赠送）
         addPoint(order.getUserId(), order.getGivePoint(), MemberPointBizTypeEnum.ORDER_GIVE,
                 order.getId());
@@ -51,6 +57,9 @@ public class TradeMemberPointOrderHandler implements TradeOrderHandler {
 
     @Override
     public void afterCancelOrder(TradeOrderDO order, List<TradeOrderItemDO> orderItems) {
+        if (order.getUserId() == null) {
+            return;
+        }
         // 售后的订单项，已经在 afterCancelOrderItem 回滚库存，所以这里不需要重复回滚
         orderItems = filterOrderItemListByNoneAfterSale(orderItems);
         if (CollUtil.isEmpty(orderItems)) {
@@ -78,6 +87,9 @@ public class TradeMemberPointOrderHandler implements TradeOrderHandler {
 
     @Override
     public void afterCancelOrderItem(TradeOrderDO order, TradeOrderItemDO orderItem) {
+        if (order.getUserId() == null) {
+            return;
+        }
         // 增加（回滚）积分（订单抵扣）
         addPoint(order.getUserId(), orderItem.getUsePoint(), MemberPointBizTypeEnum.ORDER_USE_CANCEL_ITEM, orderItem.getId());
         // 扣减（回滚）积分（订单赠送）

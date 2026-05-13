@@ -32,7 +32,9 @@ public enum PayChannelEnum implements ArrayValuable<String> {
 
     MOCK("mock", "模拟支付"),
 
-    WALLET("wallet", "钱包支付");
+    WALLET("wallet", "钱包支付"),
+
+    OFFLINE("offline", "线下收款");
 
     public static final String[] ARRAYS = Arrays.stream(values()).map(PayChannelEnum::getCode).toArray(String[]::new);
 

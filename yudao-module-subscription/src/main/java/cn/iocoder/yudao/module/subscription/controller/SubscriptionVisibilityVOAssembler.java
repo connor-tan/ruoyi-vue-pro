@@ -28,7 +28,6 @@ public final class SubscriptionVisibilityVOAssembler {
         vo.setTargetYearNameSnapshot(window.getTargetYearNameSnapshot());
         vo.setTargetYearStart(window.getTargetYearStart());
         vo.setTargetYearEnd(window.getTargetYearEnd());
-        vo.setTargetPeriod(window.getTargetPeriod());
         return vo;
     }
 
@@ -92,7 +91,6 @@ public final class SubscriptionVisibilityVOAssembler {
         vo.setTargetYearNameSnapshot(window.getTargetYearNameSnapshot());
         vo.setTargetYearStart(window.getTargetYearStart());
         vo.setTargetYearEnd(window.getTargetYearEnd());
-        vo.setTargetPeriod(window.getTargetPeriod());
         return vo;
     }
 
@@ -189,7 +187,6 @@ public final class SubscriptionVisibilityVOAssembler {
                 vo.setApplicableGradeNames(productSku.getApplicableGradeNames());
                 ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();
                 if (ext != null) {
-                    vo.setTargetPeriod(ext.getTargetPeriod());
                     vo.setVolumeLabel(ext.getVolumeLabel());
                     vo.setEditionLabel(ext.getEditionLabel());
                     vo.setIsbn(ext.getIsbn());
@@ -243,7 +240,6 @@ public final class SubscriptionVisibilityVOAssembler {
                 vo.setApplicableGradeNames(productSku.getApplicableGradeNames());
                 ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();
                 if (ext != null) {
-                    vo.setTargetPeriod(ext.getTargetPeriod());
                     vo.setVolumeLabel(ext.getVolumeLabel());
                     vo.setEditionLabel(ext.getEditionLabel());
                     vo.setIsbn(ext.getIsbn());

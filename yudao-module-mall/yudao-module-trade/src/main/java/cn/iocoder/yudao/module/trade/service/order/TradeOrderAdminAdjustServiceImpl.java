@@ -16,6 +16,7 @@ import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderItemMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.order.TradeOrderMapper;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderOperateTypeEnum;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderSourceEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.framework.order.core.annotations.TradeOrderLog;
 import cn.iocoder.yudao.module.trade.framework.order.core.utils.TradeOrderLogUtils;
@@ -33,6 +34,7 @@ import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_NOT_F
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_ADDRESS_FAIL_EXPRESS_DELIVERY_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_ADDRESS_FAIL_STATUS_NOT_DELIVERED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_ALREADY;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_ADMIN_MANUAL;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_PAID;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_PRICE_ERROR;
 
@@ -68,6 +70,9 @@ public class TradeOrderAdminAdjustServiceImpl implements TradeOrderAdminAdjustSe
         if (order.getPayStatus()) {
             throw exception(ORDER_UPDATE_PRICE_FAIL_PAID);
         }
+        if (TradeOrderSourceEnum.isAdmin(order.getOrderSource())) {
+            throw exception(ORDER_UPDATE_PRICE_FAIL_ADMIN_MANUAL);
+        }
         if (order.getAdjustPrice() > 0) {
             throw exception(ORDER_UPDATE_PRICE_FAIL_ALREADY);
         }
@@ -90,7 +95,9 @@ public class TradeOrderAdminAdjustServiceImpl implements TradeOrderAdminAdjustSe
         }
         tradeOrderItemMapper.updateBatch(updateItems);
 
-        payOrderApi.updatePayOrderPrice(order.getPayOrderId(), newPayPrice);
+        if (order.getPayOrderId() != null) {
+            payOrderApi.updatePayOrderPrice(order.getPayOrderId(), newPayPrice);
+        }
 
         TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), order.getStatus(),
                 MapUtil.<String, Object>builder().put("oldPayPrice", MoneyUtils.fenToYuanStr(order.getPayPrice()))

@@ -26,7 +26,6 @@ public class SubscriptionOrderEligibilityRespDTO {
     private String windowNameSnapshot;
     private Integer targetYearStart;
     private Integer targetYearEnd;
-    private String targetPeriod;
 
     private Long offerId;
     private Long offerSkuId;

@@ -30,9 +30,6 @@ public class SubscriptionWindowSaveReqVO {
 
     private Integer targetYearEnd;
 
-    @NotBlank(message = "目标周期不能为空")
-    private String targetPeriod;
-
     @NotNull(message = "开始时间不能为空")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)

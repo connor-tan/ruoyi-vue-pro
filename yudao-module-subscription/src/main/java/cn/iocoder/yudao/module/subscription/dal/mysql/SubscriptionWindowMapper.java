@@ -17,7 +17,6 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
         return selectPage(reqVO, new LambdaQueryWrapperX<SubscriptionWindowDO>()
                 .likeIfPresent(SubscriptionWindowDO::getName, reqVO.getName())
                 .eqIfPresent(SubscriptionWindowDO::getTargetYearCatalogId, reqVO.getTargetYearCatalogId())
-                .eqIfPresent(SubscriptionWindowDO::getTargetPeriod, reqVO.getTargetPeriod())
                 .eqIfPresent(SubscriptionWindowDO::getStatus, reqVO.getStatus())
                 .orderByDesc(SubscriptionWindowDO::getId));
     }

@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.pay.api.order;
 
 import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderCreateReqDTO;
+import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderOfflineCreateReqDTO;
 import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderRespDTO;
 import cn.iocoder.yudao.module.pay.convert.order.PayOrderConvert;
 import cn.iocoder.yudao.module.pay.dal.dataobject.order.PayOrderDO;
@@ -23,6 +24,11 @@ public class PayOrderApiImpl implements PayOrderApi {
     @Override
     public Long createOrder(PayOrderCreateReqDTO reqDTO) {
         return payOrderService.createOrder(reqDTO);
+    }
+
+    @Override
+    public Long createOfflinePaidOrder(PayOrderOfflineCreateReqDTO reqDTO) {
+        return payOrderService.createOfflinePaidOrder(reqDTO);
     }
 
     @Override

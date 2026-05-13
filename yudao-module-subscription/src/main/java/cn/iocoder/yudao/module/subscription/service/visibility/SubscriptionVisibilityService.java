@@ -7,4 +7,6 @@ public interface SubscriptionVisibilityService {
 
     SubscriptionVisibilityResultBO calculate(Long userId, Long studentId, Long windowId);
 
+    SubscriptionVisibilityResultBO calculateForAdmin(Long studentId, Long windowId);
+
 }

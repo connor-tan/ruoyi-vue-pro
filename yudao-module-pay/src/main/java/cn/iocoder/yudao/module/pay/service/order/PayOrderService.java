@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.pay.service.order;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.pay.framework.pay.core.client.dto.order.PayOrderRespDTO;
 import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderCreateReqDTO;
+import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderOfflineCreateReqDTO;
 import cn.iocoder.yudao.module.pay.controller.admin.order.vo.PayOrderExportReqVO;
 import cn.iocoder.yudao.module.pay.controller.admin.order.vo.PayOrderPageReqVO;
 import cn.iocoder.yudao.module.pay.controller.admin.order.vo.PayOrderSubmitReqVO;
@@ -87,6 +88,14 @@ public interface PayOrderService {
      * @return 支付单编号
      */
     Long createOrder(@Valid PayOrderCreateReqDTO reqDTO);
+
+    /**
+     * 创建线下已支付的支付单
+     *
+     * @param reqDTO 创建请求
+     * @return 支付单编号
+     */
+    Long createOfflinePaidOrder(@Valid PayOrderOfflineCreateReqDTO reqDTO);
 
     /**
      * 提交支付

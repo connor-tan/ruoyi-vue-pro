@@ -89,9 +89,6 @@ public class ProductSkuSaveReqVO {
     @Data
     public static class PublicationSkuExtSaveReqVO {
 
-        @Schema(description = "售卖周期", example = "FULL_YEAR")
-        private String targetPeriod;
-
         @Schema(description = "册别", example = "上册")
         private String volumeLabel;
 

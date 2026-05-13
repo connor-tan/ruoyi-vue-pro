@@ -73,10 +73,6 @@ public class TradePublicationDeliveryBatchDO extends BaseDO {
      */
     private String productNameSnapshot;
     /**
-     * 目标周期
-     */
-    private String targetPeriod;
-    /**
      * 订刊期次编号；独立刊物可为空。
      */
     private Long issueId;

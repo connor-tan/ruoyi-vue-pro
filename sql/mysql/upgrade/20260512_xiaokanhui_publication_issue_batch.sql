@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS trade_order_publication_issue (
   order_no varchar(64) DEFAULT NULL COMMENT '订单号快照',
   order_item_id bigint NOT NULL COMMENT '订单项编号',
   delivery_id bigint NOT NULL COMMENT '配送组编号',
-  user_id bigint NOT NULL COMMENT '用户编号',
+  user_id bigint NULL COMMENT '用户编号',
   delivery_type int NOT NULL COMMENT '配送方式',
   spu_id bigint NOT NULL COMMENT '商品 SPU 编号',
   sku_id bigint NOT NULL COMMENT '商品 SKU 编号',
@@ -119,7 +119,6 @@ CREATE TABLE IF NOT EXISTS trade_order_publication_issue (
   station_name_snapshot varchar(128) DEFAULT NULL COMMENT '站点名称快照',
   window_id bigint NOT NULL COMMENT '订刊窗口编号',
   window_name_snapshot varchar(128) DEFAULT NULL COMMENT '订刊窗口名称快照',
-  target_period varchar(32) DEFAULT NULL COMMENT '目标周期',
   offer_id bigint NOT NULL COMMENT '订刊窗口刊物编号',
   offer_sku_id bigint NOT NULL COMMENT '订刊窗口 SKU 编号',
   issue_id bigint DEFAULT NULL COMMENT '订刊期次编号',
@@ -166,7 +165,7 @@ SET @sql = IF(
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_publication_delivery_batch' AND COLUMN_NAME = 'issue_id'
   ),
   'SELECT 1',
-  "ALTER TABLE trade_publication_delivery_batch ADD COLUMN issue_id bigint DEFAULT NULL COMMENT '订刊期次编号' AFTER target_period"
+  "ALTER TABLE trade_publication_delivery_batch ADD COLUMN issue_id bigint DEFAULT NULL COMMENT '订刊期次编号' AFTER product_name_snapshot"
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 

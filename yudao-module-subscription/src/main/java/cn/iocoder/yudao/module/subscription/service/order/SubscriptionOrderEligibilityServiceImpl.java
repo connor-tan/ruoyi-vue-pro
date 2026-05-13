@@ -52,8 +52,9 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
             throw exception(ORDER_OFFER_SKU_PRODUCT_SKU_MISMATCH);
         }
         SubscriptionWindowOfferDO offer = offerService.validateOfferExists(offerSku.getOfferId());
-        SubscriptionVisibilityResultBO visibility = visibilityService.calculate(reqDTO.getUserId(),
-                reqDTO.getStudentId(), offer.getWindowId());
+        SubscriptionVisibilityResultBO visibility = Boolean.TRUE.equals(reqDTO.getAdmin())
+                ? visibilityService.calculateForAdmin(reqDTO.getStudentId(), offer.getWindowId())
+                : visibilityService.calculate(reqDTO.getUserId(), reqDTO.getStudentId(), offer.getWindowId());
         SubscriptionVisibilityResultBO.VisibleOfferSku visibleSku = findVisibleSku(visibility, offer.getId(),
                 offerSku.getId(), reqDTO.getSkuId());
         if (visibleSku == null) {
@@ -61,7 +62,7 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
         }
 
         Integer maxQuantity = offerSku.getMaxQuantityPerStudent() == null ? 1 : offerSku.getMaxQuantityPerStudent();
-        Integer orderedQuantity = tradeSubscriptionOrderApi.getEffectiveSubscriptionOrderItemQuantity(reqDTO.getUserId(),
+        Integer orderedQuantity = tradeSubscriptionOrderApi.getEffectiveSubscriptionOrderItemQuantity(
                 reqDTO.getStudentId(), offerSku.getId());
         if (orderedQuantity + reqDTO.getCount() > maxQuantity) {
             throw exception(ORDER_MAX_QUANTITY_EXCEEDED);
@@ -118,7 +119,6 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
             respDTO.setWindowNameSnapshot(window.getName());
             respDTO.setTargetYearStart(window.getTargetYearStart());
             respDTO.setTargetYearEnd(window.getTargetYearEnd());
-            respDTO.setTargetPeriod(window.getTargetPeriod());
         }
         respDTO.setOfferId(offer.getId());
         respDTO.setOfferSkuId(offerSku.getId());

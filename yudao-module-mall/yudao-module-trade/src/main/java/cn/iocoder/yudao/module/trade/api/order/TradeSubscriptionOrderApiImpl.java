@@ -18,8 +18,8 @@ public class TradeSubscriptionOrderApiImpl implements TradeSubscriptionOrderApi 
     private TradeOrderQueryService tradeOrderQueryService;
 
     @Override
-    public Integer getEffectiveSubscriptionOrderItemQuantity(Long userId, Long studentId, Long offerSkuId) {
-        return tradeOrderQueryService.getEffectiveSubscriptionOrderItemQuantity(userId, studentId, offerSkuId);
+    public Integer getEffectiveSubscriptionOrderItemQuantity(Long studentId, Long offerSkuId) {
+        return tradeOrderQueryService.getEffectiveSubscriptionOrderItemQuantity(studentId, offerSkuId);
     }
 
 }

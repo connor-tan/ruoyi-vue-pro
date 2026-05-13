@@ -17,13 +17,12 @@ public interface ErrorCodeConstants {
     ErrorCode OFFER_PRODUCT_NOT_PUBLICATION = new ErrorCode(1_028_001_001, "只能添加刊物商品");
     ErrorCode OFFER_PRODUCT_DUPLICATE = new ErrorCode(1_028_001_002, "窗口中已存在该刊物商品");
     ErrorCode OFFER_ANCHOR_IMMUTABLE = new ErrorCode(1_028_001_003, "窗口刊物的窗口和商品锚点不允许修改");
-    ErrorCode OFFER_NO_MATCHED_SKU = new ErrorCode(1_028_001_004, "刊物没有启用且周期匹配的 SKU，不能加入窗口");
+    ErrorCode OFFER_NO_MATCHED_SKU = new ErrorCode(1_028_001_004, "刊物没有启用且符合筛选条件的 SKU，不能加入窗口");
     ErrorCode OFFER_SKU_NOT_EXISTS = new ErrorCode(1_028_002_000, "窗口 SKU 不存在");
-    ErrorCode OFFER_SKU_TARGET_PERIOD_NOT_MATCHED = new ErrorCode(1_028_002_001, "SKU 周期与窗口目标周期不匹配");
     ErrorCode OFFER_SKU_PRODUCT_MISMATCH = new ErrorCode(1_028_002_002, "SKU 不属于当前窗口刊物");
     ErrorCode OFFER_SKU_DUPLICATE = new ErrorCode(1_028_002_003, "窗口刊物中已存在该 SKU");
     ErrorCode OFFER_SKU_BELONG_ERROR = new ErrorCode(1_028_002_004, "窗口 SKU 不属于当前窗口刊物");
-    ErrorCode OFFER_SKU_EFFECTIVE_REQUIRED = new ErrorCode(1_028_002_005, "启用窗口刊物必须至少保留一个启用、周期匹配且有库存的窗口 SKU");
+    ErrorCode OFFER_SKU_EFFECTIVE_REQUIRED = new ErrorCode(1_028_002_005, "启用窗口刊物必须至少保留一个启用且有库存的窗口 SKU");
     ErrorCode OFFER_SKU_ISSUE_NOT_EXISTS = new ErrorCode(1_028_002_006, "窗口 SKU 期次不存在");
     ErrorCode OFFER_SKU_ISSUE_DUPLICATE = new ErrorCode(1_028_002_007, "窗口 SKU 期号已存在");
     ErrorCode OFFER_SKU_ISSUE_PERIODICAL_REQUIRED = new ErrorCode(1_028_002_008, "只有期刊窗口 SKU 才能维护期次计划");

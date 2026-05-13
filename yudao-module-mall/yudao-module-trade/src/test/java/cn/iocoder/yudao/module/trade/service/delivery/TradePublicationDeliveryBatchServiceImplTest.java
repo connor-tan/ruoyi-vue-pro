@@ -210,7 +210,6 @@ class TradePublicationDeliveryBatchServiceImplTest {
                 .setOfferSkuId(5L)
                 .setSkuId(6L)
                 .setProductNameSnapshot("测试刊物")
-                .setTargetPeriod("SPRING")
                 .setIssueNo(1)
                 .setIssueName("第1期")
                 .setStudentId(orderIssueId)

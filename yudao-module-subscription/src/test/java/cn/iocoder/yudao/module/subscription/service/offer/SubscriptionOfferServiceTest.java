@@ -48,7 +48,6 @@ class SubscriptionOfferServiceTest {
     private static final long OFFER_ID = 20L;
     private static final long PRODUCT_SPU_ID = 30L;
     private static final long PRODUCT_SKU_ID = 40L;
-    private static final String TARGET_PERIOD = "FULL_YEAR";
 
     @Mock
     private SubscriptionWindowOfferMapper offerMapper;
@@ -72,7 +71,7 @@ class SubscriptionOfferServiceTest {
         SubscriptionOfferBatchCreateReqVO reqVO = new SubscriptionOfferBatchCreateReqVO();
         reqVO.setWindowId(WINDOW_ID);
         reqVO.setProductSpuIds(List.of(PRODUCT_SPU_ID));
-        ProductPublicationRespDTO publication = publication("SECOND_TERM", CommonStatusEnum.ENABLE.getStatus());
+        ProductPublicationRespDTO publication = publication(CommonStatusEnum.DISABLE.getStatus());
         when(windowService.validateWindowExists(WINDOW_ID)).thenReturn(window());
         when(productPublicationApi.getPublicationList(reqVO.getProductSpuIds())).thenReturn(List.of(publication));
 
@@ -90,7 +89,7 @@ class SubscriptionOfferServiceTest {
         SubscriptionOfferBatchCreateReqVO reqVO = new SubscriptionOfferBatchCreateReqVO();
         reqVO.setWindowId(WINDOW_ID);
         reqVO.setProductSpuIds(List.of(PRODUCT_SPU_ID));
-        ProductPublicationRespDTO publication = publication(TARGET_PERIOD, CommonStatusEnum.ENABLE.getStatus());
+        ProductPublicationRespDTO publication = publication(CommonStatusEnum.ENABLE.getStatus());
         when(windowService.validateWindowExists(WINDOW_ID)).thenReturn(window());
         when(productPublicationApi.getPublicationList(reqVO.getProductSpuIds())).thenReturn(List.of(publication));
         doAnswer(invocation -> {
@@ -158,9 +157,9 @@ class SubscriptionOfferServiceTest {
         available.setCandidateStatus("CAN_ADD");
         available.setMatchedGradeCatalogIdText("1");
         when(windowService.validateWindowExists(WINDOW_ID)).thenReturn(window());
-        when(offerMapper.selectAvailableCandidates(eq(reqVO), eq(TARGET_PERIOD), eq(0), eq(10)))
+        when(offerMapper.selectAvailableCandidates(eq(reqVO), eq(0), eq(10)))
                 .thenReturn(List.of(available));
-        when(offerMapper.selectAvailableCandidateCount(eq(reqVO), eq(TARGET_PERIOD))).thenReturn(1L);
+        when(offerMapper.selectAvailableCandidateCount(eq(reqVO))).thenReturn(1L);
         EduGradeCatalogRespDTO grade = new EduGradeCatalogRespDTO();
         grade.setId(1L);
         grade.setGradeName("一年级");
@@ -188,17 +187,16 @@ class SubscriptionOfferServiceTest {
         when(productCategoryApi.getSelfAndDescendantCategoryIds(List.of(100L)))
                 .thenReturn(new LinkedHashSet<>(List.of(100L, 101L)));
         when(offerMapper.selectAvailableCandidates(any(SubscriptionOfferAvailablePageReqVO.class),
-                eq(TARGET_PERIOD), eq(0), eq(10))).thenReturn(List.of());
-        when(offerMapper.selectAvailableCandidateCount(any(SubscriptionOfferAvailablePageReqVO.class),
-                eq(TARGET_PERIOD))).thenReturn(0L);
+                eq(0), eq(10))).thenReturn(List.of());
+        when(offerMapper.selectAvailableCandidateCount(any(SubscriptionOfferAvailablePageReqVO.class))).thenReturn(0L);
         ArgumentCaptor<SubscriptionOfferAvailablePageReqVO> queryCaptor =
                 ArgumentCaptor.forClass(SubscriptionOfferAvailablePageReqVO.class);
 
         PageResult<SubscriptionOfferAvailableRespVO> pageResult = offerService.getAvailablePage(reqVO);
 
         assertEquals(0, pageResult.getTotal());
-        verify(offerMapper).selectAvailableCandidates(queryCaptor.capture(), eq(TARGET_PERIOD), eq(0), eq(10));
-        verify(offerMapper).selectAvailableCandidateCount(queryCaptor.capture(), eq(TARGET_PERIOD));
+        verify(offerMapper).selectAvailableCandidates(queryCaptor.capture(), eq(0), eq(10));
+        verify(offerMapper).selectAvailableCandidateCount(queryCaptor.capture());
         assertEquals(List.of(100L, 101L), queryCaptor.getAllValues().get(0).getCategoryIds());
         assertEquals(List.of(100L, 101L), queryCaptor.getAllValues().get(1).getCategoryIds());
     }
@@ -219,7 +217,7 @@ class SubscriptionOfferServiceTest {
         when(productCategoryApi.getSelfAndDescendantCategoryIds(List.of(100L)))
                 .thenReturn(new LinkedHashSet<>(List.of(100L, 101L)));
         when(offerMapper.selectAvailableCandidates(any(SubscriptionOfferAvailablePageReqVO.class),
-                eq(TARGET_PERIOD), isNull(), isNull())).thenReturn(List.of(available));
+                isNull(), isNull())).thenReturn(List.of(available));
         when(productPublicationApi.getPublicationList(List.of(PRODUCT_SPU_ID))).thenReturn(List.of());
         ArgumentCaptor<SubscriptionOfferAvailablePageReqVO> queryCaptor =
                 ArgumentCaptor.forClass(SubscriptionOfferAvailablePageReqVO.class);
@@ -228,7 +226,7 @@ class SubscriptionOfferServiceTest {
 
         assertEquals(0, result.getCreatedOfferCount());
         assertEquals(1, result.getSkippedCount());
-        verify(offerMapper).selectAvailableCandidates(queryCaptor.capture(), eq(TARGET_PERIOD), isNull(), isNull());
+        verify(offerMapper).selectAvailableCandidates(queryCaptor.capture(), isNull(), isNull());
         SubscriptionOfferAvailablePageReqVO mapperQuery = queryCaptor.getValue();
         assertEquals(WINDOW_ID, mapperQuery.getWindowId());
         assertEquals("CAN_ADD", mapperQuery.getCandidateStatus());
@@ -238,7 +236,6 @@ class SubscriptionOfferServiceTest {
     private SubscriptionWindowDO window() {
         return SubscriptionWindowDO.builder()
                 .id(WINDOW_ID)
-                .targetPeriod(TARGET_PERIOD)
                 .build();
     }
 
@@ -253,18 +250,15 @@ class SubscriptionOfferServiceTest {
                 .build();
     }
 
-    private ProductPublicationRespDTO publication(String targetPeriod, Integer skuStatus) {
+    private ProductPublicationRespDTO publication(Integer skuStatus) {
         ProductPublicationRespDTO publication = new ProductPublicationRespDTO();
         publication.setId(PRODUCT_SPU_ID);
         publication.setName("测试刊物");
         publication.setBizScene(BizSceneEnum.PUBLICATION.getCode());
         publication.setStatus(ProductSpuStatusEnum.ENABLE.getStatus());
-        ProductPublicationRespDTO.PublicationSkuExtDTO skuExt = new ProductPublicationRespDTO.PublicationSkuExtDTO();
-        skuExt.setTargetPeriod(targetPeriod);
         ProductPublicationRespDTO.PublicationSkuDTO sku = new ProductPublicationRespDTO.PublicationSkuDTO();
         sku.setId(PRODUCT_SKU_ID);
         sku.setStatus(skuStatus);
-        sku.setPublicationExt(skuExt);
         sku.setApplicableGradeCatalogIds(List.of(1L));
         publication.setSkus(List.of(sku));
         return publication;

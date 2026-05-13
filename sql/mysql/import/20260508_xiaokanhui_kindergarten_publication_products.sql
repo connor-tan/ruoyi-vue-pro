@@ -360,11 +360,10 @@ BEGIN
      ORDER BY source.sort_no;
 
     INSERT INTO product_publication_sku_ext (
-        sku_id, target_period, volume_label, edition_label, isbn, remark,
+        sku_id, volume_label, edition_label, isbn, remark,
         creator, create_time, updater, update_time, deleted, tenant_id
     )
     SELECT sku.id,
-           'FULL_YEAR',
            'FULL',
            'GENERAL',
            source.isbn,

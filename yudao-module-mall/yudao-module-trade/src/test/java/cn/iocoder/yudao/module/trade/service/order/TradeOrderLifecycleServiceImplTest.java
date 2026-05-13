@@ -49,6 +49,8 @@ class TradeOrderLifecycleServiceImplTest {
     @Mock
     private TradeOrderHandler tradeOrderHandler;
     @Mock
+    private TradeOrderPublicationIssueService publicationIssueService;
+    @Mock
     private TradeOrderLifecycleService self;
     @InjectMocks
     private TradeOrderLifecycleServiceImpl tradeOrderLifecycleService;

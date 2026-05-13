@@ -38,7 +38,6 @@ public class AppSubscriptionPublicationRespVO {
         private String productSkuName;
         private Integer price;
         private Integer stock;
-        private String targetPeriod;
         private String volumeLabel;
         private String editionLabel;
         private String isbn;

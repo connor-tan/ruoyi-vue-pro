@@ -103,8 +103,6 @@ public class ProductPublicationRespDTO {
     @Data
     public static class PublicationSkuExtDTO {
 
-        private String targetPeriod;
-
         private String volumeLabel;
 
         private String editionLabel;

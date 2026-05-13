@@ -66,6 +66,12 @@ public class TradeOrderDO extends BaseDO {
      */
     private Integer terminal;
     /**
+     * 业务订单来源
+     *
+     * 枚举 {@link cn.iocoder.yudao.module.trade.enums.order.TradeOrderSourceEnum}
+     */
+    private String orderSource;
+    /**
      * 用户编号
      *
      * 关联 MemberUserDO 的 id 编号

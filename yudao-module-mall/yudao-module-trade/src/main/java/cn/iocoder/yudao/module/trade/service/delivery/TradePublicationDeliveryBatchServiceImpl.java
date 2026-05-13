@@ -164,7 +164,6 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
                 .setOfferSkuId(first.getOfferSkuId())
                 .setSkuId(first.getSkuId())
                 .setProductNameSnapshot(first.getProductNameSnapshot())
-                .setTargetPeriod(first.getTargetPeriod())
                 .setIssueId(first.getIssueId())
                 .setIssueNo(first.getIssueNo())
                 .setIssueName(first.getIssueName())

@@ -74,7 +74,7 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
         query.setWindowId(reqVO.getWindowId());
         query.setCandidateStatus(CANDIDATE_STATUS_CAN_ADD);
         SubscriptionWindowDO window = windowService.validateWindowExists(reqVO.getWindowId());
-        List<SubscriptionOfferAvailableRespVO> candidates = queryAvailableCandidates(query, window, null, null);
+        List<SubscriptionOfferAvailableRespVO> candidates = queryAvailableCandidates(query, null, null);
         List<Long> productSpuIds = candidates.stream()
                 .map(SubscriptionOfferAvailableRespVO::getProductSpuId)
                 .toList();
@@ -85,12 +85,12 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
 
     @Override
     public PageResult<SubscriptionOfferAvailableRespVO> getAvailablePage(SubscriptionOfferAvailablePageReqVO reqVO) {
-        SubscriptionWindowDO window = windowService.validateWindowExists(reqVO.getWindowId());
+        windowService.validateWindowExists(reqVO.getWindowId());
         SubscriptionOfferAvailablePageReqVO query = normalizeAvailableQuery(reqVO);
         int offset = (reqVO.getPageNo() - 1) * reqVO.getPageSize();
         List<SubscriptionOfferAvailableRespVO> candidates =
-                queryAvailableCandidates(query, window, offset, reqVO.getPageSize());
-        Long total = offerMapper.selectAvailableCandidateCount(query, window.getTargetPeriod());
+                queryAvailableCandidates(query, offset, reqVO.getPageSize());
+        Long total = offerMapper.selectAvailableCandidateCount(query);
         return new PageResult<>(candidates, total == null ? 0L : total);
     }
 
@@ -123,7 +123,7 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
                 skippedItems.add(buildSkippedItem(productSpuId, publication.getName(), OFFER_PRODUCT_DUPLICATE.getMsg()));
                 continue;
             }
-            List<SubscriptionWindowOfferSkuDO> offerSkus = buildMatchedOfferSkus(window, publication);
+            List<SubscriptionWindowOfferSkuDO> offerSkus = buildMatchedOfferSkus(publication);
             if (CollUtil.isEmpty(offerSkus)) {
                 skippedItems.add(buildSkippedItem(productSpuId, publication.getName(), OFFER_NO_MATCHED_SKU.getMsg()));
                 continue;
@@ -149,11 +149,10 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     }
 
     private List<SubscriptionOfferAvailableRespVO> queryAvailableCandidates(SubscriptionOfferAvailablePageReqVO reqVO,
-                                                                            SubscriptionWindowDO window,
                                                                             Integer offset,
                                                                             Integer limit) {
         List<SubscriptionOfferAvailableRespVO> candidates =
-                offerMapper.selectAvailableCandidates(reqVO, window.getTargetPeriod(), offset, limit);
+                offerMapper.selectAvailableCandidates(reqVO, offset, limit);
         candidates.forEach(candidate -> {
             candidate.setMatchedGradeCatalogIds(parseGradeCatalogIds(candidate.getMatchedGradeCatalogIdText()));
             candidate.setCategoryIds(parseIdText(candidate.getCategoryIdText()));
@@ -320,14 +319,11 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
                 SubscriptionWindowOfferGradeRelDO::getOfferId);
     }
 
-    private List<SubscriptionWindowOfferSkuDO> buildMatchedOfferSkus(SubscriptionWindowDO window,
-                                                                     ProductPublicationRespDTO publication) {
+    private List<SubscriptionWindowOfferSkuDO> buildMatchedOfferSkus(ProductPublicationRespDTO publication) {
         if (CollUtil.isEmpty(publication.getSkus())) {
             return Collections.emptyList();
         }
         return publication.getSkus().stream()
-                .filter(sku -> sku.getPublicationExt() != null)
-                .filter(sku -> Objects.equals(window.getTargetPeriod(), sku.getPublicationExt().getTargetPeriod()))
                 .filter(sku -> CommonStatusEnum.isEnable(sku.getStatus()))
                 .map(sku -> new SubscriptionWindowOfferSkuDO()
                         .setProductSkuId(sku.getId())

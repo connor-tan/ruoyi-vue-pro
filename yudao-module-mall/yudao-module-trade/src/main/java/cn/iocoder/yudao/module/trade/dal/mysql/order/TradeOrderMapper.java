@@ -8,6 +8,7 @@ import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderPageReq
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderPageReqVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderSourceEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -39,6 +40,7 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
                 .eqIfPresent(TradeOrderDO::getStatus, reqVO.getStatus())
                 .eqIfPresent(TradeOrderDO::getPayChannelCode, reqVO.getPayChannelCode())
                 .eqIfPresent(TradeOrderDO::getTerminal, reqVO.getTerminal())
+                .eqIfPresent(TradeOrderDO::getOrderSource, reqVO.getOrderSource())
                 .betweenIfPresent(TradeOrderDO::getCreateTime, reqVO.getCreateTime())
                 .orderByDesc(TradeOrderDO::getId);
         if (DeliveryTypeEnum.MIXED.getType().equals(reqVO.getDeliveryType())) {
@@ -63,6 +65,7 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
                 .eqIfPresent(TradeOrderDO::getStatus, reqVO.getStatus())
                 .eqIfPresent(TradeOrderDO::getPayChannelCode, reqVO.getPayChannelCode())
                 .eqIfPresent(TradeOrderDO::getTerminal, reqVO.getTerminal())
+                .eqIfPresent(TradeOrderDO::getOrderSource, reqVO.getOrderSource())
                 .betweenIfPresent(TradeOrderDO::getCreateTime, reqVO.getCreateTime())
                 .groupBy(TradeOrderDO::getRefundStatus); // 按售后状态分组
         if (DeliveryTypeEnum.MIXED.getType().equals(reqVO.getDeliveryType())) {
@@ -95,6 +98,7 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
     default List<TradeOrderDO> selectListByStatusAndCreateTimeLt(Integer status, LocalDateTime createTime) {
         return selectList(new LambdaUpdateWrapper<TradeOrderDO>()
                 .eq(TradeOrderDO::getStatus, status)
+                .eq(TradeOrderDO::getOrderSource, TradeOrderSourceEnum.APP.getSource())
                 .lt(TradeOrderDO::getCreateTime, createTime));
     }
 

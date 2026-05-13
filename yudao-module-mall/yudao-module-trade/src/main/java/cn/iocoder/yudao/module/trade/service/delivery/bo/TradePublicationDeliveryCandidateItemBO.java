@@ -46,8 +46,6 @@ public class TradePublicationDeliveryCandidateItemBO {
 
     private String productNameSnapshot;
 
-    private String targetPeriod;
-
     private Long studentId;
 
     private String studentNameSnapshot;

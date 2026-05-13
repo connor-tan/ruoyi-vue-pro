@@ -70,6 +70,19 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_ISSUE_RECEIVE_FAIL_STATUS = new ErrorCode(1_011_000_064, "刊物期次收货失败，期次不是已发货待收货状态");
     ErrorCode PUBLICATION_EXPRESS_LOGISTICS_REQUIRED = new ErrorCode(1_011_000_065, "快递刊物期次发货必须填写物流公司和单号");
     ErrorCode PUBLICATION_EXPRESS_BATCH_TOO_LARGE = new ErrorCode(1_011_000_066, "快递刊物期次单批最多支持 {} 条，请缩小筛选范围后再发货");
+    ErrorCode ORDER_MANUAL_ITEM_REQUIRED = new ErrorCode(1_011_000_067, "手工订单至少需要一条商品明细");
+    ErrorCode ORDER_MANUAL_ITEM_COUNT_INVALID = new ErrorCode(1_011_000_068, "手工订单商品数量必须大于 0");
+    ErrorCode ORDER_MANUAL_PRICE_INVALID = new ErrorCode(1_011_000_069, "手工订单金额必须大于 0");
+    ErrorCode ORDER_MANUAL_CONFIRM_PAY_SOURCE_INVALID = new ErrorCode(1_011_000_070, "只有后台手动或导入订单可以确认线下收款");
+    ErrorCode ORDER_MANUAL_CONFIRM_PAY_STATUS_INVALID = new ErrorCode(1_011_000_071, "只有待收款的后台订单可以确认线下收款");
+    ErrorCode ORDER_MANUAL_CANCEL_SOURCE_INVALID = new ErrorCode(1_011_000_072, "只有后台手动或导入订单可以后台取消");
+    ErrorCode ORDER_MANUAL_DELIVERY_ADDRESS_REQUIRED = new ErrorCode(1_011_000_073, "快递手工订单必须填写收货地址");
+    ErrorCode ORDER_MANUAL_PICK_UP_REQUIRED = new ErrorCode(1_011_000_074, "自提手工订单必须填写自提门店、联系人和联系电话");
+    ErrorCode ORDER_MANUAL_STUDENT_REQUIRED = new ErrorCode(1_011_000_075, "刊物手工订单必须填写学生编号");
+    ErrorCode ORDER_UPDATE_PRICE_FAIL_ADMIN_MANUAL = new ErrorCode(1_011_000_076,
+            "后台手工订单金额请在创建或导入时确定，不能通过订单调价修改");
+    ErrorCode ORDER_MANUAL_IMPORT_GROUP_FIELD_CONFLICT = new ErrorCode(1_011_000_077,
+            "同一导入订单号的{}不一致，请统一填写");
 
     // ========== After Sale 模块 1-011-000-100 ==========
     ErrorCode AFTER_SALE_NOT_FOUND = new ErrorCode(1_011_000_100, "售后单不存在");

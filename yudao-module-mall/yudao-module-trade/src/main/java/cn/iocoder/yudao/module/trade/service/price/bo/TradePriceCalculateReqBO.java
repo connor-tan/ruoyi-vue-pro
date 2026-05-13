@@ -215,11 +215,6 @@ public class TradePriceCalculateReqBO {
         private Integer subscriptionTargetYearEnd;
 
         /**
-         * 订刊目标周期
-         */
-        private String subscriptionTargetPeriod;
-
-        /**
          * 订刊窗口刊物编号（offer）
          */
         private Long subscriptionOfferId;

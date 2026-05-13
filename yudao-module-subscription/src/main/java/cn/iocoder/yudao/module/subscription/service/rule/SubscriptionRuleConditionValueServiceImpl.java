@@ -10,7 +10,6 @@ import cn.iocoder.yudao.module.edu.api.publication.EduPublicationTypeApi;
 import cn.iocoder.yudao.module.edu.api.publication.dto.EduPublicationPublisherRespDTO;
 import cn.iocoder.yudao.module.edu.api.publication.dto.EduPublicationTypeRespDTO;
 import cn.iocoder.yudao.module.edu.api.school.EduSchoolApi;
-import cn.iocoder.yudao.module.publication.api.enums.PublicationTargetPeriodEnum;
 import cn.iocoder.yudao.module.subscription.controller.admin.offersku.vo.SubscriptionOfferSkuRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.support.vo.SubscriptionRuleConditionValueRespVO;
 import cn.iocoder.yudao.module.subscription.enums.SubscriptionRuleFactorEnum;
@@ -67,9 +66,6 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
                     .map(item -> option(item.getId(), item.getGradeName()))
                     .toList();
             case OFFER_SKU -> buildOfferSkuOptions(offerId);
-            case SKU_TARGET_PERIOD -> Arrays.stream(PublicationTargetPeriodEnum.values())
-                    .map(item -> new SubscriptionRuleConditionValueRespVO(item.getCode(), item.getName()))
-                    .toList();
             case SKU_PUBLISHER -> publicationPublisherApi.getEnabledPublicationPublisherList().stream()
                     .map(item -> option(item.getId(), item.getName()))
                     .toList();
@@ -92,7 +88,7 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
             throw exception(RULE_FACTOR_INVALID);
         }
         return switch (factorEnum) {
-            case STUDENT_SCHOOL, STUDENT_GRADE, SKU_TARGET_PERIOD, SKU_ISSUE_CYCLE, SKU_VOLUME_LABEL,
+            case STUDENT_SCHOOL, STUDENT_GRADE, SKU_ISSUE_CYCLE, SKU_VOLUME_LABEL,
                     SKU_EDITION_LABEL -> findLabel(getConditionValueList(factor, windowId, offerId), value);
             case OFFER_SKU -> findOfferSkuLabel(offerId, value);
             case SKU_PUBLISHER -> validatePublisher(value);
@@ -116,7 +112,6 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
 
     private String buildOfferSkuLabel(SubscriptionOfferSkuRespVO item) {
         List<String> meta = Arrays.asList(
-                        getTargetPeriodName(item.getTargetPeriod()),
                         getDictLabel(DICT_TYPE_PUBLICATION_VOLUME, item.getVolumeLabel()),
                         getDictLabel(DICT_TYPE_PUBLICATION_EDITION, item.getEditionLabel()),
                         CollUtil.isEmpty(item.getApplicableGradeNames()) ? null : String.join("、", item.getApplicableGradeNames()))
@@ -185,18 +180,6 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
                 .findFirst()
                 .map(DictDataRespDTO::getLabel)
                 .orElse(value);
-    }
-
-    private String getTargetPeriodName(String targetPeriod) {
-        if (StrUtil.isBlank(targetPeriod)) {
-            return null;
-        }
-        for (PublicationTargetPeriodEnum item : PublicationTargetPeriodEnum.values()) {
-            if (Objects.equals(item.getCode(), targetPeriod)) {
-                return item.getName();
-            }
-        }
-        return targetPeriod;
     }
 
     private SubscriptionRuleConditionValueRespVO option(Long value, String label) {

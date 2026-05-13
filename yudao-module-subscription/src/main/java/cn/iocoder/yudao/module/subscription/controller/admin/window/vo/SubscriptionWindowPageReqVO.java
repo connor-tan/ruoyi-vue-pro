@@ -16,8 +16,6 @@ public class SubscriptionWindowPageReqVO extends PageParam {
 
     private Long targetYearCatalogId;
 
-    private String targetPeriod;
-
     private Integer status;
 
 }

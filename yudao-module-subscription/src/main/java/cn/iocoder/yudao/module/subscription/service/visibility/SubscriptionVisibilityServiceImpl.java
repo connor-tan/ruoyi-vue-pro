@@ -46,6 +46,15 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
 
     @Override
     public SubscriptionVisibilityResultBO calculate(Long userId, Long studentId, Long windowId) {
+        return calculate0(userId, studentId, windowId, false);
+    }
+
+    @Override
+    public SubscriptionVisibilityResultBO calculateForAdmin(Long studentId, Long windowId) {
+        return calculate0(null, studentId, windowId, true);
+    }
+
+    private SubscriptionVisibilityResultBO calculate0(Long userId, Long studentId, Long windowId, boolean admin) {
         SubscriptionWindowDO window = windowId == null ? windowService.getCurrentOpenWindow() : windowService.getWindow(windowId);
         SubscriptionVisibilityResultBO result = new SubscriptionVisibilityResultBO();
         result.setWindow(window);
@@ -57,14 +66,18 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
             return result;
         }
 
-        EduStudentSubscriptionContextRespDTO student = eduStudentApi.getSubscriptionStudentContextMap(userId,
-                        Collections.singleton(studentId), window.getTargetYearStart(), window.getTargetYearEnd(),
-                        window.getTargetYearCatalogId())
+        Map<Long, EduStudentSubscriptionContextRespDTO> studentContextMap = admin
+                ? eduStudentApi.getAdminSubscriptionStudentContextMap(Collections.singleton(studentId),
+                window.getTargetYearStart(), window.getTargetYearEnd(), window.getTargetYearCatalogId())
+                : eduStudentApi.getSubscriptionStudentContextMap(userId, Collections.singleton(studentId),
+                window.getTargetYearStart(), window.getTargetYearEnd(), window.getTargetYearCatalogId());
+        EduStudentSubscriptionContextRespDTO student = studentContextMap
                 .get(studentId);
         result.setStudent(student);
         if (student == null || student.getBlockedReason() != null) {
             result.setBlockedReason(SubscriptionVisibilityReasonEnum.STUDENT_BLOCKED.getReason());
-            result.setBlockedReasonDesc(student == null ? "学生不存在或不属于当前家长" : student.getBlockedReasonDesc());
+            result.setBlockedReasonDesc(student == null ? (admin ? "学生不存在" : "学生不存在或不属于当前家长")
+                    : student.getBlockedReasonDesc());
             result.setDecisions(Collections.emptyList());
             result.setVisibleOffers(Collections.emptyList());
             return result;
@@ -89,7 +102,7 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
         Map<Long, List<SubscriptionRuleConditionDO>> conditionMap = ruleService.getConditionMap(rules);
 
         List<SubscriptionVisibilityResultBO.OfferDecision> decisions = offers.stream()
-                .map(offer -> buildDecision(window, student, offer, publicationMap.get(offer.getProductSpuId()),
+                .map(offer -> buildDecision(student, offer, publicationMap.get(offer.getProductSpuId()),
                         offerSkuMap.get(offer.getId()), gradeRelMap.get(offer.getId()), rules, conditionMap))
                 .toList();
         result.setDecisions(decisions);
@@ -101,7 +114,6 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
     }
 
     private SubscriptionVisibilityResultBO.OfferDecision buildDecision(
-            SubscriptionWindowDO window,
             EduStudentSubscriptionContextRespDTO student,
             SubscriptionWindowOfferDO offer,
             ProductPublicationRespDTO publication,
@@ -125,7 +137,7 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
         List<SubscriptionVisibilityResultBO.VisibleOfferSku> candidateSkus = (offerSkus == null
                 ? Collections.<SubscriptionWindowOfferSkuDO>emptyList() : offerSkus).stream()
                 .filter(offerSku -> CommonStatusEnum.isEnable(offerSku.getStatus()))
-                .map(offerSku -> buildCandidateSku(window, offerSku, productSkuMap.get(offerSku.getProductSkuId())))
+                .map(offerSku -> buildCandidateSku(offerSku, productSkuMap.get(offerSku.getProductSkuId())))
                 .filter(Objects::nonNull)
                 .toList();
         decision.setCandidateSkuCount(candidateSkus.size());
@@ -198,12 +210,10 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
     }
 
     private SubscriptionVisibilityResultBO.VisibleOfferSku buildCandidateSku(
-            SubscriptionWindowDO window,
             SubscriptionWindowOfferSkuDO offerSku,
             ProductPublicationRespDTO.PublicationSkuDTO productSku) {
         if (productSku == null || !CommonStatusEnum.isEnable(productSku.getStatus()) || productSku.getStock() == null
-                || productSku.getStock() <= 0 || productSku.getPublicationExt() == null
-                || !Objects.equals(window.getTargetPeriod(), productSku.getPublicationExt().getTargetPeriod())) {
+                || productSku.getStock() <= 0) {
             return null;
         }
         SubscriptionVisibilityResultBO.VisibleOfferSku sku = new SubscriptionVisibilityResultBO.VisibleOfferSku();
@@ -252,9 +262,6 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
         ProductPublicationRespDTO.PublicationSkuDTO sku = visibleSku.getProductSku();
         ProductPublicationRespDTO.PublicationSkuExtDTO skuExt = sku.getPublicationExt();
         ProductPublicationRespDTO.PublicationSpuExtDTO spuExt = publication.getPublicationExt();
-        if (SubscriptionRuleFactorEnum.SKU_TARGET_PERIOD.getCode().equals(factor)) {
-            return skuExt != null && Objects.equals(expected, skuExt.getTargetPeriod());
-        }
         if (SubscriptionRuleFactorEnum.SKU_PUBLISHER.getCode().equals(factor)) {
             return spuExt != null && Objects.equals(expected, String.valueOf(spuExt.getPublisherId()));
         }

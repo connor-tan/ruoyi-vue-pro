@@ -18,7 +18,6 @@ public class AppSubscriptionWindowRespVO {
         private String targetYearNameSnapshot;
         private Integer targetYearStart;
         private Integer targetYearEnd;
-        private String targetPeriod;
     }
 
     @Data

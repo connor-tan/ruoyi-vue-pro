@@ -46,6 +46,9 @@ public class TradeBrokerageOrderHandler implements TradeOrderHandler {
 
     @Override
     public void beforeOrderCreate(TradeOrderDO order, List<TradeOrderItemDO> orderItems) {
+        if (order.getUserId() == null) {
+            return;
+        }
         // 设置订单推广人
         BrokerageUserDO brokerageUser = brokerageUserService.getBrokerageUser(order.getUserId());
         if (brokerageUser != null && brokerageUser.getBindUserId() != null) {
@@ -55,7 +58,7 @@ public class TradeBrokerageOrderHandler implements TradeOrderHandler {
 
     @Override
     public void afterPayOrder(TradeOrderDO order, List<TradeOrderItemDO> orderItems) {
-        if (order.getBrokerageUserId() == null) {
+        if (order.getUserId() == null || order.getBrokerageUserId() == null) {
             return;
         }
         addBrokerage(order.getUserId(), orderItems);
@@ -100,6 +103,9 @@ public class TradeBrokerageOrderHandler implements TradeOrderHandler {
      * @param orderItems 订单项
      */
     protected void addBrokerage(Long userId, List<TradeOrderItemDO> orderItems) {
+        if (userId == null) {
+            return;
+        }
         MemberUserRespDTO user = memberUserApi.getUser(userId);
         Assert.notNull(user);
         Map<Long, ProductSpuRespDTO> spusMap = productSpuApi.getSpuMap(convertList(orderItems, TradeOrderItemDO::getSpuId));

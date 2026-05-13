@@ -34,7 +34,6 @@ import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIdentifierRuleEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIssueModeEnum;
-import cn.iocoder.yudao.module.publication.api.enums.PublicationTargetPeriodEnum;
 import cn.iocoder.yudao.module.system.api.dict.DictDataApi;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import jakarta.annotation.Resource;
@@ -243,12 +242,9 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (!PublicationIssueModeEnum.isValid(ext.getIssueMode())) {
             throw exception(PUBLICATION_ISSUE_MODE_INVALID);
         }
-        ext.setIssueMode(PublicationIssueModeEnum.normalize(ext.getIssueMode()));
+        normalizePublicationIssueFields(ext);
         if (PublicationIssueModeEnum.isPeriodical(ext.getIssueMode()) && StrUtil.isBlank(ext.getIssueCycle())) {
             throw exception(PUBLICATION_ISSUE_CYCLE_REQUIRED);
-        }
-        if (PublicationIssueModeEnum.isSingle(ext.getIssueMode())) {
-            ext.setIssueCycle(null);
         }
         EduPublicationPublisherRespDTO publisher = getEnabledPublicationPublisher(ext.getPublisherId());
         EduPublicationTypeRespDTO type = getEnabledPublicationType(ext.getPublicationTypeId());
@@ -266,7 +262,6 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             if (CollUtil.isEmpty(sku.getApplicableGradeCatalogIds())) {
                 throw exception(PUBLICATION_SKU_GRADE_REQUIRED);
             }
-            sku.getPublicationExt().setTargetPeriod(PublicationTargetPeriodEnum.normalize(sku.getPublicationExt().getTargetPeriod()));
             if (StrUtil.isNotBlank(sku.getPublicationExt().getVolumeLabel())) {
                 volumeLabels.add(sku.getPublicationExt().getVolumeLabel());
             }
@@ -316,6 +311,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
     public void savePublication(Long spuId, ProductSpuSaveReqVO reqVO, List<ProductSkuDO> savedSkus,
                                 Collection<Long> cleanupSkuIds) {
         ProductSpuSaveReqVO.PublicationSpuExtSaveReqVO extReq = reqVO.getPublicationExt();
+        normalizePublicationIssueFields(extReq);
         ProductPublicationSpuExtDO extDO = BeanUtils.toBean(extReq, ProductPublicationSpuExtDO.class);
         extDO.setSpuId(spuId);
         publicationSpuExtMapper.upsert(extDO);
@@ -323,6 +319,11 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (CollUtil.isNotEmpty(cleanupSkuIds)) {
             publicationSkuExtMapper.deleteBySkuIdsPhysically(cleanupSkuIds);
             publicationSkuGradeRelMapper.deleteBySkuIdsPhysically(cleanupSkuIds);
+        }
+        Set<Long> savedSkuIds = new HashSet<>(convertSet(savedSkus, ProductSkuDO::getId));
+        savedSkuIds.remove(null);
+        if (CollUtil.isNotEmpty(savedSkuIds)) {
+            publicationSkuGradeRelMapper.deleteBySkuIdsPhysically(savedSkuIds);
         }
         Map<Long, ProductSkuSaveReqVO> reqSkuMap = convertMap(reqVO.getSkus(), ProductSkuSaveReqVO::getId);
         for (int i = 0; i < savedSkus.size(); i++) {
@@ -346,6 +347,16 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             if (CollUtil.isNotEmpty(gradeRelList)) {
                 publicationSkuGradeRelMapper.insertBatch(gradeRelList);
             }
+        }
+    }
+
+    private void normalizePublicationIssueFields(ProductSpuSaveReqVO.PublicationSpuExtSaveReqVO ext) {
+        if (ext == null) {
+            return;
+        }
+        ext.setIssueMode(PublicationIssueModeEnum.normalize(ext.getIssueMode()));
+        if (PublicationIssueModeEnum.isSingle(ext.getIssueMode())) {
+            ext.setIssueCycle("");
         }
     }
 

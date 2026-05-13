@@ -101,6 +101,12 @@ public interface StudentService {
             Integer targetYearEnd,
             Long targetYearCatalogId);
 
+    Map<Long, EduStudentSubscriptionContextRespDTO> getAdminSubscriptionStudentContextMap(
+            Collection<Long> studentIds,
+            Integer targetYearStart,
+            Integer targetYearEnd,
+            Long targetYearCatalogId);
+
     // ==================== 子表（学生班级区间记录） ====================
 
     /**

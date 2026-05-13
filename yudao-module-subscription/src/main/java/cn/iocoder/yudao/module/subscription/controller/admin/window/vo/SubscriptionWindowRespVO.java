@@ -19,7 +19,6 @@ public class SubscriptionWindowRespVO {
     private String targetYearNameSnapshot;
     private Integer targetYearStart;
     private Integer targetYearEnd;
-    private String targetPeriod;
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime startTime;
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)

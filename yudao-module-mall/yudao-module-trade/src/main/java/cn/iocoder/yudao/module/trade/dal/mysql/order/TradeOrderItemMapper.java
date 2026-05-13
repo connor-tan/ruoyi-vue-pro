@@ -53,8 +53,7 @@ public interface TradeOrderItemMapper extends BaseMapperX<TradeOrderItemDO> {
         return CollUtil.getFirst(result) != null ? MapUtil.getInt(result.get(0), "sumCount") : 0;
     }
 
-    Integer selectEffectiveSubscriptionOrderItemQuantity(@Param("userId") Long userId,
-                                                         @Param("studentId") Long studentId,
+    Integer selectEffectiveSubscriptionOrderItemQuantity(@Param("studentId") Long studentId,
                                                          @Param("offerSkuId") Long offerSkuId,
                                                          @Param("canceledStatus") Integer canceledStatus);
 

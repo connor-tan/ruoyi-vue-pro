@@ -4,6 +4,7 @@ import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.validation.InEnum;
 import cn.iocoder.yudao.framework.common.validation.Mobile;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderSourceEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -60,5 +61,9 @@ public class TradeOrderPageReqVO extends PageParam {
     @Schema(description = "订单来源", example = "10")
     @InEnum(value = TerminalEnum.class, message = "订单来源 {value}")
     private Integer terminal;
+
+    @Schema(description = "业务订单来源", example = "APP")
+    @InEnum(value = TradeOrderSourceEnum.class, message = "业务订单来源 {value}")
+    private String orderSource;
 
 }

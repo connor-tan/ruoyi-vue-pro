@@ -21,7 +21,6 @@ public class SubscriptionRulePreviewRespVO {
         private String targetYearNameSnapshot;
         private Integer targetYearStart;
         private Integer targetYearEnd;
-        private String targetPeriod;
     }
 
     @Data
@@ -69,7 +68,6 @@ public class SubscriptionRulePreviewRespVO {
         private String decisionStatusName;
         private Integer price;
         private Integer stock;
-        private String targetPeriod;
         private String volumeLabel;
         private String editionLabel;
         private String isbn;

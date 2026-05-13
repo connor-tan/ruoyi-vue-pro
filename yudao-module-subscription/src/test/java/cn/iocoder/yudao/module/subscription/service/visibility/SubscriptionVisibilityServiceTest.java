@@ -43,7 +43,6 @@ class SubscriptionVisibilityServiceTest {
     private static final long STUDENT_ID = 60L;
     private static final long SCHOOL_ID = 70L;
     private static final long GRADE_ID = 80L;
-    private static final String TARGET_PERIOD = "FULL_YEAR";
 
     @Mock
     private SubscriptionWindowService windowService;
@@ -187,7 +186,6 @@ class SubscriptionVisibilityServiceTest {
                 .targetYearCatalogId(100L)
                 .targetYearStart(2026)
                 .targetYearEnd(2027)
-                .targetPeriod(TARGET_PERIOD)
                 .gradeCalcRule("AUTO_TARGET_YEAR_GRADE")
                 .gradeResolveMode("AUTO_TARGET_YEAR_GRADE")
                 .startTime(LocalDateTime.now().minusDays(1))
@@ -259,7 +257,6 @@ class SubscriptionVisibilityServiceTest {
 
     private ProductPublicationRespDTO.PublicationSkuDTO publicationSku(Long productSkuId, String name, List<Long> gradeIds) {
         ProductPublicationRespDTO.PublicationSkuExtDTO skuExt = new ProductPublicationRespDTO.PublicationSkuExtDTO();
-        skuExt.setTargetPeriod(TARGET_PERIOD);
         skuExt.setVolumeLabel("上册");
         skuExt.setEditionLabel("苏教版");
 

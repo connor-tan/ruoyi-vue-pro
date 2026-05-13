@@ -83,7 +83,6 @@ public class TradePriceCalculatorHelper {
                     .setSubscriptionWindowNameSnapshot(item.getSubscriptionWindowNameSnapshot())
                     .setSubscriptionTargetYearStart(item.getSubscriptionTargetYearStart())
                     .setSubscriptionTargetYearEnd(item.getSubscriptionTargetYearEnd())
-                    .setSubscriptionTargetPeriod(item.getSubscriptionTargetPeriod())
                     .setSubscriptionOfferId(item.getSubscriptionOfferId())
                     .setSubscriptionOfferSkuId(item.getSubscriptionOfferSkuId())
                     .setSubscriptionVisibilityReason(item.getSubscriptionVisibilityReason())

@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.pay.api.order;
 
 import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderCreateReqDTO;
+import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderOfflineCreateReqDTO;
 import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderRespDTO;
 
 import jakarta.validation.Valid;
@@ -20,6 +21,14 @@ public interface PayOrderApi {
      * @return 支付单编号
      */
     Long createOrder(@Valid PayOrderCreateReqDTO reqDTO);
+
+    /**
+     * 创建线下已支付的支付单
+     *
+     * @param reqDTO 创建请求
+     * @return 支付单编号
+     */
+    Long createOfflinePaidOrder(@Valid PayOrderOfflineCreateReqDTO reqDTO);
 
     /**
      * 获得支付单

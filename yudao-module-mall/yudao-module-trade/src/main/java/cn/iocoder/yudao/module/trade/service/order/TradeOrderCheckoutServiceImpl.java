@@ -31,6 +31,7 @@ import cn.iocoder.yudao.module.trade.dal.redis.no.TradeNoRedisDAO;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderOperateTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderRefundStatusEnum;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderSourceEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
 import cn.iocoder.yudao.module.trade.framework.order.core.annotations.TradeOrderLog;
@@ -245,7 +246,6 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                 .setSubscriptionWindowNameSnapshot(eligibility.getWindowNameSnapshot())
                 .setSubscriptionTargetYearStart(eligibility.getTargetYearStart())
                 .setSubscriptionTargetYearEnd(eligibility.getTargetYearEnd())
-                .setSubscriptionTargetPeriod(eligibility.getTargetPeriod())
                 .setSubscriptionOfferId(eligibility.getOfferId())
                 .setSubscriptionOfferSkuId(eligibility.getOfferSkuId())
                 .setSubscriptionVisibilityReason(eligibility.getVisibilityReason())
@@ -410,7 +410,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         order.setStatus(TradeOrderStatusEnum.UNPAID.getStatus());
         order.setRefundStatus(TradeOrderRefundStatusEnum.NONE.getStatus());
         order.setProductCount(getSumValue(calculateRespBO.getItems(), TradePriceCalculateRespBO.OrderItem::getCount, Integer::sum));
-        order.setUserIp(getClientIP()).setTerminal(getTerminal());
+        order.setUserIp(getClientIP()).setTerminal(getTerminal()).setOrderSource(TradeOrderSourceEnum.APP.getSource());
         order.setGiveCouponTemplateCounts(calculateRespBO.getGiveCouponTemplateCounts());
         order.setAdjustPrice(0).setPayStatus(false);
         order.setRefundStatus(TradeOrderRefundStatusEnum.NONE.getStatus()).setRefundPrice(0);

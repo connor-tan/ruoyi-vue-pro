@@ -67,9 +67,6 @@ public class TradePublicationDeliveryCandidateItemRespVO {
     @Schema(description = "刊物商品名称快照", example = "读者")
     private String productNameSnapshot;
 
-    @Schema(description = "目标周期", example = "FULL_YEAR")
-    private String targetPeriod;
-
     @Schema(description = "学生编号", example = "1000")
     private Long studentId;
 

@@ -337,8 +337,8 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
     }
 
     @Override
-    public Integer getEffectiveSubscriptionOrderItemQuantity(Long userId, Long studentId, Long offerSkuId) {
-        return tradeOrderItemMapper.selectEffectiveSubscriptionOrderItemQuantity(userId, studentId, offerSkuId,
+    public Integer getEffectiveSubscriptionOrderItemQuantity(Long studentId, Long offerSkuId) {
+        return tradeOrderItemMapper.selectEffectiveSubscriptionOrderItemQuantity(studentId, offerSkuId,
                 TradeOrderStatusEnum.CANCELED.getStatus());
     }
 

@@ -94,6 +94,8 @@ class TradeOrderCheckoutServiceImplTest {
     private TradeOrderHandler tradeOrderHandler;
     @Spy
     private TradeOrderDeliveryGroupSupport deliveryGroupSupport = new TradeOrderDeliveryGroupSupport();
+    @Mock
+    private TradeOrderPublicationIssueService publicationIssueService;
     @InjectMocks
     private TradeOrderCheckoutServiceImpl tradeOrderCheckoutService;
 

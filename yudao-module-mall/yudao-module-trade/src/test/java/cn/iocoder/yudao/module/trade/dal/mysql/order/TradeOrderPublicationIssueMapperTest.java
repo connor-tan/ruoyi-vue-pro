@@ -112,7 +112,6 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
                 .setStationNameSnapshot("城北站")
                 .setWindowId(3L)
                 .setWindowNameSnapshot("2026 春季订刊")
-                .setTargetPeriod("SPRING")
                 .setOfferId(4L)
                 .setOfferSkuId(5L)
                 .setIssueId(7001L)

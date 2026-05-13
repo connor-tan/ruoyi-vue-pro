@@ -17,4 +17,10 @@ public interface EduStudentApi {
             Integer targetYearEnd,
             Long targetYearCatalogId);
 
+    Map<Long, EduStudentSubscriptionContextRespDTO> getAdminSubscriptionStudentContextMap(
+            Collection<Long> studentIds,
+            Integer targetYearStart,
+            Integer targetYearEnd,
+            Long targetYearCatalogId);
+
 }

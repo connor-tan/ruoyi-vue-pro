@@ -12,6 +12,7 @@ import cn.iocoder.yudao.module.pay.framework.pay.core.client.dto.order.PayOrderR
 import cn.iocoder.yudao.module.pay.framework.pay.core.client.dto.order.PayOrderUnifiedReqDTO;
 import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderCreateReqDTO;
+import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderOfflineCreateReqDTO;
 import cn.iocoder.yudao.module.pay.controller.admin.order.vo.PayOrderExportReqVO;
 import cn.iocoder.yudao.module.pay.controller.admin.order.vo.PayOrderPageReqVO;
 import cn.iocoder.yudao.module.pay.controller.admin.order.vo.PayOrderSubmitReqVO;
@@ -24,6 +25,7 @@ import cn.iocoder.yudao.module.pay.dal.dataobject.order.PayOrderExtensionDO;
 import cn.iocoder.yudao.module.pay.dal.mysql.order.PayOrderExtensionMapper;
 import cn.iocoder.yudao.module.pay.dal.mysql.order.PayOrderMapper;
 import cn.iocoder.yudao.module.pay.dal.redis.no.PayNoRedisDAO;
+import cn.iocoder.yudao.module.pay.enums.PayChannelEnum;
 import cn.iocoder.yudao.module.pay.enums.notify.PayNotifyTypeEnum;
 import cn.iocoder.yudao.module.pay.enums.order.PayOrderStatusEnum;
 import cn.iocoder.yudao.module.pay.framework.pay.config.PayProperties;
@@ -134,6 +136,44 @@ public class PayOrderServiceImpl implements PayOrderService {
                 .setStatus(PayOrderStatusEnum.WAITING.getStatus())
                 // 退款相关字段
                 .setRefundPrice(0);
+        orderMapper.insert(order);
+        return order.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long createOfflinePaidOrder(PayOrderOfflineCreateReqDTO reqDTO) {
+        PayAppDO app = appService.validPayApp(reqDTO.getAppKey());
+        PayOrderDO order = orderMapper.selectByAppIdAndMerchantOrderId(app.getId(), reqDTO.getMerchantOrderId());
+        if (order != null) {
+            if (PayOrderStatusEnum.isSuccess(order.getStatus())
+                    && PayChannelEnum.OFFLINE.getCode().equals(order.getChannelCode())) {
+                return order.getId();
+            }
+            throw exception(PAY_ORDER_STATUS_IS_NOT_WAITING);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String no = PayChannelEnum.OFFLINE.getCode() + "-" + reqDTO.getMerchantOrderId();
+        order = new PayOrderDO()
+                .setAppId(app.getId())
+                .setChannelCode(PayChannelEnum.OFFLINE.getCode())
+                .setUserId(reqDTO.getUserId())
+                .setUserType(reqDTO.getUserType())
+                .setMerchantOrderId(reqDTO.getMerchantOrderId())
+                .setSubject(reqDTO.getSubject())
+                .setBody(reqDTO.getBody())
+                .setNotifyUrl(app.getOrderNotifyUrl())
+                .setPrice(reqDTO.getPrice())
+                .setChannelFeeRate(0D)
+                .setChannelFeePrice(0)
+                .setStatus(PayOrderStatusEnum.SUCCESS.getStatus())
+                .setUserIp(reqDTO.getUserIp())
+                .setExpireTime(now)
+                .setSuccessTime(now)
+                .setNo(no)
+                .setRefundPrice(0)
+                .setChannelOrderNo(no);
         orderMapper.insert(order);
         return order.getId();
     }

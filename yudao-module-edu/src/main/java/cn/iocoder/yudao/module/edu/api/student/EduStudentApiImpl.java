@@ -34,4 +34,14 @@ public class EduStudentApiImpl implements EduStudentApi {
                 targetYearCatalogId);
     }
 
+    @Override
+    public Map<Long, EduStudentSubscriptionContextRespDTO> getAdminSubscriptionStudentContextMap(
+            Collection<Long> studentIds,
+            Integer targetYearStart,
+            Integer targetYearEnd,
+            Long targetYearCatalogId) {
+        return studentService.getAdminSubscriptionStudentContextMap(studentIds, targetYearStart, targetYearEnd,
+                targetYearCatalogId);
+    }
+
 }

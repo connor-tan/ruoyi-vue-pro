@@ -306,6 +306,27 @@ public class StudentServiceImpl implements StudentService {
         List<StudentDO> students = studentMapper.selectList(StudentDO::getId, studentIds).stream()
                 .filter(student -> Objects.equals(student.getBelongTo(), belongTo))
                 .toList();
+        return buildSubscriptionStudentContextMap(students, targetYearStart, targetYearEnd, targetYearCatalogId);
+    }
+
+    @Override
+    public Map<Long, EduStudentSubscriptionContextRespDTO> getAdminSubscriptionStudentContextMap(
+            Collection<Long> studentIds,
+            Integer targetYearStart,
+            Integer targetYearEnd,
+            Long targetYearCatalogId) {
+        if (CollUtil.isEmpty(studentIds)) {
+            return Collections.emptyMap();
+        }
+        List<StudentDO> students = studentMapper.selectList(StudentDO::getId, studentIds);
+        return buildSubscriptionStudentContextMap(students, targetYearStart, targetYearEnd, targetYearCatalogId);
+    }
+
+    private Map<Long, EduStudentSubscriptionContextRespDTO> buildSubscriptionStudentContextMap(
+            List<StudentDO> students,
+            Integer targetYearStart,
+            Integer targetYearEnd,
+            Long targetYearCatalogId) {
         if (CollUtil.isEmpty(students)) {
             return Collections.emptyMap();
         }
