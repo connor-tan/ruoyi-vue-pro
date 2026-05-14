@@ -19,4 +19,20 @@
           AND o.status &lt;&gt; #{canceledStatus}
     </select>
 
+    <select id="selectEffectiveSubscriptionOrderItemQuantityList"
+            resultType="cn.iocoder.yudao.module.trade.service.order.bo.TradeSubscriptionOrderItemQuantityBO">
+        SELECT i.subscription_offer_sku_id AS offerSkuId,
+               COALESCE(SUM(i.count), 0) AS quantity
+        FROM trade_order_item i
+        INNER JOIN trade_order o ON o.id = i.order_id AND o.deleted = 0
+        WHERE i.deleted = 0
+          AND i.subscription_student_id = #{studentId}
+          AND i.subscription_offer_sku_id IN
+          <foreach collection="offerSkuIds" item="offerSkuId" open="(" separator="," close=")">
+              #{offerSkuId}
+          </foreach>
+          AND o.status &lt;&gt; #{canceledStatus}
+        GROUP BY i.subscription_offer_sku_id
+    </select>
+
 </mapper>

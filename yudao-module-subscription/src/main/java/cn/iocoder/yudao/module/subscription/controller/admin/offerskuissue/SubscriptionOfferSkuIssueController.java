@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueApplyDefaultTemplateReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueGenerateReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueSaveReqVO;
@@ -55,6 +56,14 @@ public class SubscriptionOfferSkuIssueController {
     @PreAuthorize("@ss.hasPermission('subscription:offer:update')")
     public CommonResult<Integer> generate(@Valid @RequestBody SubscriptionOfferSkuIssueGenerateReqVO reqVO) {
         return success(offerSkuIssueService.generateIssues(reqVO));
+    }
+
+    @PostMapping("/apply-default-template")
+    @Operation(summary = "应用商品 SKU 默认期次模板")
+    @PreAuthorize("@ss.hasPermission('subscription:offer:update')")
+    public CommonResult<Integer> applyDefaultTemplate(
+            @Valid @RequestBody SubscriptionOfferSkuIssueApplyDefaultTemplateReqVO reqVO) {
+        return success(offerSkuIssueService.applyDefaultTemplate(reqVO));
     }
 
     @DeleteMapping("/delete")

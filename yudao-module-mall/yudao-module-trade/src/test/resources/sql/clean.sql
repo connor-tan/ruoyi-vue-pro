@@ -1,6 +1,8 @@
 DELETE FROM trade_order_publication_issue;
 DELETE FROM trade_order;
 DELETE FROM trade_order_item;
+DELETE FROM product_publication_sku_ext;
+DELETE FROM product_sku;
 DELETE FROM trade_after_sale;
 DELETE FROM trade_after_sale_log;
 DELETE FROM trade_brokerage_user;

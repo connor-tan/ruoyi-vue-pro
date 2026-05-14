@@ -5,6 +5,7 @@ import cn.hutool.core.map.MapUtil;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderItemDO;
+import cn.iocoder.yudao.module.trade.service.order.bo.TradeSubscriptionOrderItemQuantityBO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -56,5 +57,10 @@ public interface TradeOrderItemMapper extends BaseMapperX<TradeOrderItemDO> {
     Integer selectEffectiveSubscriptionOrderItemQuantity(@Param("studentId") Long studentId,
                                                          @Param("offerSkuId") Long offerSkuId,
                                                          @Param("canceledStatus") Integer canceledStatus);
+
+    List<TradeSubscriptionOrderItemQuantityBO> selectEffectiveSubscriptionOrderItemQuantityList(
+            @Param("studentId") Long studentId,
+            @Param("offerSkuIds") Collection<Long> offerSkuIds,
+            @Param("canceledStatus") Integer canceledStatus);
 
 }

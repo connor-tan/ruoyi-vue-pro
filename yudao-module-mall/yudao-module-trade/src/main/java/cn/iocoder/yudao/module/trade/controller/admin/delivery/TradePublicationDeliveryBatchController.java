@@ -28,7 +28,7 @@ import java.util.List;
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
-@Tag(name = "管理后台 - 刊物站点发货批次")
+@Tag(name = "管理后台 - 刊物学校配送发货批次")
 @RestController
 @RequestMapping("/trade/publication-delivery-batch")
 @Validated
@@ -38,7 +38,7 @@ public class TradePublicationDeliveryBatchController {
     private TradePublicationDeliveryBatchService publicationDeliveryBatchService;
 
     @GetMapping("/candidate-page")
-    @Operation(summary = "获得刊物站点发货候选分页")
+    @Operation(summary = "获得刊物学校配送发货候选分页")
     @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:query')")
     public CommonResult<PageResult<TradePublicationDeliveryCandidateRespVO>> getCandidatePage(
             @Valid TradePublicationDeliveryCandidatePageReqVO reqVO) {
@@ -54,14 +54,14 @@ public class TradePublicationDeliveryBatchController {
     }
 
     @PostMapping("/create-and-deliver")
-    @Operation(summary = "创建刊物站点发货批次并发货")
+    @Operation(summary = "创建刊物学校配送发货批次并发货")
     @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:create')")
     public CommonResult<Long> createAndDeliver(@Valid @RequestBody TradePublicationDeliveryBatchCreateReqVO reqVO) {
         return success(publicationDeliveryBatchService.createAndDeliver(reqVO, getLoginUserId()));
     }
 
     @GetMapping("/page")
-    @Operation(summary = "获得刊物站点发货批次分页")
+    @Operation(summary = "获得刊物学校配送发货批次分页")
     @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:query')")
     public CommonResult<PageResult<TradePublicationDeliveryBatchRespVO>> getBatchPage(
             @Valid TradePublicationDeliveryBatchPageReqVO reqVO) {
@@ -69,7 +69,7 @@ public class TradePublicationDeliveryBatchController {
     }
 
     @GetMapping("/get")
-    @Operation(summary = "获得刊物站点发货批次详情")
+    @Operation(summary = "获得刊物学校配送发货批次详情")
     @Parameter(name = "id", description = "批次编号", required = true, example = "1")
     @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:query')")
     public CommonResult<TradePublicationDeliveryBatchRespVO> getBatch(@RequestParam("id") Long id) {

@@ -26,7 +26,7 @@ public interface StationService {
 
     List<StationSimpleRespVO> getStationSimpleList();
 
-    StationDO validateStationBindable(Long stationId, Long schoolAreaId);
+    StationDO validateStationBindable(Long stationId);
 
     Map<Long, StationDO> getStationMap(Collection<Long> stationIds);
 

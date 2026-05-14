@@ -15,6 +15,8 @@ public class EduStudentOrderContextRespDTO {
 
     private String schoolName;
 
+    private String schoolAddress;
+
     private Long classId;
 
     private String className;
@@ -32,5 +34,13 @@ public class EduStudentOrderContextRespDTO {
     private String contactName;
 
     private String contactMobile;
+
+    private Long warehouseId;
+
+    private String warehouseName;
+
+    private String warehouseAddress;
+
+    private String warehousePrincipal;
 
 }

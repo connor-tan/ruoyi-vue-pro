@@ -29,6 +29,7 @@ import cn.iocoder.yudao.module.trade.framework.delivery.core.client.ExpressClien
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackQueryReqDTO;
 import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressTrackRespDTO;
 import cn.iocoder.yudao.module.trade.service.delivery.DeliveryExpressService;
+import cn.iocoder.yudao.module.trade.service.order.bo.TradeSubscriptionOrderItemQuantityBO;
 import cn.iocoder.yudao.module.trade.service.order.support.TradeOrderDeliveryAccessSupport;
 import jakarta.annotation.Resource;
 import org.springframework.cache.annotation.Cacheable;
@@ -340,6 +341,21 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
     public Integer getEffectiveSubscriptionOrderItemQuantity(Long studentId, Long offerSkuId) {
         return tradeOrderItemMapper.selectEffectiveSubscriptionOrderItemQuantity(studentId, offerSkuId,
                 TradeOrderStatusEnum.CANCELED.getStatus());
+    }
+
+    @Override
+    public Map<Long, Integer> getEffectiveSubscriptionOrderItemQuantityMap(Long studentId, Collection<Long> offerSkuIds) {
+        if (studentId == null || CollUtil.isEmpty(offerSkuIds)) {
+            return Collections.emptyMap();
+        }
+        List<TradeSubscriptionOrderItemQuantityBO> quantities =
+                tradeOrderItemMapper.selectEffectiveSubscriptionOrderItemQuantityList(studentId, offerSkuIds,
+                        TradeOrderStatusEnum.CANCELED.getStatus());
+        Map<Long, Integer> quantityMap = new HashMap<>(offerSkuIds.size());
+        for (TradeSubscriptionOrderItemQuantityBO quantity : quantities) {
+            quantityMap.put(quantity.getOfferSkuId(), quantity.getQuantity());
+        }
+        return quantityMap;
     }
 
     /**

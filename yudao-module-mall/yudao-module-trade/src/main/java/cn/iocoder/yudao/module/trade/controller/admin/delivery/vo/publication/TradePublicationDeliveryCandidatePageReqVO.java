@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
-@Schema(description = "管理后台 - 刊物站点批次发货候选分页 Request VO")
+@Schema(description = "管理后台 - 刊物学校配送批次发货候选分页 Request VO")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
@@ -15,8 +15,8 @@ public class TradePublicationDeliveryCandidatePageReqVO extends PageParam {
     @Schema(description = "学校编号", example = "100")
     private Long schoolId;
 
-    @Schema(description = "站点编号", example = "200")
-    private Long stationId;
+    @Schema(description = "学校配送仓库编号", example = "200")
+    private Long warehouseId;
 
     @Schema(description = "配送方式", example = "1")
     private Integer deliveryType;

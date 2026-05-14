@@ -10,7 +10,7 @@ import java.util.List;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
-@Schema(description = "管理后台 - 刊物站点发货批次 Response VO")
+@Schema(description = "管理后台 - 刊物仓库发货批次 Response VO")
 @Data
 public class TradePublicationDeliveryBatchRespVO {
 
@@ -29,11 +29,11 @@ public class TradePublicationDeliveryBatchRespVO {
     @Schema(description = "配送方式", example = "3")
     private Integer deliveryType;
 
-    @Schema(description = "站点编号", example = "200")
-    private Long stationId;
+    @Schema(description = "学校配送仓库编号", example = "200")
+    private Long warehouseId;
 
-    @Schema(description = "站点名称快照", example = "梁溪站")
-    private String stationNameSnapshot;
+    @Schema(description = "学校配送仓库名称快照", example = "梁溪站")
+    private String warehouseNameSnapshot;
 
     @Schema(description = "订刊窗口编号", example = "1")
     private Long windowId;
@@ -91,7 +91,7 @@ public class TradePublicationDeliveryBatchRespVO {
     @Schema(description = "批次明细")
     private List<Item> items;
 
-    @Schema(description = "管理后台 - 刊物站点发货批次明细 Response VO")
+    @Schema(description = "管理后台 - 刊物仓库发货批次明细 Response VO")
     @Data
     public static class Item {
 

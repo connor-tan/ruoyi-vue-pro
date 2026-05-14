@@ -90,8 +90,12 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_SKU_ISBN_REQUIRED = new ErrorCode(1_008_010_008, "当前刊物类型要求每个 SKU 都填写 ISBN");
     ErrorCode PUBLICATION_GRADE_CATALOG_NOT_EXISTS = new ErrorCode(1_008_010_009, "适用年级不存在或已禁用");
     ErrorCode PUBLICATION_DELIVERY_REQUIRED = new ErrorCode(1_008_010_010, "刊物商品配送方式不能为空");
-    ErrorCode PUBLICATION_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_010_011, "刊物商品配送方式只允许快递发货或站点配送");
+    ErrorCode PUBLICATION_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_010_011, "刊物商品配送方式只允许快递发货或学校配送");
     ErrorCode PUBLICATION_DELIVERY_TEMPLATE_REQUIRED = new ErrorCode(1_008_010_012, "刊物商品选择快递发货时，运费模板不能为空");
     ErrorCode PUBLICATION_ISSUE_MODE_INVALID = new ErrorCode(1_008_010_013, "刊物履约类型不合法");
+    ErrorCode PUBLICATION_SKU_ISSUE_TEMPLATE_REQUIRED = new ErrorCode(1_008_010_014, "期刊 SKU 必须配置默认期次模板");
+    ErrorCode PUBLICATION_SKU_ISSUE_TEMPLATE_PERIODICAL_REQUIRED = new ErrorCode(1_008_010_015, "只有期刊 SKU 才能维护默认期次模板");
+    ErrorCode PUBLICATION_SKU_ISSUE_TEMPLATE_NOT_EXISTS = new ErrorCode(1_008_010_016, "刊物 SKU 默认期次模板不存在");
+    ErrorCode PUBLICATION_SKU_ISSUE_TEMPLATE_DUPLICATE = new ErrorCode(1_008_010_017, "刊物 SKU 默认期号已存在");
 
 }

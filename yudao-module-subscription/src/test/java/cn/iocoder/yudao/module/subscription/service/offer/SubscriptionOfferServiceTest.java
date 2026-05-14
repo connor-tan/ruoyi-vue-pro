@@ -15,12 +15,17 @@ import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.Subscripti
 import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferBatchCreateReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferBatchCreateRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.SubscriptionOfferSaveReqVO;
+import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionRuleDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferSkuDO;
+import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionRuleConditionMapper;
+import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionRuleMapper;
+import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionOfferSkuIssueMapper;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferGradeRelMapper;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferMapper;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferSkuMapper;
+import cn.iocoder.yudao.module.subscription.service.offerskuissue.SubscriptionOfferSkuIssueDefaultTemplateService;
 import cn.iocoder.yudao.module.subscription.service.window.SubscriptionWindowService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,9 +37,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
 import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.OFFER_ANCHOR_IMMUTABLE;
+import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.OFFER_NOT_EXISTS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,11 +55,14 @@ class SubscriptionOfferServiceTest {
     private static final long OFFER_ID = 20L;
     private static final long PRODUCT_SPU_ID = 30L;
     private static final long PRODUCT_SKU_ID = 40L;
+    private static final long OFFER_SKU_ID = 50L;
 
     @Mock
     private SubscriptionWindowOfferMapper offerMapper;
     @Mock
     private SubscriptionWindowOfferSkuMapper offerSkuMapper;
+    @Mock
+    private SubscriptionOfferSkuIssueMapper offerSkuIssueMapper;
     @Mock
     private SubscriptionWindowOfferGradeRelMapper offerGradeRelMapper;
     @Mock
@@ -63,6 +73,12 @@ class SubscriptionOfferServiceTest {
     private ProductCategoryApi productCategoryApi;
     @Mock
     private EduGradeCatalogApi gradeCatalogApi;
+    @Mock
+    private SubscriptionRuleMapper ruleMapper;
+    @Mock
+    private SubscriptionRuleConditionMapper ruleConditionMapper;
+    @Mock
+    private SubscriptionOfferSkuIssueDefaultTemplateService offerSkuIssueDefaultTemplateService;
     @InjectMocks
     private SubscriptionOfferServiceImpl offerService;
 
@@ -142,6 +158,60 @@ class SubscriptionOfferServiceTest {
         assertEquals(true, updateObj.getRecommendFlag());
         assertEquals(9, updateObj.getSort());
         assertEquals(CommonStatusEnum.DISABLE.getStatus(), updateObj.getStatus());
+    }
+
+    @Test
+    void deleteOffer_shouldKeepSingleDeleteCleanupSemantics() {
+        when(offerMapper.selectById(OFFER_ID)).thenReturn(offer());
+        SubscriptionRuleDO rule = SubscriptionRuleDO.builder().id(100L).offerId(OFFER_ID).build();
+        when(ruleMapper.selectListByOfferIds(List.of(OFFER_ID))).thenReturn(List.of(rule));
+        when(offerSkuMapper.selectListByOfferIds(List.of(OFFER_ID))).thenReturn(List.of(offerSku(OFFER_SKU_ID)));
+
+        offerService.deleteOffer(OFFER_ID);
+
+        verify(ruleConditionMapper).deleteByRuleIds(Set.of(100L));
+        verify(ruleMapper).deleteByOfferIds(List.of(OFFER_ID));
+        verify(offerSkuIssueMapper).deleteByOfferSkuIds(Set.of(OFFER_SKU_ID));
+        verify(offerSkuMapper).deleteByOfferIds(List.of(OFFER_ID));
+        verify(offerGradeRelMapper).deleteByOfferIds(List.of(OFFER_ID));
+        verify(offerMapper).deleteByIds(List.of(OFFER_ID));
+    }
+
+    @Test
+    void deleteOfferList_shouldDeleteOffersAndRelations() {
+        List<Long> offerIds = List.of(OFFER_ID, OFFER_ID + 1);
+        when(offerMapper.selectListByIds(offerIds)).thenReturn(List.of(offer(OFFER_ID), offer(OFFER_ID + 1)));
+        List<SubscriptionRuleDO> rules = List.of(
+                SubscriptionRuleDO.builder().id(100L).offerId(OFFER_ID).build(),
+                SubscriptionRuleDO.builder().id(101L).offerId(OFFER_ID + 1).build());
+        when(ruleMapper.selectListByOfferIds(offerIds)).thenReturn(rules);
+        when(offerSkuMapper.selectListByOfferIds(offerIds)).thenReturn(List.of(
+                offerSku(OFFER_SKU_ID), offerSku(OFFER_SKU_ID + 1)));
+
+        offerService.deleteOfferList(offerIds);
+
+        verify(ruleConditionMapper).deleteByRuleIds(Set.of(100L, 101L));
+        verify(ruleMapper).deleteByOfferIds(offerIds);
+        verify(offerSkuIssueMapper).deleteByOfferSkuIds(Set.of(OFFER_SKU_ID, OFFER_SKU_ID + 1));
+        verify(offerSkuMapper).deleteByOfferIds(offerIds);
+        verify(offerGradeRelMapper).deleteByOfferIds(offerIds);
+        verify(offerMapper).deleteByIds(offerIds);
+    }
+
+    @Test
+    void deleteOfferList_shouldRejectWhenAnyOfferMissing() {
+        List<Long> offerIds = List.of(OFFER_ID, OFFER_ID + 1);
+        when(offerMapper.selectListByIds(offerIds)).thenReturn(List.of(offer(OFFER_ID)));
+
+        assertServiceException(() -> offerService.deleteOfferList(offerIds), OFFER_NOT_EXISTS);
+
+        verify(ruleMapper, never()).selectListByOfferIds(any());
+        verify(ruleConditionMapper, never()).deleteByRuleIds(any());
+        verify(ruleMapper, never()).deleteByOfferIds(any());
+        verify(offerSkuIssueMapper, never()).deleteByOfferSkuIds(any());
+        verify(offerSkuMapper, never()).deleteByOfferIds(any());
+        verify(offerGradeRelMapper, never()).deleteByOfferIds(any());
+        verify(offerMapper, never()).deleteByIds(any());
     }
 
     @Test
@@ -240,13 +310,25 @@ class SubscriptionOfferServiceTest {
     }
 
     private SubscriptionWindowOfferDO offer() {
+        return offer(OFFER_ID);
+    }
+
+    private SubscriptionWindowOfferDO offer(Long offerId) {
         return SubscriptionWindowOfferDO.builder()
-                .id(OFFER_ID)
+                .id(offerId)
                 .windowId(WINDOW_ID)
                 .productSpuId(PRODUCT_SPU_ID)
                 .recommendFlag(false)
                 .sort(0)
                 .status(CommonStatusEnum.ENABLE.getStatus())
+                .build();
+    }
+
+    private SubscriptionWindowOfferSkuDO offerSku(Long offerSkuId) {
+        return SubscriptionWindowOfferSkuDO.builder()
+                .id(offerSkuId)
+                .offerId(OFFER_ID)
+                .productSkuId(PRODUCT_SKU_ID)
                 .build();
     }
 

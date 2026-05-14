@@ -1,4 +1,5 @@
 DELETE FROM "product_sku";
+DELETE FROM "product_publication_sku_issue_template";
 DELETE FROM "product_spu_category_rel";
 DELETE FROM "product_spu";
 DELETE FROM "product_category";

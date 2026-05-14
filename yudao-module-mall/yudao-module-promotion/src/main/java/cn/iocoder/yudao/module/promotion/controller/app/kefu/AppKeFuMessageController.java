@@ -41,7 +41,7 @@ public class AppKeFuMessageController {
 
     @PostMapping("/send")
     @Operation(summary = "发送客服消息")
-    public CommonResult<Long> sendKefuMessage(@Valid @RequestBody AppKeFuMessageSendReqVO sendReqVO) {
+    public CommonResult<KeFuMessageRespVO> sendKefuMessage(@Valid @RequestBody AppKeFuMessageSendReqVO sendReqVO) {
         sendReqVO.setSenderId(getLoginUserId()).setSenderType(UserTypeEnum.MEMBER.getValue()); // 设置用户编号和类型
         return success(kefuMessageService.sendKefuMessage(sendReqVO));
     }

@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 
-@Schema(description = "管理后台 - 刊物站点发货批次分页 Request VO")
+@Schema(description = "管理后台 - 刊物仓库发货批次分页 Request VO")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
@@ -23,8 +23,8 @@ public class TradePublicationDeliveryBatchPageReqVO extends PageParam {
     @Schema(description = "学校编号", example = "100")
     private Long schoolId;
 
-    @Schema(description = "站点编号", example = "200")
-    private Long stationId;
+    @Schema(description = "学校配送仓库编号", example = "200")
+    private Long warehouseId;
 
     @Schema(description = "配送方式", example = "3")
     private Integer deliveryType;

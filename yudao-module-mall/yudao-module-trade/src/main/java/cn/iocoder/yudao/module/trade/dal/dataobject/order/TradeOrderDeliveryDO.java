@@ -102,17 +102,21 @@ public class TradeOrderDeliveryDO extends BaseDO {
      */
     private String schoolNameSnapshot;
     /**
-     * 站点编号
+     * 学校地址快照
      */
-    private Long stationId;
+    private String schoolAddressSnapshot;
     /**
-     * 站点名称快照
+     * 学校配送仓库编号
      */
-    private String stationNameSnapshot;
+    private Long warehouseId;
     /**
-     * 站点地址快照
+     * 学校配送仓库名称快照
      */
-    private String stationAddressSnapshot;
+    private String warehouseNameSnapshot;
+    /**
+     * 学校配送仓库地址快照
+     */
+    private String warehouseAddressSnapshot;
     /**
      * 联系人
      */

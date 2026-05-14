@@ -16,7 +16,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 import java.util.Map;
 
-import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_STATION_AREA_NOT_MATCHED;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STATION_DISABLED;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STATION_IN_USE_BY_SCHOOL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,19 +49,18 @@ class StationServiceImplTest {
         when(stationMapper.selectById(1L)).thenReturn(station(1L, 100L, 1));
 
         ServiceException exception = assertThrows(ServiceException.class,
-                () -> service.validateStationBindable(1L, 100L));
+                () -> service.validateStationBindable(1L));
 
         assertEquals(STATION_DISABLED.getCode(), exception.getCode());
     }
 
     @Test
-    void validateStationBindableShouldRejectAreaMismatch() {
+    void validateStationBindableShouldAllowAreaMismatch() {
         when(stationMapper.selectById(1L)).thenReturn(station(1L, 100L, 0));
 
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> service.validateStationBindable(1L, 200L));
+        StationDO result = service.validateStationBindable(1L);
 
-        assertEquals(SCHOOL_STATION_AREA_NOT_MATCHED.getCode(), exception.getCode());
+        assertEquals(1L, result.getId());
     }
 
     @Test

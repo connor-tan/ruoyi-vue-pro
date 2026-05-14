@@ -37,6 +37,8 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
+import cn.iocoder.yudao.module.repo.dal.dataobject.warehouse.RepoWarehouseDO;
+import cn.iocoder.yudao.module.repo.service.warehouse.RepoWarehouseService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,6 +116,8 @@ public class StudentServiceImpl implements StudentService {
     private MemberUserApi memberUserApi;
     @Resource
     private StationService stationService;
+    @Resource
+    private RepoWarehouseService warehouseService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -286,9 +290,11 @@ public class StudentServiceImpl implements StudentService {
                 .collect(Collectors.toMap(GradeCatalogDO::getId, Function.identity(), (item1, item2) -> item1));
         Map<Long, StationDO> stationMap = stationService.getStationMap(
                 convertSet(schoolMap.values(), SchoolDO::getStationId));
+        Map<Long, RepoWarehouseDO> warehouseMap = warehouseService.getWarehouseMap(
+                convertSet(schoolMap.values(), SchoolDO::getWarehouseId));
         return students.stream()
                 .map(student -> buildOrderStudentContextResp(student, schoolMap, currentStudentClassMap,
-                        schoolClassMap, schoolGradeMap, gradeCatalogMap, stationMap))
+                        schoolClassMap, schoolGradeMap, gradeCatalogMap, stationMap, warehouseMap))
                 .collect(Collectors.toMap(EduStudentOrderContextRespDTO::getStudentId,
                         Function.identity(), (item1, item2) -> item1));
     }
@@ -433,6 +439,8 @@ public class StudentServiceImpl implements StudentService {
         }
         respDTO.setSchoolId(school.getId());
         respDTO.setSchoolName(school.getSchoolName());
+        respDTO.setSchoolAddress(school.getSchoolAddress());
+        fillSubscriptionWarehouse(respDTO, school);
         if (school.getStationId() == null) {
             return;
         }
@@ -446,6 +454,21 @@ public class StudentServiceImpl implements StudentService {
         respDTO.setStationAddress(station.getStationAddress());
         respDTO.setContactName(station.getContactName());
         respDTO.setContactMobile(station.getContactMobile());
+    }
+
+    private void fillSubscriptionWarehouse(EduStudentSubscriptionContextRespDTO respDTO, SchoolDO school) {
+        if (school.getWarehouseId() == null) {
+            return;
+        }
+        RepoWarehouseDO warehouse = warehouseService.getWarehouseMap(Collections.singleton(school.getWarehouseId()))
+                .get(school.getWarehouseId());
+        if (warehouse == null) {
+            return;
+        }
+        respDTO.setWarehouseId(warehouse.getId());
+        respDTO.setWarehouseName(warehouse.getName());
+        respDTO.setWarehouseAddress(warehouse.getAddress());
+        respDTO.setWarehousePrincipal(warehouse.getPrincipal());
     }
 
     private EduStudentSubscriptionContextRespDTO fillSubscriptionClassAndGrade(
@@ -867,7 +890,8 @@ public class StudentServiceImpl implements StudentService {
                                                                        Map<Long, SchoolClassDO> schoolClassMap,
                                                                        Map<Long, SchoolGradeDO> schoolGradeMap,
                                                                        Map<Long, GradeCatalogDO> gradeCatalogMap,
-                                                                       Map<Long, StationDO> stationMap) {
+                                                                       Map<Long, StationDO> stationMap,
+                                                                       Map<Long, RepoWarehouseDO> warehouseMap) {
         EduStudentOrderContextRespDTO respDTO = new EduStudentOrderContextRespDTO();
         respDTO.setStudentId(student.getId());
         respDTO.setStudentName(student.getStudentName());
@@ -876,6 +900,7 @@ public class StudentServiceImpl implements StudentService {
         if (school != null) {
             respDTO.setSchoolId(school.getId());
             respDTO.setSchoolName(school.getSchoolName());
+            respDTO.setSchoolAddress(school.getSchoolAddress());
             StationDO station = stationMap.get(school.getStationId());
             if (station != null) {
                 respDTO.setStationId(station.getId());
@@ -883,6 +908,13 @@ public class StudentServiceImpl implements StudentService {
                 respDTO.setStationAddress(station.getStationAddress());
                 respDTO.setContactName(station.getContactName());
                 respDTO.setContactMobile(station.getContactMobile());
+            }
+            RepoWarehouseDO warehouse = warehouseMap.get(school.getWarehouseId());
+            if (warehouse != null) {
+                respDTO.setWarehouseId(warehouse.getId());
+                respDTO.setWarehouseName(warehouse.getName());
+                respDTO.setWarehouseAddress(warehouse.getAddress());
+                respDTO.setWarehousePrincipal(warehouse.getPrincipal());
             }
         }
         List<StudentClassDO> currentStudentClasses = currentStudentClassMap.get(student.getId());

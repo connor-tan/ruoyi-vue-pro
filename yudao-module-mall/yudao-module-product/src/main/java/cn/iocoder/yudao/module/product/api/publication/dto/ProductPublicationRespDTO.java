@@ -94,6 +94,10 @@ public class ProductPublicationRespDTO {
 
         private PublicationSkuExtDTO publicationExt;
 
+        private Integer issueTemplateCount;
+
+        private List<PublicationSkuIssueTemplateDTO> issueTemplates;
+
         private List<Long> applicableGradeCatalogIds;
 
         private List<String> applicableGradeNames;
@@ -108,6 +112,29 @@ public class ProductPublicationRespDTO {
         private String editionLabel;
 
         private String isbn;
+
+        private String remark;
+
+    }
+
+    @Data
+    public static class PublicationSkuIssueTemplateDTO {
+
+        private Long id;
+
+        private Long skuId;
+
+        private Integer issueNo;
+
+        private String issueName;
+
+        private Integer publishOffsetDays;
+
+        private Integer deliveryOffsetDays;
+
+        private Integer sort;
+
+        private Integer status;
 
         private String remark;
 

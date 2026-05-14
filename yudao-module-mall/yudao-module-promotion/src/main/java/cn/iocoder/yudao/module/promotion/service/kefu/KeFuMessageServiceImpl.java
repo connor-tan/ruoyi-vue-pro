@@ -63,7 +63,8 @@ public class KeFuMessageServiceImpl implements KeFuMessageService {
 
         // 2.1 保存消息
         KeFuMessageDO kefuMessage = BeanUtils.toBean(sendReqVO, KeFuMessageDO.class);
-        kefuMessage.setReceiverId(conversation.getUserId()).setReceiverType(UserTypeEnum.MEMBER.getValue()); // 设置接收人
+        kefuMessage.setReceiverId(conversation.getUserId()).setReceiverType(UserTypeEnum.MEMBER.getValue()) // 设置接收人
+                .setReadStatus(Boolean.FALSE);
         keFuMessageMapper.insert(kefuMessage);
         // 2.2 更新会话消息冗余
         conversationService.updateConversationLastMessage(kefuMessage);
@@ -78,11 +79,11 @@ public class KeFuMessageServiceImpl implements KeFuMessageService {
     }
 
     @Override
-    public Long sendKefuMessage(AppKeFuMessageSendReqVO sendReqVO) {
+    public KeFuMessageRespVO sendKefuMessage(AppKeFuMessageSendReqVO sendReqVO) {
         // 1.1 设置会话编号
         KeFuMessageDO kefuMessage = BeanUtils.toBean(sendReqVO, KeFuMessageDO.class);
         KeFuConversationDO conversation = conversationService.getOrCreateConversation(sendReqVO.getSenderId());
-        kefuMessage.setConversationId(conversation.getId());
+        kefuMessage.setConversationId(conversation.getId()).setReadStatus(Boolean.FALSE);
         // 1.2 保存消息
         keFuMessageMapper.insert(kefuMessage);
 
@@ -93,7 +94,7 @@ public class KeFuMessageServiceImpl implements KeFuMessageService {
         KeFuMessageRespVO message = BeanUtils.toBean(kefuMessage, KeFuMessageRespVO.class).setSenderAvatar(user.getAvatar());
         getSelf().sendAsyncMessageToAdmin(KEFU_MESSAGE_TYPE, message);
         getSelf().sendAsyncMessageToMember(conversation.getUserId(), KEFU_MESSAGE_TYPE, message);
-        return kefuMessage.getId();
+        return message;
     }
 
     @Override

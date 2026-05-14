@@ -51,6 +51,10 @@ public class SchoolDO extends BaseDO {
      */
     private Long stationId;
     /**
+     * 学校配送仓库 ID
+     */
+    private Long warehouseId;
+    /**
      * 学校代码
      */
     private String code;
@@ -63,5 +67,14 @@ public class SchoolDO extends BaseDO {
 
     @TableField(exist = false)
     private String stationName;
+
+    @TableField(exist = false)
+    private Long stationAreaId;
+
+    @TableField(exist = false)
+    private String stationAreaName;
+
+    @TableField(exist = false)
+    private String warehouseName;
 
 }

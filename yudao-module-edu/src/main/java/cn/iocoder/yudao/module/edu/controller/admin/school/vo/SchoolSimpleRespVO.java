@@ -21,6 +21,18 @@ public class SchoolSimpleRespVO {
     @Schema(description = "归属站点名称", example = "梁溪站")
     private String stationName;
 
+    @Schema(description = "归属站点区域编号", example = "320205")
+    private Long stationAreaId;
+
+    @Schema(description = "归属站点区域名称", example = "江苏省 无锡市 梁溪区")
+    private String stationAreaName;
+
+    @Schema(description = "学校配送仓库编号", example = "1")
+    private Long warehouseId;
+
+    @Schema(description = "学校配送仓库名称", example = "滨湖履约仓")
+    private String warehouseName;
+
     @Schema(description = "办学学段编码列表", requiredMode = Schema.RequiredMode.REQUIRED, example = "[\"primary\",\"middle\"]")
     private List<String> stageCodes;
 

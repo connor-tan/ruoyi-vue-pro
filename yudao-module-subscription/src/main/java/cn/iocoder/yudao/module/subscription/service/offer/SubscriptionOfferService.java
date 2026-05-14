@@ -24,6 +24,8 @@ public interface SubscriptionOfferService {
 
     void deleteOffer(Long id);
 
+    void deleteOfferList(Collection<Long> ids);
+
     SubscriptionWindowOfferDO getOffer(Long id);
 
     SubscriptionWindowOfferDO validateOfferExists(Long id);

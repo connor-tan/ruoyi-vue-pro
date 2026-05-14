@@ -65,6 +65,10 @@ public class ProductSkuSaveReqVO {
     @Schema(description = "适用年级目录编号数组")
     private List<Long> applicableGradeCatalogIds;
 
+    @Schema(description = "刊物 SKU 默认期次模板数组")
+    @Valid
+    private List<PublicationSkuIssueTemplateSaveReqVO> issueTemplates;
+
     @Schema(description = "商品属性")
     @Data
     @NoArgsConstructor
@@ -99,6 +103,36 @@ public class ProductSkuSaveReqVO {
         private String isbn;
 
         @Schema(description = "备注", example = "秋季版")
+        private String remark;
+
+    }
+
+    @Schema(description = "刊物 SKU 默认期次模板")
+    @Data
+    public static class PublicationSkuIssueTemplateSaveReqVO {
+
+        @Schema(description = "编号", example = "1024")
+        private Long id;
+
+        @Schema(description = "期号", example = "1")
+        private Integer issueNo;
+
+        @Schema(description = "期次名称", example = "第1期")
+        private String issueName;
+
+        @Schema(description = "计划出刊日期相对订刊窗口开始日期的偏移天数", example = "0")
+        private Integer publishOffsetDays;
+
+        @Schema(description = "计划配送日期相对订刊窗口开始日期的偏移天数", example = "7")
+        private Integer deliveryOffsetDays;
+
+        @Schema(description = "排序", example = "1")
+        private Integer sort;
+
+        @Schema(description = "状态", example = "0")
+        private Integer status;
+
+        @Schema(description = "备注", example = "首期")
         private String remark;
 
     }

@@ -12,13 +12,15 @@ public class SubscriptionOrderEligibilityRespDTO {
     private String studentNameSnapshot;
     private Long schoolId;
     private String schoolNameSnapshot;
+    private String schoolAddressSnapshot;
     private Long classId;
     private String classNameSnapshot;
     private Long gradeCatalogId;
     private String gradeNameSnapshot;
-    private Long stationId;
-    private String stationNameSnapshot;
-    private String stationAddressSnapshot;
+    private Long warehouseId;
+    private String warehouseNameSnapshot;
+    private String warehouseAddressSnapshot;
+    private String warehousePrincipalSnapshot;
     private String contactName;
     private String contactMobile;
 

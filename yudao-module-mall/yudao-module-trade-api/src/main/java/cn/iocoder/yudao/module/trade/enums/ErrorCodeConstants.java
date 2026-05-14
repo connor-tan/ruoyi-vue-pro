@@ -46,9 +46,9 @@ public interface ErrorCodeConstants {
     ErrorCode ORDER_NORMAL_STUDENT_NOT_ALLOWED = new ErrorCode(1_011_000_041, "普通商品不能携带学生购买信息");
     ErrorCode ORDER_ITEM_DELIVERY_TYPE_REQUIRED = new ErrorCode(1_011_000_042, "商品必须选择配送方式");
     ErrorCode ORDER_PUBLICATION_MULTI_DELIVERY_FOR_STUDENT = new ErrorCode(1_011_000_043, "同一学生本次结算只能选择一种配送方式");
-    ErrorCode ORDER_SCHOOL_STATION_NOT_CONFIGURED = new ErrorCode(1_011_000_044, "当前学生所在学校未配置站点配送信息");
+    ErrorCode ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED = new ErrorCode(1_011_000_044, "当前学生所在学校未配置学校配送仓库");
     ErrorCode ORDER_DELIVERY_NOT_FOUND = new ErrorCode(1_011_000_045, "订单配送组不存在");
-    ErrorCode ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_STATION = new ErrorCode(1_011_000_046, "订单配送失败，配送组类型不是站点配送");
+    ErrorCode ORDER_DELIVERY_FAIL_DELIVERY_TYPE_NOT_SCHOOL = new ErrorCode(1_011_000_046, "订单配送失败，配送组类型不是学校配送");
     ErrorCode ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED = new ErrorCode(1_011_000_047, "订单收货失败，配送组不是【待收货】状态");
     ErrorCode ORDER_RECEIVE_FAIL_DELIVERY_NOT_OWNED = new ErrorCode(1_011_000_048, "订单收货失败，配送组不属于当前用户");
     ErrorCode ORDER_RECEIVE_FAIL_SPLIT_DELIVERY_REQUIRED = new ErrorCode(1_011_000_049, "订单已拆分多个配送组，请按配送组确认收货");

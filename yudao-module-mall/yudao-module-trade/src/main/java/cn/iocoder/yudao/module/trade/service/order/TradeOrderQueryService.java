@@ -12,6 +12,7 @@ import cn.iocoder.yudao.module.trade.framework.delivery.core.client.dto.ExpressT
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Collections.singleton;
 
@@ -202,5 +203,14 @@ public interface TradeOrderQueryService {
      * @return 已购买数量
      */
     Integer getEffectiveSubscriptionOrderItemQuantity(Long studentId, Long offerSkuId);
+
+    /**
+     * 按学生和订刊窗口 SKU 批量统计有效订单中已购买的数量。
+     *
+     * @param studentId 学生编号
+     * @param offerSkuIds 窗口 SKU 编号集合
+     * @return key 为窗口 SKU 编号，value 为已购买数量
+     */
+    Map<Long, Integer> getEffectiveSubscriptionOrderItemQuantityMap(Long studentId, Collection<Long> offerSkuIds);
 
 }

@@ -11,7 +11,7 @@ import lombok.ToString;
 import java.time.LocalDateTime;
 
 /**
- * 刊物站点发货批次 DO
+ * 刊物仓库发货批次 DO
  */
 @TableName("trade_publication_delivery_batch")
 @KeySequence("trade_publication_delivery_batch_seq")
@@ -41,13 +41,13 @@ public class TradePublicationDeliveryBatchDO extends BaseDO {
      */
     private String schoolNameSnapshot;
     /**
-     * 站点编号
+     * 学校配送仓库编号
      */
-    private Long stationId;
+    private Long warehouseId;
     /**
-     * 站点名称快照
+     * 学校配送仓库名称快照
      */
-    private String stationNameSnapshot;
+    private String warehouseNameSnapshot;
     /**
      * 订刊窗口编号
      */

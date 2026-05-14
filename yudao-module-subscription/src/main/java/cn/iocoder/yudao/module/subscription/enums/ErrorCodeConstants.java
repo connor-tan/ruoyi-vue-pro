@@ -26,6 +26,9 @@ public interface ErrorCodeConstants {
     ErrorCode OFFER_SKU_ISSUE_NOT_EXISTS = new ErrorCode(1_028_002_006, "窗口 SKU 期次不存在");
     ErrorCode OFFER_SKU_ISSUE_DUPLICATE = new ErrorCode(1_028_002_007, "窗口 SKU 期号已存在");
     ErrorCode OFFER_SKU_ISSUE_PERIODICAL_REQUIRED = new ErrorCode(1_028_002_008, "只有期刊窗口 SKU 才能维护期次计划");
+    ErrorCode OFFER_SKU_ISSUE_DEFAULT_TEMPLATE_REQUIRED = new ErrorCode(1_028_002_009, "商品 SKU 未配置默认期次模板");
+    ErrorCode OFFER_SKU_ISSUE_APPLY_EXISTS = new ErrorCode(1_028_002_010, "窗口 SKU 已存在期次计划，请确认覆盖后再应用默认模板");
+    ErrorCode OFFER_SKU_ANCHOR_IMMUTABLE = new ErrorCode(1_028_002_011, "窗口 SKU 的窗口刊物和商品 SKU 不允许修改");
 
     ErrorCode RULE_NOT_EXISTS = new ErrorCode(1_028_003_000, "订刊规则不存在");
     ErrorCode RULE_EFFECT_INVALID = new ErrorCode(1_028_003_001, "订刊规则作用类型不合法");

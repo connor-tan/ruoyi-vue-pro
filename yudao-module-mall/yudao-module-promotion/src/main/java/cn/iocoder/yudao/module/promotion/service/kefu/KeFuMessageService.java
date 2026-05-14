@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.promotion.service.kefu;
 
 import cn.iocoder.yudao.module.promotion.controller.admin.kefu.vo.message.KeFuMessageListReqVO;
+import cn.iocoder.yudao.module.promotion.controller.admin.kefu.vo.message.KeFuMessageRespVO;
 import cn.iocoder.yudao.module.promotion.controller.admin.kefu.vo.message.KeFuMessageSendReqVO;
 import cn.iocoder.yudao.module.promotion.controller.app.kefu.vo.message.AppKeFuMessagePageReqVO;
 import cn.iocoder.yudao.module.promotion.controller.app.kefu.vo.message.AppKeFuMessageSendReqVO;
@@ -28,9 +29,9 @@ public interface KeFuMessageService {
      * 【会员】发送客服消息
      *
      * @param sendReqVO 信息
-     * @return 编号
+     * @return 消息
      */
-    Long sendKefuMessage(AppKeFuMessageSendReqVO sendReqVO);
+    KeFuMessageRespVO sendKefuMessage(AppKeFuMessageSendReqVO sendReqVO);
 
     /**
      * 【管理员】更新消息已读状态

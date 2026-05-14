@@ -229,6 +229,7 @@ public final class SubscriptionVisibilityVOAssembler {
             if (item.getOfferSku() != null) {
                 vo.setOfferSkuId(item.getOfferSku().getId());
                 vo.setProductSkuId(item.getOfferSku().getProductSkuId());
+                vo.setMaxQuantityPerStudent(item.getOfferSku().getMaxQuantityPerStudent());
             }
             ProductPublicationRespDTO.PublicationSkuDTO productSku = item.getProductSku();
             if (productSku != null) {

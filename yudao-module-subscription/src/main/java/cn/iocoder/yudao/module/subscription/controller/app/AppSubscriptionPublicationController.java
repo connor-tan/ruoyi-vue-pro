@@ -5,6 +5,7 @@ import cn.iocoder.yudao.module.subscription.controller.SubscriptionVisibilityVOA
 import cn.iocoder.yudao.module.subscription.controller.app.vo.AppSubscriptionPublicationRespVO;
 import cn.iocoder.yudao.module.subscription.service.visibility.SubscriptionVisibilityResultBO;
 import cn.iocoder.yudao.module.subscription.service.visibility.SubscriptionVisibilityService;
+import cn.iocoder.yudao.module.trade.api.order.TradeSubscriptionOrderApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,8 +16,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
@@ -27,8 +32,12 @@ import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUti
 @Validated
 public class AppSubscriptionPublicationController {
 
+    private static final String PURCHASE_LIMIT_REACHED_DESC = "已达该刊物限购数量";
+
     @Resource
     private SubscriptionVisibilityService visibilityService;
+    @Resource
+    private TradeSubscriptionOrderApi tradeSubscriptionOrderApi;
 
     @GetMapping("/list")
     @Operation(summary = "获得学生可订刊物列表")
@@ -48,8 +57,63 @@ public class AppSubscriptionPublicationController {
         respVO.setStudent(SubscriptionVisibilityVOAssembler.buildAppStudent(result.getStudent()));
         respVO.setBlockedReason(result.getBlockedReason());
         respVO.setBlockedReasonDesc(result.getBlockedReasonDesc());
-        respVO.setOffers(SubscriptionVisibilityVOAssembler.buildAppVisibleOffers(visibleOffers));
+        List<AppSubscriptionPublicationRespVO.Offer> offers =
+                SubscriptionVisibilityVOAssembler.buildAppVisibleOffers(visibleOffers);
+        fillPurchaseAvailability(studentId, offers);
+        respVO.setOffers(offers);
         return success(respVO);
+    }
+
+    private void fillPurchaseAvailability(Long studentId, List<AppSubscriptionPublicationRespVO.Offer> offers) {
+        if (offers == null || offers.isEmpty()) {
+            return;
+        }
+        Set<Long> offerSkuIds = offers.stream()
+                .filter(Objects::nonNull)
+                .flatMap(offer -> getFinalSkus(offer).stream())
+                .map(AppSubscriptionPublicationRespVO.OfferSku::getOfferSkuId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, Integer> orderedQuantityMap =
+                tradeSubscriptionOrderApi.getEffectiveSubscriptionOrderItemQuantityMap(studentId, offerSkuIds);
+        offers.forEach(offer -> fillOfferPurchaseAvailability(offer, orderedQuantityMap));
+    }
+
+    private List<AppSubscriptionPublicationRespVO.OfferSku> getFinalSkus(AppSubscriptionPublicationRespVO.Offer offer) {
+        return offer.getFinalSkus() == null ? Collections.emptyList() : offer.getFinalSkus();
+    }
+
+    private void fillOfferPurchaseAvailability(AppSubscriptionPublicationRespVO.Offer offer,
+                                               Map<Long, Integer> orderedQuantityMap) {
+        if (offer == null || offer.getFinalSkus() == null || offer.getFinalSkus().isEmpty()) {
+            if (offer != null) {
+                offer.setPurchasable(false);
+                offer.setPurchaseUnavailableReasonDesc(PURCHASE_LIMIT_REACHED_DESC);
+            }
+            return;
+        }
+        boolean purchasable = false;
+        for (AppSubscriptionPublicationRespVO.OfferSku sku : offer.getFinalSkus()) {
+            if (sku == null) {
+                continue;
+            }
+            fillOfferSkuPurchaseAvailability(sku, orderedQuantityMap);
+            purchasable = purchasable || Boolean.TRUE.equals(sku.getPurchasable());
+        }
+        offer.setPurchasable(purchasable);
+        offer.setPurchaseUnavailableReasonDesc(purchasable ? null : PURCHASE_LIMIT_REACHED_DESC);
+    }
+
+    private void fillOfferSkuPurchaseAvailability(AppSubscriptionPublicationRespVO.OfferSku sku,
+                                                  Map<Long, Integer> orderedQuantityMap) {
+        Integer maxQuantity = sku.getMaxQuantityPerStudent() == null ? 1 : sku.getMaxQuantityPerStudent();
+        Integer orderedQuantity = orderedQuantityMap == null ? 0 : orderedQuantityMap.getOrDefault(sku.getOfferSkuId(), 0);
+        int remainingQuantity = Math.max(0, maxQuantity - Math.max(0, orderedQuantity));
+        sku.setMaxQuantityPerStudent(maxQuantity);
+        sku.setOrderedQuantity(Math.max(0, orderedQuantity));
+        sku.setRemainingQuantity(remainingQuantity);
+        sku.setPurchasable(remainingQuantity > 0);
+        sku.setPurchaseUnavailableReasonDesc(remainingQuantity > 0 ? null : PURCHASE_LIMIT_REACHED_DESC);
     }
 
 }

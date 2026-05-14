@@ -30,9 +30,9 @@ public class TradePublicationDeliveryCandidateItemBO {
 
     private String schoolNameSnapshot;
 
-    private Long stationId;
+    private Long warehouseId;
 
-    private String stationNameSnapshot;
+    private String warehouseNameSnapshot;
 
     private Long windowId;
 

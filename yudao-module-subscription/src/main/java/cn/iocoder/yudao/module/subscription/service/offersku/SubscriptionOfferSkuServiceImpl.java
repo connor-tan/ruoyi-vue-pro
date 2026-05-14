@@ -13,6 +13,8 @@ import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOff
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionOfferSkuIssueMapper;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionWindowOfferSkuMapper;
 import cn.iocoder.yudao.module.subscription.service.offer.SubscriptionOfferService;
+import cn.iocoder.yudao.module.subscription.service.offerskuissue.SubscriptionOfferSkuIssueDefaultTemplateService;
+import cn.iocoder.yudao.module.subscription.service.window.SubscriptionWindowService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,10 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
     private ProductPublicationApi productPublicationApi;
     @Resource
     private SubscriptionOfferSkuAvailabilityValidator offerSkuAvailabilityValidator;
+    @Resource
+    private SubscriptionWindowService windowService;
+    @Resource
+    private SubscriptionOfferSkuIssueDefaultTemplateService offerSkuIssueDefaultTemplateService;
 
     @Override
     public List<SubscriptionOfferSkuRespVO> getOfferSkuList(Long offerId) {
@@ -87,6 +93,12 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
             return 0;
         }
         offerSkuMapper.insertBatch(insertList);
+        Set<Long> insertedProductSkuIds = convertSet(insertList, SubscriptionWindowOfferSkuDO::getProductSkuId);
+        List<SubscriptionWindowOfferSkuDO> insertedOfferSkus = offerSkuMapper.selectListByOfferId(offerId).stream()
+                .filter(offerSku -> insertedProductSkuIds.contains(offerSku.getProductSkuId()))
+                .toList();
+        offerSkuIssueDefaultTemplateService.copyDefaultIssuesForNewOfferSkus(
+                windowService.validateWindowExists(offer.getWindowId()), publication, insertedOfferSkus);
         offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(offerId);
         return insertList.size();
     }
@@ -114,6 +126,9 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         if (oldOfferSku != null && !Objects.equals(oldOfferSku.getOfferId(), reqVO.getOfferId())) {
             throw exception(OFFER_SKU_BELONG_ERROR);
         }
+        if (oldOfferSku != null && !Objects.equals(oldOfferSku.getProductSkuId(), reqVO.getProductSkuId())) {
+            throw exception(OFFER_SKU_ANCHOR_IMMUTABLE);
+        }
         ProductPublicationRespDTO publication = productPublicationApi.getPublication(offer.getProductSpuId());
         ProductPublicationRespDTO.PublicationSkuDTO productSku = findPublicationSku(publication, reqVO.getProductSkuId());
         if (productSku == null) {
@@ -124,24 +139,33 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         if (existed != null) {
             throw exception(OFFER_SKU_DUPLICATE);
         }
-        SubscriptionWindowOfferSkuDO offerSku = BeanUtils.toBean(reqVO, SubscriptionWindowOfferSkuDO.class);
-        if (offerSku.getSort() == null) {
-            offerSku.setSort(0);
-        }
-        if (offerSku.getStatus() == null) {
-            offerSku.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        }
-        if (offerSku.getMaxQuantityPerStudent() == null) {
-            offerSku.setMaxQuantityPerStudent(1);
-        }
         if (reqVO.getId() == null) {
+            SubscriptionWindowOfferSkuDO offerSku = BeanUtils.toBean(reqVO, SubscriptionWindowOfferSkuDO.class);
+            if (offerSku.getSort() == null) {
+                offerSku.setSort(0);
+            }
+            if (offerSku.getStatus() == null) {
+                offerSku.setStatus(CommonStatusEnum.ENABLE.getStatus());
+            }
+            if (offerSku.getMaxQuantityPerStudent() == null) {
+                offerSku.setMaxQuantityPerStudent(1);
+            }
             offerSkuMapper.insert(offerSku);
+            offerSkuIssueDefaultTemplateService.copyDefaultIssuesForNewOfferSkus(
+                    windowService.validateWindowExists(offer.getWindowId()), publication, List.of(offerSku));
             if (validateAvailability) {
                 offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(reqVO.getOfferId());
             }
             return offerSku.getId();
         }
-        offerSkuMapper.updateById(offerSku);
+        SubscriptionWindowOfferSkuDO updateObj = new SubscriptionWindowOfferSkuDO()
+                .setId(reqVO.getId())
+                .setMaxQuantityPerStudent(reqVO.getMaxQuantityPerStudent() == null
+                        ? oldOfferSku.getMaxQuantityPerStudent() : reqVO.getMaxQuantityPerStudent())
+                .setSort(reqVO.getSort() == null ? oldOfferSku.getSort() : reqVO.getSort())
+                .setStatus(reqVO.getStatus() == null ? oldOfferSku.getStatus() : reqVO.getStatus())
+                .setRemark(reqVO.getRemark());
+        offerSkuMapper.updateById(updateObj);
         if (validateAvailability) {
             offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(reqVO.getOfferId());
         }
@@ -152,6 +176,7 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
     @Override
     public void deleteOfferSku(Long id) {
         SubscriptionWindowOfferSkuDO offerSku = validateOfferSkuExists(id);
+        offerSkuIssueMapper.deleteByOfferSkuId(id);
         offerSkuMapper.deleteById(id);
         offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(offerSku.getOfferId());
     }
@@ -195,6 +220,7 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         respVO.setIssueMode(spuExt == null ? null : spuExt.getIssueMode());
         respVO.setIssueCount(offerSkuIssueMapper.selectEnabledListByOfferSkuId(offerSku.getId(),
                 CommonStatusEnum.ENABLE.getStatus()).size());
+        respVO.setIssueTemplateCount(productSku.getIssueTemplateCount());
         respVO.setApplicableGradeCatalogIds(productSku.getApplicableGradeCatalogIds());
         respVO.setApplicableGradeNames(productSku.getApplicableGradeNames());
         ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();

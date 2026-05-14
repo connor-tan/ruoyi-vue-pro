@@ -18,9 +18,10 @@ CREATE TABLE IF NOT EXISTS `trade_order_delivery` (
   `receiver_detail_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '收件详细地址',
   `school_id` bigint DEFAULT NULL COMMENT '学校编号',
   `school_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校名称快照',
-  `station_id` bigint DEFAULT NULL COMMENT '站点编号',
-  `station_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '站点名称快照',
-  `station_address_snapshot` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '站点地址快照',
+  `school_address_snapshot` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校地址快照',
+  `warehouse_id` bigint DEFAULT NULL COMMENT '学校配送仓库编号',
+  `warehouse_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校配送仓库名称快照',
+  `warehouse_address_snapshot` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校配送仓库地址快照',
   `contact_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '联系人',
   `contact_mobile` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '联系电话',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '' COMMENT '创建者',
@@ -32,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `trade_order_delivery` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_trade_order_delivery_order_id` (`order_id`),
   KEY `idx_trade_order_delivery_order_type` (`order_id`, `delivery_type`),
-  KEY `idx_trade_order_delivery_station_school` (`station_id`, `school_id`),
+  KEY `idx_trade_order_delivery_warehouse_school` (`warehouse_id`, `school_id`),
   KEY `idx_trade_order_delivery_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='交易订单配送单';
 
@@ -127,11 +128,19 @@ DEALLOCATE PREPARE trade_order_item_delivery_idx_stmt;
 
 INSERT INTO `system_dict_data`
 (`id`, `sort`, `label`, `value`, `dict_type`, `status`, `color_type`, `css_class`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
-SELECT 3070, 3, '站点配送', '3', 'trade_delivery_type', 0, '', '', '', '1', NOW(), '1', NOW(), b'0'
+SELECT 3070, 3, '学校配送', '3', 'trade_delivery_type', 0, '', '', '', '1', NOW(), '1', NOW(), b'0'
 WHERE NOT EXISTS (
   SELECT 1 FROM `system_dict_data`
   WHERE `dict_type` = 'trade_delivery_type' AND `value` = '3' AND `deleted` = b'0'
 );
+
+UPDATE `system_dict_data`
+SET `label` = '学校配送',
+    `updater` = '1',
+    `update_time` = NOW()
+WHERE `dict_type` = 'trade_delivery_type'
+  AND `value` = '3'
+  AND `deleted` = b'0';
 
 INSERT INTO `system_dict_data`
 (`id`, `sort`, `label`, `value`, `dict_type`, `status`, `color_type`, `css_class`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)

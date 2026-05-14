@@ -18,6 +18,7 @@ import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReq
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuRespVO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
 import cn.iocoder.yudao.module.product.dal.dataobject.category.ProductCategoryDO;
+import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSkuIssueTemplateDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSkuExtDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSkuGradeRelDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.publication.ProductPublicationSpuExtDO;
@@ -26,6 +27,7 @@ import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuCategoryRelD
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuExtMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuGradeRelMapper;
+import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSkuIssueTemplateMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.publication.ProductPublicationSpuExtMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.category.ProductCategoryMapper;
 import cn.iocoder.yudao.module.product.dal.mysql.sku.ProductSkuMapper;
@@ -55,7 +57,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
     private static final String DICT_TYPE_PUBLICATION_VOLUME = "edu_publication_volume";
     private static final String DICT_TYPE_PUBLICATION_EDITION = "edu_publication_edition";
     private static final Set<Integer> PUBLICATION_DELIVERY_TYPES = Set.of(
-            DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.STATION.getType());
+            DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.SCHOOL.getType());
 
     @Resource
     private ProductSpuMapper productSpuMapper;
@@ -75,6 +77,8 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
     private ProductPublicationSkuExtMapper publicationSkuExtMapper;
     @Resource
     private ProductPublicationSkuGradeRelMapper publicationSkuGradeRelMapper;
+    @Resource
+    private ProductPublicationSkuIssueTemplateMapper publicationSkuIssueTemplateMapper;
     @Resource
     private EduGradeCatalogApi gradeCatalogApi;
     @Resource
@@ -116,6 +120,8 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         Set<Long> skuIds = convertSet(skuList, ProductSkuDO::getId);
         Map<Long, ProductPublicationSkuExtDO> skuExtMap = convertMap(
                 publicationSkuExtMapper.selectListBySkuIds(skuIds), ProductPublicationSkuExtDO::getSkuId);
+        Map<Long, List<ProductPublicationSkuIssueTemplateDO>> skuIssueTemplateMap = convertMultiMap(
+                publicationSkuIssueTemplateMapper.selectListBySkuIds(skuIds), ProductPublicationSkuIssueTemplateDO::getSkuId);
         Map<Long, List<ProductPublicationSkuGradeRelDO>> skuGradeMap = convertMultiMap(
                 publicationSkuGradeRelMapper.selectListBySkuIds(skuIds), ProductPublicationSkuGradeRelDO::getSkuId);
         Set<Long> gradeCatalogIds = new LinkedHashSet<>();
@@ -123,7 +129,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap = gradeCatalogApi.getGradeCatalogMap(gradeCatalogIds);
 
         return convertList(publicationSpus, spu -> buildPublicationResp(spu, categoryMap, spuExtMap, publisherMap,
-                publicationTypeMap, skuMap, skuExtMap, skuGradeMap, gradeCatalogMap));
+                publicationTypeMap, skuMap, skuExtMap, skuIssueTemplateMap, skuGradeMap, gradeCatalogMap));
     }
 
     @Override
@@ -179,6 +185,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             Map<Long, EduPublicationTypeRespDTO> publicationTypeMap,
             Map<Long, List<ProductSkuDO>> skuMap,
             Map<Long, ProductPublicationSkuExtDO> skuExtMap,
+            Map<Long, List<ProductPublicationSkuIssueTemplateDO>> skuIssueTemplateMap,
             Map<Long, List<ProductPublicationSkuGradeRelDO>> skuGradeMap,
             Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap) {
         ProductPublicationRespDTO dto = BeanUtils.toBean(spu, ProductPublicationRespDTO.class);
@@ -199,14 +206,15 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             dto.setPublicationExt(spuExtDTO);
         }
 
-        dto.setSkus(convertList(skuMap.get(spu.getId()), sku -> buildPublicationSkuResp(sku, skuExtMap, skuGradeMap,
-                gradeCatalogMap)));
+        dto.setSkus(convertList(skuMap.get(spu.getId()), sku -> buildPublicationSkuResp(sku, skuExtMap,
+                skuIssueTemplateMap, skuGradeMap, gradeCatalogMap)));
         return dto;
     }
 
     private ProductPublicationRespDTO.PublicationSkuDTO buildPublicationSkuResp(
             ProductSkuDO sku,
             Map<Long, ProductPublicationSkuExtDO> skuExtMap,
+            Map<Long, List<ProductPublicationSkuIssueTemplateDO>> skuIssueTemplateMap,
             Map<Long, List<ProductPublicationSkuGradeRelDO>> skuGradeMap,
             Map<Long, EduGradeCatalogRespDTO> gradeCatalogMap) {
         ProductPublicationRespDTO.PublicationSkuDTO skuDTO =
@@ -215,6 +223,12 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (skuExt != null) {
             skuDTO.setPublicationExt(BeanUtils.toBean(skuExt, ProductPublicationRespDTO.PublicationSkuExtDTO.class));
         }
+        List<ProductPublicationSkuIssueTemplateDO> issueTemplates = skuIssueTemplateMap.get(sku.getId());
+        skuDTO.setIssueTemplates(BeanUtils.toBean(issueTemplates,
+                ProductPublicationRespDTO.PublicationSkuIssueTemplateDTO.class));
+        skuDTO.setIssueTemplateCount(CollUtil.isEmpty(issueTemplates) ? 0 : (int) issueTemplates.stream()
+                .filter(template -> CommonStatusEnum.isEnable(template.getStatus()))
+                .count());
         List<ProductPublicationSkuGradeRelDO> relList = skuGradeMap.get(sku.getId());
         if (CollUtil.isNotEmpty(relList)) {
             skuDTO.setApplicableGradeCatalogIds(convertList(relList, ProductPublicationSkuGradeRelDO::getGradeCatalogId));
@@ -272,6 +286,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
                     && StrUtil.isBlank(sku.getPublicationExt().getIsbn())) {
                 throw exception(PUBLICATION_SKU_ISBN_REQUIRED);
             }
+            validateIssueTemplatesForSave(ext.getIssueMode(), sku);
         }
         validatePublicationSkuDictValues(volumeLabels, editionLabels);
         if (PublicationIdentifierRuleEnum.requiresTitleIdentifier(type.getIdentifierRule())
@@ -306,6 +321,43 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         }
     }
 
+    private void validateIssueTemplatesForSave(String issueMode, ProductSkuSaveReqVO sku) {
+        List<ProductSkuSaveReqVO.PublicationSkuIssueTemplateSaveReqVO> templates = sku.getIssueTemplates();
+        if (!PublicationIssueModeEnum.isPeriodical(issueMode)) {
+            sku.setIssueTemplates(Collections.emptyList());
+            return;
+        }
+        boolean skuEnabled = CommonStatusEnum.isEnable(sku.getStatus() == null
+                ? CommonStatusEnum.ENABLE.getStatus() : sku.getStatus());
+        if (CollUtil.isEmpty(templates)) {
+            if (skuEnabled) {
+                throw exception(PUBLICATION_SKU_ISSUE_TEMPLATE_REQUIRED);
+            }
+            return;
+        }
+        Set<Integer> issueNos = new LinkedHashSet<>();
+        boolean hasEnabledTemplate = false;
+        for (ProductSkuSaveReqVO.PublicationSkuIssueTemplateSaveReqVO template : templates) {
+            if (template.getIssueNo() == null || template.getIssueNo() < 1 || StrUtil.isBlank(template.getIssueName())) {
+                throw exception(PUBLICATION_SKU_ISSUE_TEMPLATE_REQUIRED);
+            }
+            if ((template.getPublishOffsetDays() != null && template.getPublishOffsetDays() < 0)
+                    || (template.getDeliveryOffsetDays() != null && template.getDeliveryOffsetDays() < 0)
+                    || (template.getSort() != null && template.getSort() < 0)) {
+                throw exception(PUBLICATION_SKU_ISSUE_TEMPLATE_REQUIRED);
+            }
+            if (!issueNos.add(template.getIssueNo())) {
+                throw exception(PUBLICATION_SKU_ISSUE_TEMPLATE_DUPLICATE);
+            }
+            Integer status = template.getStatus() == null ? CommonStatusEnum.ENABLE.getStatus() : template.getStatus();
+            template.setStatus(status);
+            hasEnabledTemplate = hasEnabledTemplate || CommonStatusEnum.isEnable(status);
+        }
+        if (skuEnabled && !hasEnabledTemplate) {
+            throw exception(PUBLICATION_SKU_ISSUE_TEMPLATE_REQUIRED);
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void savePublication(Long spuId, ProductSpuSaveReqVO reqVO, List<ProductSkuDO> savedSkus,
@@ -319,11 +371,13 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (CollUtil.isNotEmpty(cleanupSkuIds)) {
             publicationSkuExtMapper.deleteBySkuIdsPhysically(cleanupSkuIds);
             publicationSkuGradeRelMapper.deleteBySkuIdsPhysically(cleanupSkuIds);
+            publicationSkuIssueTemplateMapper.deleteBySkuIds(cleanupSkuIds);
         }
         Set<Long> savedSkuIds = new HashSet<>(convertSet(savedSkus, ProductSkuDO::getId));
         savedSkuIds.remove(null);
         if (CollUtil.isNotEmpty(savedSkuIds)) {
             publicationSkuGradeRelMapper.deleteBySkuIdsPhysically(savedSkuIds);
+            publicationSkuIssueTemplateMapper.deleteBySkuIds(savedSkuIds);
         }
         Map<Long, ProductSkuSaveReqVO> reqSkuMap = convertMap(reqVO.getSkus(), ProductSkuSaveReqVO::getId);
         for (int i = 0; i < savedSkus.size(); i++) {
@@ -347,6 +401,13 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             if (CollUtil.isNotEmpty(gradeRelList)) {
                 publicationSkuGradeRelMapper.insertBatch(gradeRelList);
             }
+            if (PublicationIssueModeEnum.isPeriodical(extReq.getIssueMode())) {
+                List<ProductPublicationSkuIssueTemplateDO> issueTemplates =
+                        buildIssueTemplates(savedSku.getId(), reqSku.getIssueTemplates());
+                if (CollUtil.isNotEmpty(issueTemplates)) {
+                    publicationSkuIssueTemplateMapper.insertBatch(issueTemplates);
+                }
+            }
         }
     }
 
@@ -360,6 +421,19 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         }
     }
 
+    private List<ProductPublicationSkuIssueTemplateDO> buildIssueTemplates(
+            Long skuId, List<ProductSkuSaveReqVO.PublicationSkuIssueTemplateSaveReqVO> templates) {
+        if (CollUtil.isEmpty(templates)) {
+            return Collections.emptyList();
+        }
+        return convertList(templates, template -> BeanUtils
+                .toBean(template, ProductPublicationSkuIssueTemplateDO.class)
+                .setId(null)
+                .setSkuId(skuId)
+                .setSort(template.getSort() == null ? template.getIssueNo() : template.getSort())
+                .setStatus(template.getStatus() == null ? CommonStatusEnum.ENABLE.getStatus() : template.getStatus()));
+    }
+
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void clearPublication(Long spuId, Collection<Long> skuIds) {
@@ -367,6 +441,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         if (CollUtil.isNotEmpty(skuIds)) {
             publicationSkuExtMapper.deleteBySkuIdsPhysically(skuIds);
             publicationSkuGradeRelMapper.deleteBySkuIdsPhysically(skuIds);
+            publicationSkuIssueTemplateMapper.deleteBySkuIds(skuIds);
         }
     }
 
@@ -390,6 +465,8 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         Set<Long> skuIds = convertSet(skuRespVOList, ProductSkuRespVO::getId);
         Map<Long, ProductPublicationSkuExtDO> skuExtMap = convertMap(
                 publicationSkuExtMapper.selectListBySkuIds(skuIds), ProductPublicationSkuExtDO::getSkuId);
+        Map<Long, List<ProductPublicationSkuIssueTemplateDO>> issueTemplateMap = convertMultiMap(
+                publicationSkuIssueTemplateMapper.selectListBySkuIds(skuIds), ProductPublicationSkuIssueTemplateDO::getSkuId);
         Map<Long, List<ProductPublicationSkuGradeRelDO>> gradeRelMap = convertMultiMap(
                 publicationSkuGradeRelMapper.selectListBySkuIds(skuIds), ProductPublicationSkuGradeRelDO::getSkuId);
         Set<Long> gradeCatalogIds = new LinkedHashSet<>();
@@ -400,6 +477,8 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             if (skuExtDO != null) {
                 sku.setPublicationExt(BeanUtils.toBean(skuExtDO, ProductSkuRespVO.PublicationSkuExtRespVO.class));
             }
+            sku.setIssueTemplates(BeanUtils.toBean(issueTemplateMap.get(sku.getId()),
+                    ProductSkuRespVO.PublicationSkuIssueTemplateRespVO.class));
             List<ProductPublicationSkuGradeRelDO> relList = gradeRelMap.get(sku.getId());
             if (CollUtil.isNotEmpty(relList)) {
                 sku.setApplicableGradeCatalogIds(convertList(relList, ProductPublicationSkuGradeRelDO::getGradeCatalogId));

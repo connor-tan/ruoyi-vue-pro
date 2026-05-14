@@ -51,4 +51,12 @@ public interface SubscriptionRuleMapper extends BaseMapperX<SubscriptionRuleDO> 
     default int deleteByOfferId(Long offerId) {
         return delete(SubscriptionRuleDO::getOfferId, offerId);
     }
+
+    default int deleteByOfferIds(Collection<Long> offerIds) {
+        if (offerIds == null || offerIds.isEmpty()) {
+            return 0;
+        }
+        return delete(new LambdaQueryWrapperX<SubscriptionRuleDO>()
+                .in(SubscriptionRuleDO::getOfferId, offerIds));
+    }
 }

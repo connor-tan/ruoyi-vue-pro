@@ -23,6 +23,7 @@ public interface SchoolMapper extends BaseMapperX<SchoolDO> {
                 .inIfPresent(SchoolDO::getAreaId, areaIds)
                 .inIfPresent(SchoolDO::getId, stageSchoolIds)
                 .eqIfPresent(SchoolDO::getStationId, reqVO.getStationId())
+                .eqIfPresent(SchoolDO::getWarehouseId, reqVO.getWarehouseId())
                 .likeIfPresent(SchoolDO::getSchoolAddress, reqVO.getSchoolAddress())
                 .likeIfPresent(SchoolDO::getCode, reqVO.getCode())
                 .betweenIfPresent(SchoolDO::getCreateTime, reqVO.getCreateTime())

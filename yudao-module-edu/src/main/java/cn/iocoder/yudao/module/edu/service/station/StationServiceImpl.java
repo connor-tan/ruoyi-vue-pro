@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertMap;
-import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_STATION_AREA_NOT_MATCHED;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STATION_DISABLED;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STATION_IN_USE_BY_SCHOOL;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STATION_NAME_DUPLICATE;
@@ -98,13 +97,10 @@ public class StationServiceImpl implements StationService {
     }
 
     @Override
-    public StationDO validateStationBindable(Long stationId, Long schoolAreaId) {
+    public StationDO validateStationBindable(Long stationId) {
         StationDO station = validateStationExists(stationId);
         if (CommonStatusEnum.isDisable(station.getStatus())) {
             throw exception(STATION_DISABLED);
-        }
-        if (!Objects.equals(station.getAreaId(), schoolAreaId)) {
-            throw exception(SCHOOL_STATION_AREA_NOT_MATCHED);
         }
         return station;
     }

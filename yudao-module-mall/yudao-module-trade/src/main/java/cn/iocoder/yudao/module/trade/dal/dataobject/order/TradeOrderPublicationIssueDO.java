@@ -52,8 +52,8 @@ public class TradeOrderPublicationIssueDO extends BaseDO {
     private String schoolNameSnapshot;
     private Long classId;
     private String classNameSnapshot;
-    private Long stationId;
-    private String stationNameSnapshot;
+    private Long warehouseId;
+    private String warehouseNameSnapshot;
 
     private Long windowId;
     private String windowNameSnapshot;

@@ -135,8 +135,8 @@ class TradeOrderFulfillmentServiceImplTest {
     }
 
     @Test
-    void deliveryOrder_shouldRejectStationDeliveryGroup() {
-        TradeOrderDeliveryDO delivery = delivery(DeliveryTypeEnum.STATION.getType());
+    void deliveryOrder_shouldRejectWarehouseDeliveryGroup() {
+        TradeOrderDeliveryDO delivery = delivery(DeliveryTypeEnum.SCHOOL.getType());
         TradeOrderDO order = order();
         TradeOrderDeliveryReqVO reqVO = new TradeOrderDeliveryReqVO().setDeliveryId(delivery.getId())
                 .setLogisticsId(100L).setLogisticsNo("SF100");

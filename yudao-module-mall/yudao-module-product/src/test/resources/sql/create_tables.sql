@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS `product_publication_spu_ext` (
     `spu_id` bigint NOT NULL COMMENT 'SPU 编号',
     `publisher_id` bigint NOT NULL COMMENT '出版社编号',
     `publication_type_id` bigint NOT NULL COMMENT '刊物类型编号',
+    `issue_mode` varchar(32) NOT NULL DEFAULT 'SINGLE' COMMENT '期次模式',
     `issue_cycle` varchar(64) NOT NULL COMMENT '出刊周期',
     `issn` varchar(64) DEFAULT NULL COMMENT 'ISSN',
     `cn_code` varchar(64) DEFAULT NULL COMMENT 'CN 刊号',
@@ -178,6 +179,26 @@ CREATE TABLE IF NOT EXISTS `product_publication_sku_ext` (
     PRIMARY KEY("sku_id")
 ) COMMENT '刊物 SKU 扩展';
 
+CREATE TABLE IF NOT EXISTS `product_publication_sku_issue_template` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `sku_id` bigint NOT NULL COMMENT 'SKU 编号',
+    `issue_no` int NOT NULL COMMENT '期号',
+    `issue_name` varchar(128) NOT NULL COMMENT '期次名称',
+    `publish_offset_days` int DEFAULT NULL COMMENT '出刊偏移天数',
+    `delivery_offset_days` int DEFAULT NULL COMMENT '配送偏移天数',
+    `sort` int NOT NULL DEFAULT '0' COMMENT '排序',
+    `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态',
+    `remark` varchar(255) DEFAULT NULL COMMENT '备注',
+    "creator" varchar(64) DEFAULT '',
+    "create_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updater" varchar(64) DEFAULT '',
+    "update_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted" bit NOT NULL DEFAULT FALSE,
+    "tenant_id" bigint not null default  '0',
+    PRIMARY KEY("id"),
+    UNIQUE KEY `uk_product_publication_sku_issue_template_no` (`sku_id`, `issue_no`)
+) COMMENT '刊物 SKU 默认期次模板';
+
 CREATE TABLE IF NOT EXISTS `product_publication_sku_grade_rel` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
     `sku_id` bigint NOT NULL COMMENT 'SKU 编号',
@@ -196,7 +217,6 @@ CREATE TABLE IF NOT EXISTS `product_publication_sku_grade_rel` (
 CREATE TABLE IF NOT EXISTS `product_property` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
     `name` varchar(64) DEFAULT NULL COMMENT '规格名称',
-    `status` tinyint DEFAULT NULL COMMENT '状态： 0 开启 ，1 禁用',
     "creator" varchar(64) DEFAULT '',
     "create_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updater" varchar(64) DEFAULT '',
@@ -211,7 +231,6 @@ CREATE TABLE IF NOT EXISTS `product_property_value` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
     `property_id` bigint DEFAULT NULL COMMENT '规格键id',
     `name` varchar(128) DEFAULT NULL COMMENT '规格值名字',
-    `status` tinyint DEFAULT NULL COMMENT '状态： 1 开启 ，2 禁用',
     "creator" varchar(64) DEFAULT '',
     "create_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updater" varchar(64) DEFAULT '',

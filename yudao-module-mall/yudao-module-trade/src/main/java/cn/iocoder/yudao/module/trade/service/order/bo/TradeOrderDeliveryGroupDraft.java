@@ -47,6 +47,8 @@ public class TradeOrderDeliveryGroupDraft {
 
     private String schoolNameSnapshot;
 
+    private String schoolAddressSnapshot;
+
     private Long classId;
 
     private String classNameSnapshot;
@@ -55,11 +57,11 @@ public class TradeOrderDeliveryGroupDraft {
 
     private String gradeNameSnapshot;
 
-    private Long stationId;
+    private Long warehouseId;
 
-    private String stationNameSnapshot;
+    private String warehouseNameSnapshot;
 
-    private String stationAddressSnapshot;
+    private String warehouseAddressSnapshot;
 
     private String contactName;
 
@@ -78,13 +80,14 @@ public class TradeOrderDeliveryGroupDraft {
         group.setStudentNameSnapshot(student.getStudentNameSnapshot());
         group.setSchoolId(student.getSchoolId());
         group.setSchoolNameSnapshot(student.getSchoolNameSnapshot());
+        group.setSchoolAddressSnapshot(student.getSchoolAddressSnapshot());
         group.setClassId(student.getClassId());
         group.setClassNameSnapshot(student.getClassNameSnapshot());
         group.setGradeCatalogId(student.getGradeCatalogId());
         group.setGradeNameSnapshot(student.getGradeNameSnapshot());
-        group.setStationId(student.getStationId());
-        group.setStationNameSnapshot(student.getStationNameSnapshot());
-        group.setStationAddressSnapshot(student.getStationAddressSnapshot());
+        group.setWarehouseId(student.getWarehouseId());
+        group.setWarehouseNameSnapshot(student.getWarehouseNameSnapshot());
+        group.setWarehouseAddressSnapshot(student.getWarehouseAddressSnapshot());
         group.setContactName(student.getContactName());
         group.setContactMobile(student.getContactMobile());
         return group;
@@ -98,13 +101,14 @@ public class TradeOrderDeliveryGroupDraft {
         group.setStudentNameSnapshot(item.getSubscriptionStudentNameSnapshot());
         group.setSchoolId(item.getSubscriptionSchoolId());
         group.setSchoolNameSnapshot(item.getSubscriptionSchoolNameSnapshot());
+        group.setSchoolAddressSnapshot(item.getSubscriptionSchoolAddressSnapshot());
         group.setClassId(item.getSubscriptionClassId());
         group.setClassNameSnapshot(item.getSubscriptionClassNameSnapshot());
         group.setGradeCatalogId(item.getSubscriptionGradeCatalogId());
         group.setGradeNameSnapshot(item.getSubscriptionGradeNameSnapshot());
-        group.setStationId(item.getSubscriptionStationId());
-        group.setStationNameSnapshot(item.getSubscriptionStationNameSnapshot());
-        group.setStationAddressSnapshot(item.getSubscriptionStationAddressSnapshot());
+        group.setWarehouseId(item.getSubscriptionWarehouseId());
+        group.setWarehouseNameSnapshot(item.getSubscriptionWarehouseNameSnapshot());
+        group.setWarehouseAddressSnapshot(item.getSubscriptionWarehouseAddressSnapshot());
         group.setContactName(item.getSubscriptionContactName());
         group.setContactMobile(item.getSubscriptionContactMobile());
         return group;

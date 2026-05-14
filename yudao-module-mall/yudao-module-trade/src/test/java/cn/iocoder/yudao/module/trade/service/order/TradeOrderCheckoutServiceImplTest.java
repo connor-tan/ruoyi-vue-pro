@@ -128,33 +128,33 @@ class TradeOrderCheckoutServiceImplTest {
     }
 
     @Test
-    void settlementOrder_shouldAllowPublicationStationWhenSkuSupportsExpressAndStation() {
+    void settlementOrder_shouldAllowPublicationWarehouseWhenSkuSupportsExpressAndWarehouse() {
         mockNoDefaultAddress();
         mockProducts(Map.of(PRODUCT_SKU_ID, productSku(PRODUCT_SKU_ID, PRODUCT_SPU_ID)),
                 Map.of(PRODUCT_SPU_ID, publicationSpu(List.of(
-                        DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.STATION.getType()))));
+                        DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.SCHOOL.getType()))));
         when(subscriptionOrderEligibilityApi.validateOrder(any())).thenReturn(eligibility());
         mockCalculateOrderPrice();
 
         AppTradeOrderSettlementReqVO reqVO = new AppTradeOrderSettlementReqVO();
         reqVO.setPointStatus(false);
-        reqVO.setItems(List.of(publicationItem(DeliveryTypeEnum.STATION.getType())));
+        reqVO.setItems(List.of(publicationItem(DeliveryTypeEnum.SCHOOL.getType())));
         AppTradeOrderSettlementRespVO respVO = tradeOrderCheckoutService.settlementOrder(USER_ID, reqVO);
 
         assertEquals(1, respVO.getDeliveries().size());
-        assertEquals(DeliveryTypeEnum.STATION.getType(), respVO.getDeliveries().get(0).getDeliveryType());
-        assertEquals(300L, respVO.getDeliveries().get(0).getStationId());
+        assertEquals(DeliveryTypeEnum.SCHOOL.getType(), respVO.getDeliveries().get(0).getDeliveryType());
+        assertEquals(300L, respVO.getDeliveries().get(0).getWarehouseId());
         assertEquals(0, respVO.getPrice().getDeliveryPrice());
     }
 
     @Test
-    void settlementOrder_shouldAllowStationPublicationAndPickUpNormalMixed() {
+    void settlementOrder_shouldAllowWarehousePublicationAndPickUpNormalMixed() {
         mockNoDefaultAddress();
         mockProducts(Map.of(
                         PRODUCT_SKU_ID, productSku(PRODUCT_SKU_ID, PRODUCT_SPU_ID),
                         NORMAL_SKU_ID, productSku(NORMAL_SKU_ID, NORMAL_SPU_ID)),
                 Map.of(
-                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.STATION.getType())),
+                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.SCHOOL.getType())),
                         NORMAL_SPU_ID, normalSpu(List.of(DeliveryTypeEnum.PICK_UP.getType()))));
         when(subscriptionOrderEligibilityApi.validateOrder(any())).thenReturn(eligibility());
         mockCalculateOrderPrice();
@@ -165,12 +165,12 @@ class TradeOrderCheckoutServiceImplTest {
         reqVO.setReceiverName("自提人");
         reqVO.setReceiverMobile("13900001111");
         reqVO.setItems(List.of(
-                publicationItem(DeliveryTypeEnum.STATION.getType()),
+                publicationItem(DeliveryTypeEnum.SCHOOL.getType()),
                 normalItem(DeliveryTypeEnum.PICK_UP.getType())));
         AppTradeOrderSettlementRespVO respVO = tradeOrderCheckoutService.settlementOrder(USER_ID, reqVO);
 
         assertEquals(2, respVO.getDeliveries().size());
-        assertEquals(Set.of(DeliveryTypeEnum.STATION.getType(), DeliveryTypeEnum.PICK_UP.getType()),
+        assertEquals(Set.of(DeliveryTypeEnum.SCHOOL.getType(), DeliveryTypeEnum.PICK_UP.getType()),
                 Set.copyOf(respVO.getDeliveries().stream()
                         .map(AppTradeOrderDeliveryRespVO::getDeliveryType).toList()));
         AppTradeOrderDeliveryRespVO pickUpDelivery = respVO.getDeliveries().stream()
@@ -189,7 +189,7 @@ class TradeOrderCheckoutServiceImplTest {
                         PRODUCT_SKU_ID, productSku(PRODUCT_SKU_ID, PRODUCT_SPU_ID),
                         NORMAL_SKU_ID, productSku(NORMAL_SKU_ID, NORMAL_SPU_ID)),
                 Map.of(
-                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.STATION.getType())),
+                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.SCHOOL.getType())),
                         NORMAL_SPU_ID, normalSpu(List.of(DeliveryTypeEnum.PICK_UP.getType()))));
         when(subscriptionOrderEligibilityApi.validateOrder(any())).thenReturn(eligibility());
         mockCalculateOrderPrice();
@@ -214,11 +214,14 @@ class TradeOrderCheckoutServiceImplTest {
         reqVO.setReceiverName("自提人");
         reqVO.setReceiverMobile("13900001111");
         reqVO.setItems(List.of(
-                publicationItem(DeliveryTypeEnum.STATION.getType()),
+                publicationItem(DeliveryTypeEnum.SCHOOL.getType()),
                 normalItem(DeliveryTypeEnum.PICK_UP.getType())));
         TradeOrderDO order = tradeOrderCheckoutService.createOrder(USER_ID, reqVO);
 
         assertEquals(DeliveryTypeEnum.MIXED.getType(), order.getDeliveryType());
+        assertEquals("测试学校", order.getReceiverName());
+        assertEquals("13900000000", order.getReceiverMobile());
+        assertEquals("测试学校地址", order.getReceiverDetailAddress());
         verify(tradeOrderDeliveryMapper, times(2)).insert(any(TradeOrderDeliveryDO.class));
         ArgumentCaptor<TradeOrderDeliveryDO> deliveryCaptor = ArgumentCaptor.forClass(TradeOrderDeliveryDO.class);
         verify(tradeOrderDeliveryMapper, times(2)).insert(deliveryCaptor.capture());
@@ -240,7 +243,7 @@ class TradeOrderCheckoutServiceImplTest {
 
         AppTradeOrderSettlementReqVO reqVO = new AppTradeOrderSettlementReqVO();
         reqVO.setPointStatus(false);
-        reqVO.setItems(List.of(publicationItem(DeliveryTypeEnum.STATION.getType())));
+        reqVO.setItems(List.of(publicationItem(DeliveryTypeEnum.SCHOOL.getType())));
 
         assertThrows(ServiceException.class,
                 () -> tradeOrderCheckoutService.settlementOrder(USER_ID, reqVO));
@@ -254,7 +257,7 @@ class TradeOrderCheckoutServiceImplTest {
                         PRODUCT_SKU_ID, productSku(PRODUCT_SKU_ID, PRODUCT_SPU_ID),
                         NORMAL_SKU_ID, productSku(NORMAL_SKU_ID, NORMAL_SPU_ID)),
                 Map.of(
-                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.STATION.getType())),
+                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.SCHOOL.getType())),
                         NORMAL_SPU_ID, normalSpu(List.of(DeliveryTypeEnum.EXPRESS.getType()))));
         when(subscriptionOrderEligibilityApi.validateOrder(any())).thenReturn(eligibility());
         mockCalculateOrderPrice();
@@ -262,14 +265,14 @@ class TradeOrderCheckoutServiceImplTest {
         AppTradeOrderSettlementReqVO reqVO = new AppTradeOrderSettlementReqVO();
         reqVO.setPointStatus(false);
         reqVO.setItems(List.of(
-                publicationItem(DeliveryTypeEnum.STATION.getType()),
+                publicationItem(DeliveryTypeEnum.SCHOOL.getType()),
                 normalItem(DeliveryTypeEnum.EXPRESS.getType())));
         AppTradeOrderSettlementRespVO respVO = tradeOrderCheckoutService.settlementOrder(USER_ID, reqVO);
 
         assertEquals(2, respVO.getDeliveries().size());
         assertEquals(EXPRESS_DELIVERY_PRICE, respVO.getPrice().getDeliveryPrice());
         assertTrue(respVO.getDeliveries().stream()
-                .filter(delivery -> DeliveryTypeEnum.STATION.getType().equals(delivery.getDeliveryType()))
+                .filter(delivery -> DeliveryTypeEnum.SCHOOL.getType().equals(delivery.getDeliveryType()))
                 .allMatch(delivery -> delivery.getDeliveryPrice() == 0));
     }
 
@@ -333,13 +336,14 @@ class TradeOrderCheckoutServiceImplTest {
         respDTO.setStudentNameSnapshot("测试学生");
         respDTO.setSchoolId(200L);
         respDTO.setSchoolNameSnapshot("测试学校");
+        respDTO.setSchoolAddressSnapshot("测试学校地址");
         respDTO.setClassId(201L);
         respDTO.setClassNameSnapshot("一年级1班");
         respDTO.setGradeCatalogId(202L);
         respDTO.setGradeNameSnapshot("一年级");
-        respDTO.setStationId(300L);
-        respDTO.setStationNameSnapshot("测试站点");
-        respDTO.setStationAddressSnapshot("测试地址");
+        respDTO.setWarehouseId(300L);
+        respDTO.setWarehouseNameSnapshot("测试仓库");
+        respDTO.setWarehouseAddressSnapshot("测试地址");
         respDTO.setContactName("张老师");
         respDTO.setContactMobile("13900000000");
         respDTO.setOfferSkuId(OFFER_SKU_ID);
@@ -412,7 +416,7 @@ class TradeOrderCheckoutServiceImplTest {
                 .setSpuName(publication ? "测试刊物" : "测试普通商品")
                 .setBizScene(publication ? BizSceneEnum.PUBLICATION.getCode() : BizSceneEnum.NORMAL.getCode())
                 .setDeliveryTypes(publication
-                        ? List.of(DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.STATION.getType())
+                        ? List.of(DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.SCHOOL.getType())
                         : List.of(DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.PICK_UP.getType()))
                 .setDeliveryTemplateId(DeliveryTypeEnum.EXPRESS.getType().equals(item.getDeliveryType()) ? 1L : null)
                 .setResolvedDeliveryType(item.getDeliveryType())
@@ -420,13 +424,14 @@ class TradeOrderCheckoutServiceImplTest {
                 .setSubscriptionStudentNameSnapshot(item.getSubscriptionStudentNameSnapshot())
                 .setSubscriptionSchoolId(item.getSubscriptionSchoolId())
                 .setSubscriptionSchoolNameSnapshot(item.getSubscriptionSchoolNameSnapshot())
+                .setSubscriptionSchoolAddressSnapshot(item.getSubscriptionSchoolAddressSnapshot())
                 .setSubscriptionClassId(item.getSubscriptionClassId())
                 .setSubscriptionClassNameSnapshot(item.getSubscriptionClassNameSnapshot())
                 .setSubscriptionGradeCatalogId(item.getSubscriptionGradeCatalogId())
                 .setSubscriptionGradeNameSnapshot(item.getSubscriptionGradeNameSnapshot())
-                .setSubscriptionStationId(item.getSubscriptionStationId())
-                .setSubscriptionStationNameSnapshot(item.getSubscriptionStationNameSnapshot())
-                .setSubscriptionStationAddressSnapshot(item.getSubscriptionStationAddressSnapshot())
+                .setSubscriptionWarehouseId(item.getSubscriptionWarehouseId())
+                .setSubscriptionWarehouseNameSnapshot(item.getSubscriptionWarehouseNameSnapshot())
+                .setSubscriptionWarehouseAddressSnapshot(item.getSubscriptionWarehouseAddressSnapshot())
                 .setSubscriptionContactName(item.getSubscriptionContactName())
                 .setSubscriptionContactMobile(item.getSubscriptionContactMobile())
                 .setSubscriptionWindowId(item.getSubscriptionWindowId())

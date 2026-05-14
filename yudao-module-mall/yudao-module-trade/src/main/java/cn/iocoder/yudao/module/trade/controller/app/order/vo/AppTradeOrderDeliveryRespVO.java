@@ -84,6 +84,9 @@ public class AppTradeOrderDeliveryRespVO {
     @Schema(description = "学校名称快照", example = "实验小学")
     private String schoolNameSnapshot;
 
+    @Schema(description = "学校地址快照", example = "上海市普陀区曹杨路 1 号")
+    private String schoolAddressSnapshot;
+
     @Schema(description = "班级编号", example = "300")
     private Long classId;
 
@@ -96,18 +99,18 @@ public class AppTradeOrderDeliveryRespVO {
     @Schema(description = "年级名称快照", example = "一年级")
     private String gradeNameSnapshot;
 
-    @Schema(description = "站点编号", example = "200")
-    private Long stationId;
+    @Schema(description = "学校配送仓库编号", example = "200")
+    private Long warehouseId;
 
-    @Schema(description = "站点名称快照", example = "A 站点")
-    private String stationNameSnapshot;
+    @Schema(description = "学校配送仓库名称快照", example = "滨湖履约仓")
+    private String warehouseNameSnapshot;
 
-    @Schema(description = "站点地址快照", example = "上海市普陀区曹杨路 1 号")
-    private String stationAddressSnapshot;
+    @Schema(description = "学校配送仓库地址快照", example = "上海市普陀区曹杨路 1 号")
+    private String warehouseAddressSnapshot;
 
-    @Schema(description = "站点联系人", example = "李老师")
+    @Schema(description = "学校配送联系人", example = "李老师")
     private String contactName;
 
-    @Schema(description = "站点联系电话", example = "13800001111")
+    @Schema(description = "学校配送联系电话", example = "13800001111")
     private String contactMobile;
 }

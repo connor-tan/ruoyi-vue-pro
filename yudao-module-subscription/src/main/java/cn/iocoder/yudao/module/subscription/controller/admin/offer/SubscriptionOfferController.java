@@ -13,6 +13,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 订刊窗口刊物")
@@ -54,6 +56,15 @@ public class SubscriptionOfferController {
     @PreAuthorize("@ss.hasPermission('subscription:offer:delete')")
     public CommonResult<Boolean> delete(@RequestParam("id") Long id) {
         offerService.deleteOffer(id);
+        return success(true);
+    }
+
+    @DeleteMapping("/delete-list")
+    @Operation(summary = "批量删除窗口刊物")
+    @Parameter(name = "ids", required = true)
+    @PreAuthorize("@ss.hasPermission('subscription:offer:delete')")
+    public CommonResult<Boolean> deleteList(@RequestParam("ids") List<Long> ids) {
+        offerService.deleteOfferList(ids);
         return success(true);
     }
 

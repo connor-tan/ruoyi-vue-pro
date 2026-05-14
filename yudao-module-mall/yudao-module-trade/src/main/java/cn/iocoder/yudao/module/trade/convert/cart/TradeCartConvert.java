@@ -80,13 +80,14 @@ public interface TradeCartConvert {
                 group.setStudentName(student.getStudentName());
                 group.setSchoolId(student.getSchoolId());
                 group.setSchoolName(student.getSchoolName());
+                group.setSchoolAddress(student.getSchoolAddress());
                 group.setClassId(student.getClassId());
                 group.setClassName(student.getClassName());
                 group.setGradeCatalogId(student.getGradeCatalogId());
                 group.setGradeName(student.getGradeName());
-                group.setStationId(student.getStationId());
-                group.setStationName(student.getStationName());
-                group.setStationAddress(student.getStationAddress());
+                group.setWarehouseId(student.getWarehouseId());
+                group.setWarehouseName(student.getWarehouseName());
+                group.setWarehouseAddress(student.getWarehouseAddress());
                 group.setContactName(student.getContactName());
                 group.setContactMobile(student.getContactMobile());
             } else {

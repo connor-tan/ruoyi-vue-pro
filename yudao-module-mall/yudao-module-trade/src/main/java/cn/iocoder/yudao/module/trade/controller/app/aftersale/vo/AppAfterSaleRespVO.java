@@ -72,6 +72,50 @@ public class AppAfterSaleRespVO {
     @Schema(description = "退货商品数量", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer count;
 
+    // ========== 订刊快照 ==========
+
+    @Schema(description = "订刊学生编号", example = "1")
+    private Long subscriptionStudentId;
+
+    @Schema(description = "订刊学生名称快照", example = "张小明")
+    private String subscriptionStudentNameSnapshot;
+
+    @Schema(description = "订刊学校编号", example = "1")
+    private Long subscriptionSchoolId;
+
+    @Schema(description = "订刊学校名称快照", example = "实验小学")
+    private String subscriptionSchoolNameSnapshot;
+
+    @Schema(description = "订刊班级编号", example = "1")
+    private Long subscriptionClassId;
+
+    @Schema(description = "订刊班级名称快照", example = "2026级一年级1班")
+    private String subscriptionClassNameSnapshot;
+
+    @Schema(description = "订刊年级编号", example = "1")
+    private Long subscriptionGradeCatalogId;
+
+    @Schema(description = "订刊年级名称快照", example = "一年级")
+    private String subscriptionGradeNameSnapshot;
+
+    @Schema(description = "订刊窗口编号", example = "1")
+    private Long subscriptionWindowId;
+
+    @Schema(description = "订刊窗口名称快照", example = "2026春季订刊")
+    private String subscriptionWindowNameSnapshot;
+
+    @Schema(description = "订刊目标学年开始年份", example = "2026")
+    private Integer subscriptionTargetYearStart;
+
+    @Schema(description = "订刊目标学年结束年份", example = "2027")
+    private Integer subscriptionTargetYearEnd;
+
+    @Schema(description = "订刊窗口刊物编号（offer）", example = "1")
+    private Long subscriptionOfferId;
+
+    @Schema(description = "订刊窗口 SKU 编号（offerSku）", example = "1")
+    private Long subscriptionOfferSkuId;
+
     // ========== 审批相关 ==========
 
     /**

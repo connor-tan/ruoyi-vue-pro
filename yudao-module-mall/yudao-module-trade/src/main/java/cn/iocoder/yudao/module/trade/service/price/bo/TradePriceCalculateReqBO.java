@@ -150,6 +150,11 @@ public class TradePriceCalculateReqBO {
         private String subscriptionSchoolNameSnapshot;
 
         /**
+         * 订刊学校地址快照
+         */
+        private String subscriptionSchoolAddressSnapshot;
+
+        /**
          * 订刊班级编号
          */
         private Long subscriptionClassId;
@@ -170,27 +175,27 @@ public class TradePriceCalculateReqBO {
         private String subscriptionGradeNameSnapshot;
 
         /**
-         * 订刊站点编号
+         * 订刊学校配送仓库编号
          */
-        private Long subscriptionStationId;
+        private Long subscriptionWarehouseId;
 
         /**
-         * 订刊站点名称快照
+         * 订刊学校配送仓库名称快照
          */
-        private String subscriptionStationNameSnapshot;
+        private String subscriptionWarehouseNameSnapshot;
 
         /**
-         * 订刊站点地址快照
+         * 订刊学校配送仓库地址快照
          */
-        private String subscriptionStationAddressSnapshot;
+        private String subscriptionWarehouseAddressSnapshot;
 
         /**
-         * 订刊站点联系人
+         * 订刊学校配送联系人
          */
         private String subscriptionContactName;
 
         /**
-         * 订刊站点联系电话
+         * 订刊学校配送联系电话
          */
         private String subscriptionContactMobile;
 

@@ -1,0 +1,13 @@
+DELETE FROM `subscription_offer_sku_issue`;
+DELETE FROM `subscription_window_offer_sku`;
+DELETE FROM `subscription_window_offer`;
+DELETE FROM `subscription_window`;
+DELETE FROM `product_publication_sku_issue_template`;
+DELETE FROM `product_publication_sku_grade_rel`;
+DELETE FROM `product_sku`;
+DELETE FROM `product_publication_spu_ext`;
+DELETE FROM `product_spu_category_rel`;
+DELETE FROM `product_category`;
+DELETE FROM `product_publisher`;
+DELETE FROM `product_publication_type`;
+DELETE FROM `product_spu`;

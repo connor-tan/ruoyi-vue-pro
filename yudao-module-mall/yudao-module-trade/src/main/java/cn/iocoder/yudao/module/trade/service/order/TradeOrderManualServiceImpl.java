@@ -303,7 +303,7 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
                 throw exception(ORDER_PUBLICATION_OFFER_SKU_REQUIRED);
             }
             if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())
-                    && !Objects.equals(deliveryType, DeliveryTypeEnum.STATION.getType())) {
+                    && !Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType())) {
                 throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
             }
             Integer existedDeliveryType = studentDeliveryTypeMap.putIfAbsent(item.getSubscriptionStudentId(), deliveryType);
@@ -321,8 +321,8 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
                             .setOfferSkuId(item.getSubscriptionOfferSkuId())
                             .setSkuId(item.getSkuId())
                             .setCount(accumulatedCount));
-            if (Objects.equals(deliveryType, DeliveryTypeEnum.STATION.getType()) && eligibility.getStationId() == null) {
-                throw exception(ORDER_SCHOOL_STATION_NOT_CONFIGURED);
+            if (Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType()) && eligibility.getWarehouseId() == null) {
+                throw exception(ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED);
             }
             fillPublicationItemFacts(item, eligibility);
         }
@@ -334,13 +334,14 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
                 .setSubscriptionStudentNameSnapshot(eligibility.getStudentNameSnapshot())
                 .setSubscriptionSchoolId(eligibility.getSchoolId())
                 .setSubscriptionSchoolNameSnapshot(eligibility.getSchoolNameSnapshot())
+                .setSubscriptionSchoolAddressSnapshot(eligibility.getSchoolAddressSnapshot())
                 .setSubscriptionClassId(eligibility.getClassId())
                 .setSubscriptionClassNameSnapshot(eligibility.getClassNameSnapshot())
                 .setSubscriptionGradeCatalogId(eligibility.getGradeCatalogId())
                 .setSubscriptionGradeNameSnapshot(eligibility.getGradeNameSnapshot())
-                .setSubscriptionStationId(eligibility.getStationId())
-                .setSubscriptionStationNameSnapshot(eligibility.getStationNameSnapshot())
-                .setSubscriptionStationAddressSnapshot(eligibility.getStationAddressSnapshot())
+                .setSubscriptionWarehouseId(eligibility.getWarehouseId())
+                .setSubscriptionWarehouseNameSnapshot(eligibility.getWarehouseNameSnapshot())
+                .setSubscriptionWarehouseAddressSnapshot(eligibility.getWarehouseAddressSnapshot())
                 .setSubscriptionContactName(eligibility.getContactName())
                 .setSubscriptionContactMobile(eligibility.getContactMobile())
                 .setSubscriptionWindowId(eligibility.getWindowId())
@@ -495,6 +496,11 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
                     .setReceiverAreaId(address.getAreaId()).setReceiverDetailAddress(address.getDetailAddress());
             return;
         }
+        TradeOrderDeliveryGroupDraft schoolGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.SCHOOL.getType());
+        if (schoolGroup != null) {
+            fillSchoolOrderReceiver(order, schoolGroup);
+            return;
+        }
         TradeOrderDeliveryGroupDraft pickUpGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.PICK_UP.getType());
         if (pickUpGroup != null) {
             order.setReceiverName(pickUpGroup.getReceiverName()).setReceiverMobile(pickUpGroup.getReceiverMobile())
@@ -502,13 +508,13 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
                     .setPickUpVerifyCode(pickUpGroup.getPickUpVerifyCode());
             return;
         }
-        TradeOrderDeliveryGroupDraft stationGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.STATION.getType());
-        if (stationGroup != null) {
-            order.setReceiverName(StrUtil.blankToDefault(stationGroup.getContactName(),
-                            stationGroup.getStudentNameSnapshot()))
-                    .setReceiverMobile(stationGroup.getContactMobile())
-                    .setReceiverDetailAddress(stationGroup.getStationAddressSnapshot());
-        }
+    }
+
+    private void fillSchoolOrderReceiver(TradeOrderDO order, TradeOrderDeliveryGroupDraft schoolGroup) {
+        order.setReceiverName(StrUtil.blankToDefault(schoolGroup.getSchoolNameSnapshot(),
+                        StrUtil.blankToDefault(schoolGroup.getContactName(), schoolGroup.getStudentNameSnapshot())))
+                .setReceiverMobile(StrUtil.nullToDefault(schoolGroup.getContactMobile(), ""))
+                .setReceiverDetailAddress(schoolGroup.getSchoolAddressSnapshot());
     }
 
     private List<TradeOrderItemDO> buildManualTradeOrderItems(TradeOrderDO order,

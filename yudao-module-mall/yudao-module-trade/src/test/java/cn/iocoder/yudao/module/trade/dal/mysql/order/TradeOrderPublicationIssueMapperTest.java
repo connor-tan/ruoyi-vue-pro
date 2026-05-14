@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.trade.dal.mysql.order;
 import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
 import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidatePageReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
@@ -12,9 +13,13 @@ import cn.iocoder.yudao.module.trade.enums.order.TradeOrderRefundStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import cn.iocoder.yudao.module.trade.service.delivery.bo.TradePublicationDeliveryCandidateItemBO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
+import javax.sql.DataSource;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,6 +31,8 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
     private TradeOrderPublicationIssueMapper publicationIssueMapper;
     @Resource
     private TradeOrderMapper tradeOrderMapper;
+    @Resource
+    private DataSource dataSource;
 
     @Test
     void selectPublicationDeliveryCandidateItemList_shouldIncludePartRefundOrderIssue() {
@@ -56,9 +63,30 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         assertTrue(items.isEmpty());
     }
 
+    @Test
+    void selectPublicationDeliveryCandidatePage_shouldReturnReadableSkuFields() {
+        insertOrder(1L, TradeOrderStatusEnum.UNDELIVERED.getStatus(), TradeOrderRefundStatusEnum.NONE.getStatus());
+        insertIssue(9001L, 1L, false, PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        insertSku(6L, "测试刊物 SKU-全学年", "FULL", "GENERAL", "ISBN978-7-5436-9310-0");
+
+        IPage<TradePublicationDeliveryCandidateRespVO> page = publicationIssueMapper
+                .selectPublicationDeliveryCandidatePage(new Page<>(1, 10), candidateReqVO(),
+                        TradeOrderStatusEnum.UNDELIVERED.getStatus(),
+                        PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+
+        assertEquals(1, page.getRecords().size());
+        TradePublicationDeliveryCandidateRespVO candidate = page.getRecords().get(0);
+        assertEquals("测试刊物 SKU-全学年", candidate.getProductSkuName());
+        assertEquals("FULL", candidate.getVolumeLabel());
+        assertEquals("GENERAL", candidate.getEditionLabel());
+        assertEquals("ISBN978-7-5436-9310-0", candidate.getIsbn());
+        assertEquals(1, candidate.getTotalCount());
+        assertEquals(1, candidate.getOrderCount());
+    }
+
     private TradePublicationDeliveryCandidatePageReqVO candidateReqVO() {
         return new TradePublicationDeliveryCandidatePageReqVO()
-                .setDeliveryType(DeliveryTypeEnum.STATION.getType())
+                .setDeliveryType(DeliveryTypeEnum.SCHOOL.getType())
                 .setWindowId(3L)
                 .setOfferId(4L)
                 .setOfferSkuId(5L)
@@ -81,7 +109,7 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
                 .setDeliveryPrice(0)
                 .setAdjustPrice(0)
                 .setPayPrice(1000)
-                .setDeliveryType(DeliveryTypeEnum.STATION.getType())
+                .setDeliveryType(DeliveryTypeEnum.SCHOOL.getType())
                 .setReceiverName("张三")
                 .setReceiverMobile("13800000000")
                 .setReceiverAreaId(110000)
@@ -102,14 +130,14 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
                 .setOrderItemId(1001L)
                 .setDeliveryId(11L)
                 .setUserId(10L)
-                .setDeliveryType(DeliveryTypeEnum.STATION.getType())
+                .setDeliveryType(DeliveryTypeEnum.SCHOOL.getType())
                 .setSkuId(6L)
                 .setProductNameSnapshot("测试刊物")
                 .setCount(1)
                 .setSchoolId(100L)
                 .setSchoolNameSnapshot("实验小学")
-                .setStationId(200L)
-                .setStationNameSnapshot("城北站")
+                .setWarehouseId(200L)
+                .setWarehouseNameSnapshot("城北站")
                 .setWindowId(3L)
                 .setWindowNameSnapshot("2026 春季订刊")
                 .setOfferId(4L)
@@ -120,6 +148,18 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
                 .setDeliveryStatus(deliveryStatus)
                 .setReceiveStatus(PublicationReceiveStatusEnum.UNRECEIVED.getStatus())
                 .setCanceled(canceled));
+    }
+
+    private void insertSku(Long skuId, String skuName, String volumeLabel, String editionLabel, String isbn) {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        jdbcTemplate.update("""
+                INSERT INTO product_sku (id, spu_id, name, deleted)
+                VALUES (?, ?, ?, FALSE)
+                """, skuId, 600L, skuName);
+        jdbcTemplate.update("""
+                INSERT INTO product_publication_sku_ext (sku_id, volume_label, edition_label, isbn, deleted)
+                VALUES (?, ?, ?, ?, FALSE)
+                """, skuId, volumeLabel, editionLabel, isbn);
     }
 
 }

@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 /**
- * 刊物站点发货批次明细 DO
+ * 刊物学校配送发货批次明细 DO
  */
 @TableName("trade_publication_delivery_batch_item")
 @KeySequence("trade_publication_delivery_batch_item_seq")

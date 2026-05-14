@@ -14,7 +14,7 @@ public interface TradePublicationDeliveryBatchMapper extends BaseMapperX<TradePu
         return selectPage(reqVO, new LambdaQueryWrapperX<TradePublicationDeliveryBatchDO>()
                 .likeIfPresent(TradePublicationDeliveryBatchDO::getBatchNo, reqVO.getBatchNo())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getSchoolId, reqVO.getSchoolId())
-                .eqIfPresent(TradePublicationDeliveryBatchDO::getStationId, reqVO.getStationId())
+                .eqIfPresent(TradePublicationDeliveryBatchDO::getWarehouseId, reqVO.getWarehouseId())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getDeliveryType, reqVO.getDeliveryType())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getWindowId, reqVO.getWindowId())
                 .eqIfPresent(TradePublicationDeliveryBatchDO::getOfferId, reqVO.getOfferId())

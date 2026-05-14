@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
-@Schema(description = "管理后台 - 刊物站点批次发货候选 Response VO")
+@Schema(description = "管理后台 - 刊物学校配送批次发货候选 Response VO")
 @Data
 public class TradePublicationDeliveryCandidateRespVO {
 
@@ -22,11 +22,11 @@ public class TradePublicationDeliveryCandidateRespVO {
     @Schema(description = "学校名称快照", example = "实验小学")
     private String schoolNameSnapshot;
 
-    @Schema(description = "站点编号", example = "200")
-    private Long stationId;
+    @Schema(description = "学校配送仓库编号", example = "200")
+    private Long warehouseId;
 
-    @Schema(description = "站点名称快照", example = "梁溪站")
-    private String stationNameSnapshot;
+    @Schema(description = "学校配送仓库名称快照", example = "梁溪站")
+    private String warehouseNameSnapshot;
 
     @Schema(description = "订刊窗口编号", example = "1")
     private Long windowId;
@@ -45,6 +45,18 @@ public class TradePublicationDeliveryCandidateRespVO {
 
     @Schema(description = "刊物商品名称快照", example = "读者")
     private String productNameSnapshot;
+
+    @Schema(description = "商品 SKU 名称", example = "读者-全学年")
+    private String productSkuName;
+
+    @Schema(description = "刊物 SKU 卷期字典值", example = "FULL")
+    private String volumeLabel;
+
+    @Schema(description = "刊物 SKU 版别字典值", example = "GENERAL")
+    private String editionLabel;
+
+    @Schema(description = "ISBN", example = "ISBN978-7-5436-9310-0")
+    private String isbn;
 
     @Schema(description = "订刊期次编号", example = "10000")
     private Long issueId;

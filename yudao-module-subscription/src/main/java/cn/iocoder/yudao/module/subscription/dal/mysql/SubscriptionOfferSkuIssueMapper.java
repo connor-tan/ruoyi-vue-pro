@@ -51,4 +51,20 @@ public interface SubscriptionOfferSkuIssueMapper extends BaseMapperX<Subscriptio
                 .last("LIMIT 1"));
     }
 
+    default int deleteByOfferSkuId(Long offerSkuId) {
+        if (offerSkuId == null) {
+            return 0;
+        }
+        return delete(new LambdaQueryWrapperX<SubscriptionOfferSkuIssueDO>()
+                .eq(SubscriptionOfferSkuIssueDO::getOfferSkuId, offerSkuId));
+    }
+
+    default int deleteByOfferSkuIds(Collection<Long> offerSkuIds) {
+        if (CollUtil.isEmpty(offerSkuIds)) {
+            return 0;
+        }
+        return delete(new LambdaQueryWrapperX<SubscriptionOfferSkuIssueDO>()
+                .in(SubscriptionOfferSkuIssueDO::getOfferSkuId, offerSkuIds));
+    }
+
 }

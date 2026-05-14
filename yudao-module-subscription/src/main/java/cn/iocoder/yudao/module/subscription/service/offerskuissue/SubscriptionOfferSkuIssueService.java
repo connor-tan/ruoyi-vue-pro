@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.subscription.service.offerskuissue;
 
+import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueApplyDefaultTemplateReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueGenerateReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueSaveReqVO;
@@ -16,6 +17,8 @@ public interface SubscriptionOfferSkuIssueService {
     Long saveIssue(SubscriptionOfferSkuIssueSaveReqVO reqVO);
 
     int generateIssues(SubscriptionOfferSkuIssueGenerateReqVO reqVO);
+
+    int applyDefaultTemplate(SubscriptionOfferSkuIssueApplyDefaultTemplateReqVO reqVO);
 
     void deleteIssue(Long id);
 

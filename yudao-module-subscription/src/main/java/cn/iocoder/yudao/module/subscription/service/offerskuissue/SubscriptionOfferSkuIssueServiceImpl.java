@@ -6,15 +6,18 @@ import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.product.api.publication.ProductPublicationApi;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIssueModeEnum;
+import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueApplyDefaultTemplateReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueGenerateReqVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueRespVO;
 import cn.iocoder.yudao.module.subscription.controller.admin.offerskuissue.vo.SubscriptionOfferSkuIssueSaveReqVO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionOfferSkuIssueDO;
+import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferDO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowOfferSkuDO;
 import cn.iocoder.yudao.module.subscription.dal.mysql.SubscriptionOfferSkuIssueMapper;
 import cn.iocoder.yudao.module.subscription.service.offer.SubscriptionOfferService;
 import cn.iocoder.yudao.module.subscription.service.offersku.SubscriptionOfferSkuService;
+import cn.iocoder.yudao.module.subscription.service.window.SubscriptionWindowService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +44,11 @@ public class SubscriptionOfferSkuIssueServiceImpl implements SubscriptionOfferSk
     @Resource
     private SubscriptionOfferService offerService;
     @Resource
+    private SubscriptionWindowService windowService;
+    @Resource
     private ProductPublicationApi productPublicationApi;
+    @Resource
+    private SubscriptionOfferSkuIssueDefaultTemplateService defaultTemplateService;
 
     @Override
     public List<SubscriptionOfferSkuIssueRespVO> getIssueList(Long offerSkuId) {
@@ -114,6 +121,18 @@ public class SubscriptionOfferSkuIssueServiceImpl implements SubscriptionOfferSk
         }
         offerSkuIssueMapper.insertBatch(issues);
         return issues.size();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int applyDefaultTemplate(SubscriptionOfferSkuIssueApplyDefaultTemplateReqVO reqVO) {
+        SubscriptionWindowOfferSkuDO offerSku = offerSkuService.validateOfferSkuExists(reqVO.getOfferSkuId());
+        validateOfferSkuPeriodical(offerSku);
+        SubscriptionWindowOfferDO offer = offerService.validateOfferExists(offerSku.getOfferId());
+        SubscriptionWindowDO window = windowService.validateWindowExists(offer.getWindowId());
+        ProductPublicationRespDTO publication = productPublicationApi.getPublication(offer.getProductSpuId());
+        return defaultTemplateService.applyDefaultTemplate(window, offerSku, publication,
+                Boolean.TRUE.equals(reqVO.getOverwrite()));
     }
 
     @Override

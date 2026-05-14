@@ -22,6 +22,8 @@ public class AppSubscriptionPublicationRespVO {
         private Boolean visible;
         private String reason;
         private String reasonDesc;
+        private Boolean purchasable;
+        private String purchaseUnavailableReasonDesc;
         private Integer totalOfferSkuCount;
         private Integer candidateSkuCount;
         private Integer finalSkuCount;
@@ -38,6 +40,11 @@ public class AppSubscriptionPublicationRespVO {
         private String productSkuName;
         private Integer price;
         private Integer stock;
+        private Boolean purchasable;
+        private Integer maxQuantityPerStudent;
+        private Integer orderedQuantity;
+        private Integer remainingQuantity;
+        private String purchaseUnavailableReasonDesc;
         private String volumeLabel;
         private String editionLabel;
         private String isbn;

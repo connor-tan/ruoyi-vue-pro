@@ -21,6 +21,8 @@ import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.service.station.StationService;
+import cn.iocoder.yudao.module.repo.dal.dataobject.warehouse.RepoWarehouseDO;
+import cn.iocoder.yudao.module.repo.service.warehouse.RepoWarehouseService;
 import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Collection;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_GRADE_STAGE_NOT_ALLOWED;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.SCHOOL_STAGE_IN_USE;
@@ -57,6 +60,7 @@ class SchoolServiceImplTest {
     private StudentClassMapper studentClassMapper;
     private AreaApi areaApi;
     private StationService stationService;
+    private RepoWarehouseService warehouseService;
 
     @BeforeEach
     void setUp() {
@@ -72,6 +76,7 @@ class SchoolServiceImplTest {
         studentClassMapper = mock(StudentClassMapper.class);
         areaApi = mock(AreaApi.class);
         stationService = mock(StationService.class);
+        warehouseService = mock(RepoWarehouseService.class);
         ReflectionTestUtils.setField(service, "schoolMapper", schoolMapper);
         ReflectionTestUtils.setField(service, "schoolStageMapper", schoolStageMapper);
         ReflectionTestUtils.setField(service, "gradeCatalogMapper", gradeCatalogMapper);
@@ -83,6 +88,7 @@ class SchoolServiceImplTest {
         ReflectionTestUtils.setField(service, "studentClassMapper", studentClassMapper);
         ReflectionTestUtils.setField(service, "areaApi", areaApi);
         ReflectionTestUtils.setField(service, "stationService", stationService);
+        ReflectionTestUtils.setField(service, "warehouseService", warehouseService);
     }
 
     @Test
@@ -90,7 +96,8 @@ class SchoolServiceImplTest {
         when(gradeCatalogMapper.selectListByStatus(0)).thenReturn(List.of(
                 gradeCatalog(4L, "primary", "P1", "一年级"),
                 gradeCatalog(10L, "middle", "M1", "初一")));
-        when(stationService.validateStationBindable(9L, 1L)).thenReturn(station(9L, 1L, 0));
+        when(stationService.validateStationBindable(9L)).thenReturn(station(9L, 2L, 0));
+        when(warehouseService.validateWarehouseBindable(19L)).thenReturn(warehouse(19L));
         doAnswer(invocation -> {
             SchoolDO school = invocation.getArgument(0);
             school.setId(1L);
@@ -101,6 +108,7 @@ class SchoolServiceImplTest {
         reqVO.setAreaId(1L);
         reqVO.setSchoolAddress("测试地址");
         reqVO.setStationId(9L);
+        reqVO.setWarehouseId(19L);
         reqVO.setStageCodes(List.of("primary", "middle", "primary"));
 
         Long schoolId = service.createSchool(reqVO);
@@ -109,6 +117,7 @@ class SchoolServiceImplTest {
         ArgumentCaptor<SchoolDO> schoolCaptor = ArgumentCaptor.forClass(SchoolDO.class);
         verify(schoolMapper).insert(schoolCaptor.capture());
         assertEquals(9L, schoolCaptor.getValue().getStationId());
+        assertEquals(19L, schoolCaptor.getValue().getWarehouseId());
         ArgumentCaptor<Collection<SchoolStageDO>> captor = ArgumentCaptor.forClass(Collection.class);
         verify(schoolStageMapper).insertBatch(captor.capture());
         List<String> stages = captor.getValue().stream().map(SchoolStageDO::getStage).toList();
@@ -177,6 +186,26 @@ class SchoolServiceImplTest {
         assertEquals(2027, captor.getValue().getYearEnd());
     }
 
+    @Test
+    void getSchoolShouldFillStationArea() {
+        SchoolDO school = school(1L);
+        school.setStationId(9L);
+        school.setWarehouseId(19L);
+        when(schoolMapper.selectById(1L)).thenReturn(school);
+        when(schoolStageMapper.selectListBySchoolId(1L)).thenReturn(List.of(schoolStage(1L, "primary")));
+        when(stationService.getStationMap(List.of(9L))).thenReturn(Map.of(9L, station(9L, 110105L, 0)));
+        when(warehouseService.getWarehouseMap(List.of(19L))).thenReturn(Map.of(19L, warehouse(19L)));
+
+        SchoolDO result = service.getSchool(1L);
+
+        assertEquals(9L, result.getStationId());
+        assertEquals("测试站点", result.getStationName());
+        assertEquals(110105L, result.getStationAreaId());
+        assertEquals("北京市 北京市 朝阳区", result.getStationAreaName());
+        assertEquals(19L, result.getWarehouseId());
+        assertEquals("测试仓库", result.getWarehouseName());
+    }
+
     private SchoolDO school(Long id) {
         SchoolDO school = new SchoolDO();
         school.setId(id);
@@ -191,6 +220,13 @@ class SchoolServiceImplTest {
         station.setStatus(status);
         station.setStationName("测试站点");
         return station;
+    }
+
+    private RepoWarehouseDO warehouse(Long id) {
+        RepoWarehouseDO warehouse = new RepoWarehouseDO();
+        warehouse.setId(id);
+        warehouse.setName("测试仓库");
+        return warehouse;
     }
 
     private SchoolStageDO schoolStage(Long schoolId, String stage) {

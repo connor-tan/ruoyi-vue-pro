@@ -6,7 +6,7 @@ import lombok.Data;
 
 import java.util.List;
 
-@Schema(description = "管理后台 - 刊物站点批次创建并发货 Request VO")
+@Schema(description = "管理后台 - 刊物学校配送批次创建并发货 Request VO")
 @Data
 public class TradePublicationDeliveryBatchCreateReqVO {
 
@@ -18,8 +18,8 @@ public class TradePublicationDeliveryBatchCreateReqVO {
     @NotNull(message = "学校不能为空")
     private Long schoolId;
 
-    @Schema(description = "站点编号；站点配送必填", example = "200")
-    private Long stationId;
+    @Schema(description = "学校配送仓库编号；学校配送必填", example = "200")
+    private Long warehouseId;
 
     @Schema(description = "订刊窗口编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @NotNull(message = "订刊窗口不能为空")

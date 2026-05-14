@@ -60,16 +60,16 @@ class TradePublicationDeliveryBatchServiceImplTest {
     private TradePublicationDeliveryBatchServiceImpl service;
 
     @Test
-    void createAndDeliver_shouldCreateStationIssueBatch() {
-        mockCandidateItems(List.of(candidateItem(9001L, DeliveryTypeEnum.STATION.getType()),
-                candidateItem(9002L, DeliveryTypeEnum.STATION.getType())));
+    void createAndDeliver_shouldCreateWarehouseIssueBatch() {
+        mockCandidateItems(List.of(candidateItem(9001L, DeliveryTypeEnum.SCHOOL.getType()),
+                candidateItem(9002L, DeliveryTypeEnum.SCHOOL.getType())));
         mockBatchInsert();
         when(tradeNoRedisDAO.generate(TradeNoRedisDAO.PUBLICATION_DELIVERY_BATCH_NO_PREFIX)).thenReturn("pd100");
         when(publicationIssueMapper.updateDeliveredByIds(any(),
                 eq(PublicationDeliveryStatusEnum.UNDELIVERED.getStatus()), eq(200L), any(LocalDateTime.class)))
                 .thenReturn(2);
 
-        Long batchId = service.createAndDeliver(createReqVO(DeliveryTypeEnum.STATION.getType()), 9L);
+        Long batchId = service.createAndDeliver(createReqVO(DeliveryTypeEnum.SCHOOL.getType()), 9L);
 
         assertEquals(200L, batchId);
         verify(publicationIssueService).afterIssueDelivered(eq(Set.of(9001L, 9002L)), any(LocalDateTime.class));
@@ -96,7 +96,7 @@ class TradePublicationDeliveryBatchServiceImplTest {
         mockCandidateItems(List.of());
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> service.createAndDeliver(createReqVO(DeliveryTypeEnum.STATION.getType()), 9L));
+                () -> service.createAndDeliver(createReqVO(DeliveryTypeEnum.SCHOOL.getType()), 9L));
 
         assertEquals(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND.getCode(), ex.getCode());
         verify(publicationDeliveryBatchMapper, never()).insert(any(TradePublicationDeliveryBatchDO.class));
@@ -104,13 +104,13 @@ class TradePublicationDeliveryBatchServiceImplTest {
 
     @Test
     void createAndDeliver_shouldRejectDuplicateOrderIssue() {
-        mockCandidateItems(List.of(candidateItem(9001L, DeliveryTypeEnum.STATION.getType())));
+        mockCandidateItems(List.of(candidateItem(9001L, DeliveryTypeEnum.SCHOOL.getType())));
         mockBatchInsert();
         when(tradeNoRedisDAO.generate(TradeNoRedisDAO.PUBLICATION_DELIVERY_BATCH_NO_PREFIX)).thenReturn("pd100");
         doThrow(new DuplicateKeyException("duplicate")).when(publicationDeliveryBatchItemMapper).insertBatch(any());
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> service.createAndDeliver(createReqVO(DeliveryTypeEnum.STATION.getType()), 9L));
+                () -> service.createAndDeliver(createReqVO(DeliveryTypeEnum.SCHOOL.getType()), 9L));
 
         assertEquals(PUBLICATION_ISSUE_DELIVERY_DUPLICATE.getCode(), ex.getCode());
         verify(publicationIssueMapper, never()).updateDeliveredByIds(any(), anyInt(), any(), any());
@@ -118,8 +118,8 @@ class TradePublicationDeliveryBatchServiceImplTest {
 
     @Test
     void createAndDeliver_shouldRejectWhenIssueUpdateCountMismatch() {
-        mockCandidateItems(List.of(candidateItem(9001L, DeliveryTypeEnum.STATION.getType()),
-                candidateItem(9002L, DeliveryTypeEnum.STATION.getType())));
+        mockCandidateItems(List.of(candidateItem(9001L, DeliveryTypeEnum.SCHOOL.getType()),
+                candidateItem(9002L, DeliveryTypeEnum.SCHOOL.getType())));
         mockBatchInsert();
         when(tradeNoRedisDAO.generate(TradeNoRedisDAO.PUBLICATION_DELIVERY_BATCH_NO_PREFIX)).thenReturn("pd100");
         when(publicationIssueMapper.updateDeliveredByIds(any(),
@@ -127,7 +127,7 @@ class TradePublicationDeliveryBatchServiceImplTest {
                 .thenReturn(1);
 
         ServiceException ex = assertThrows(ServiceException.class,
-                () -> service.createAndDeliver(createReqVO(DeliveryTypeEnum.STATION.getType()), 9L));
+                () -> service.createAndDeliver(createReqVO(DeliveryTypeEnum.SCHOOL.getType()), 9L));
 
         assertEquals(PUBLICATION_DELIVERY_ITEM_UPDATE_FAIL.getCode(), ex.getCode());
     }
@@ -174,7 +174,7 @@ class TradePublicationDeliveryBatchServiceImplTest {
         return new TradePublicationDeliveryBatchCreateReqVO()
                 .setDeliveryType(deliveryType)
                 .setSchoolId(1L)
-                .setStationId(DeliveryTypeEnum.STATION.getType().equals(deliveryType) ? 2L : null)
+                .setWarehouseId(DeliveryTypeEnum.SCHOOL.getType().equals(deliveryType) ? 2L : null)
                 .setWindowId(3L)
                 .setOfferId(4L)
                 .setOfferSkuId(5L)
@@ -202,8 +202,8 @@ class TradePublicationDeliveryBatchServiceImplTest {
                 .setCount(1)
                 .setSchoolId(1L)
                 .setSchoolNameSnapshot("实验小学")
-                .setStationId(DeliveryTypeEnum.STATION.getType().equals(deliveryType) ? 2L : null)
-                .setStationNameSnapshot("城北站")
+                .setWarehouseId(DeliveryTypeEnum.SCHOOL.getType().equals(deliveryType) ? 2L : null)
+                .setWarehouseNameSnapshot("城北站")
                 .setWindowId(3L)
                 .setWindowNameSnapshot("2026 春季订刊")
                 .setOfferId(4L)

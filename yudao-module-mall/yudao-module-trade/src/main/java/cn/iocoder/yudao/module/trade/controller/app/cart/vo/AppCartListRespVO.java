@@ -75,6 +75,9 @@ public class AppCartListRespVO {
         @Schema(description = "学校名称", example = "实验小学")
         private String schoolName;
 
+        @Schema(description = "学校地址", example = "上海市普陀区曹杨路1号")
+        private String schoolAddress;
+
         @Schema(description = "班级编号", example = "2048")
         private Long classId;
 
@@ -87,14 +90,14 @@ public class AppCartListRespVO {
         @Schema(description = "年级名称", example = "一年级")
         private String gradeName;
 
-        @Schema(description = "站点编号", example = "300")
-        private Long stationId;
+        @Schema(description = "学校配送仓库编号", example = "300")
+        private Long warehouseId;
 
-        @Schema(description = "站点名称", example = "A站点")
-        private String stationName;
+        @Schema(description = "学校配送仓库名称", example = "滨湖履约仓")
+        private String warehouseName;
 
-        @Schema(description = "站点地址", example = "上海市普陀区曹杨路1号")
-        private String stationAddress;
+        @Schema(description = "学校配送仓库地址", example = "上海市普陀区曹杨路1号")
+        private String warehouseAddress;
 
         @Schema(description = "联系人", example = "李老师")
         private String contactName;

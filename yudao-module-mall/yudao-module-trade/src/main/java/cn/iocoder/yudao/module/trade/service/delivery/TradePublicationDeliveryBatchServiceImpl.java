@@ -49,7 +49,7 @@ import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_ITEM_UPDATE_FAIL;
 
 /**
- * 刊物站点发货批次 Service 实现类
+ * 刊物学校配送发货批次 Service 实现类
  */
 @Service
 public class TradePublicationDeliveryBatchServiceImpl implements TradePublicationDeliveryBatchService {
@@ -138,7 +138,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     private TradePublicationDeliveryCandidatePageReqVO buildCandidateReqVO(TradePublicationDeliveryBatchCreateReqVO reqVO) {
         return new TradePublicationDeliveryCandidatePageReqVO()
                 .setSchoolId(reqVO.getSchoolId())
-                .setStationId(reqVO.getStationId())
+                .setWarehouseId(reqVO.getWarehouseId())
                 .setDeliveryType(reqVO.getDeliveryType())
                 .setWindowId(reqVO.getWindowId())
                 .setOfferId(reqVO.getOfferId())
@@ -156,8 +156,8 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
                 .setDeliveryType(first.getDeliveryType())
                 .setSchoolId(first.getSchoolId())
                 .setSchoolNameSnapshot(first.getSchoolNameSnapshot())
-                .setStationId(first.getStationId())
-                .setStationNameSnapshot(first.getStationNameSnapshot())
+                .setWarehouseId(first.getWarehouseId())
+                .setWarehouseNameSnapshot(first.getWarehouseNameSnapshot())
                 .setWindowId(first.getWindowId())
                 .setWindowNameSnapshot(first.getWindowNameSnapshot())
                 .setOfferId(first.getOfferId())
@@ -202,7 +202,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     }
 
     private void validateCreateReq(TradePublicationDeliveryBatchCreateReqVO reqVO) {
-        if (Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.STATION.getType()) && reqVO.getStationId() == null) {
+        if (Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType()) && reqVO.getWarehouseId() == null) {
             throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
         }
         if (Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
@@ -217,7 +217,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
             }
             return;
         }
-        if (!Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.STATION.getType())) {
+        if (!Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType())) {
             throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
         }
     }
@@ -250,7 +250,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     private void updateIssueDelivered(Long batchId, List<TradePublicationDeliveryCandidateItemBO> items,
                                       Map<Long, TradePublicationDeliveryBatchCreateReqVO.ExpressItem> expressItemMap,
                                       LocalDateTime deliveryTime) {
-        if (Objects.equals(items.get(0).getDeliveryType(), DeliveryTypeEnum.STATION.getType())) {
+        if (Objects.equals(items.get(0).getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType())) {
             int updatedCount = publicationIssueMapper.updateDeliveredByIds(
                     convertSet(items, TradePublicationDeliveryCandidateItemBO::getOrderIssueId),
                     PublicationDeliveryStatusEnum.UNDELIVERED.getStatus(), batchId, deliveryTime);

@@ -5,7 +5,7 @@
     <sql id="AvailableCandidateStatusExpr">
         CASE
             WHEN offer.id IS NOT NULL THEN 'ADDED'
-            WHEN spu.status != 0 THEN 'DISABLED'
+            WHEN spu.status != 1 THEN 'DISABLED'
             WHEN COUNT(DISTINCT sku.id) = 0 THEN 'DISABLED'
             WHEN COUNT(DISTINCT CASE WHEN sku.status = 0 THEN sku.id END) = 0 THEN 'DISABLED'
             WHEN COUNT(DISTINCT CASE
@@ -54,31 +54,31 @@
         FROM product_publication_spu_ext ext
                  INNER JOIN product_spu spu
                             ON spu.id = ext.spu_id
-                                AND spu.deleted = b'0'
+                                AND spu.deleted = false
                                 AND spu.biz_scene = 'PUBLICATION'
                  INNER JOIN product_spu_category_rel category_rel
                             ON category_rel.spu_id = spu.id
-                                AND category_rel.deleted = b'0'
+                                AND category_rel.deleted = false
                  INNER JOIN product_category category
                             ON category.id = category_rel.category_id
-                                AND category.deleted = b'0'
+                                AND category.deleted = false
                  LEFT JOIN product_publisher publisher
                            ON publisher.id = ext.publisher_id
-                               AND publisher.deleted = b'0'
+                               AND publisher.deleted = false
                  LEFT JOIN product_publication_type publication_type
                            ON publication_type.id = ext.publication_type_id
-                               AND publication_type.deleted = b'0'
+                               AND publication_type.deleted = false
                  LEFT JOIN subscription_window_offer offer
                            ON offer.window_id = #{req.windowId}
                                AND offer.product_spu_id = spu.id
-                               AND offer.deleted = b'0'
+                               AND offer.deleted = false
                  LEFT JOIN product_sku sku
                            ON sku.spu_id = spu.id
-                               AND sku.deleted = b'0'
+                               AND sku.deleted = false
                  LEFT JOIN product_publication_sku_grade_rel grade_rel
                            ON grade_rel.sku_id = sku.id
-                               AND grade_rel.deleted = b'0'
-        WHERE ext.deleted = b'0'
+                               AND grade_rel.deleted = false
+        WHERE ext.deleted = false
         <if test="req != null and req.publisherId != null">
           AND ext.publisher_id = #{req.publisherId}
         </if>
@@ -96,7 +96,7 @@
               SELECT 1
               FROM product_spu_category_rel filter_category_rel
               WHERE filter_category_rel.spu_id = spu.id
-                AND filter_category_rel.deleted = b'0'
+                AND filter_category_rel.deleted = false
                 AND filter_category_rel.category_id IN
                 <foreach collection="req.categoryIds" item="categoryId" open="(" separator="," close=")">
                     #{categoryId}
@@ -109,10 +109,10 @@
               FROM product_sku filter_sku
                        INNER JOIN product_publication_sku_grade_rel filter_rel
                                   ON filter_rel.sku_id = filter_sku.id
-                                      AND filter_rel.deleted = b'0'
+                                      AND filter_rel.deleted = false
                                       AND filter_rel.grade_catalog_id = #{req.gradeCatalogId}
               WHERE filter_sku.spu_id = spu.id
-                AND filter_sku.deleted = b'0'
+                AND filter_sku.deleted = false
           )
         </if>
     </sql>

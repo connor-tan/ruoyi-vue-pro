@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.trade.service.order.support;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.ip.core.utils.AreaUtils;
 import cn.iocoder.yudao.module.member.api.address.dto.MemberAddressRespDTO;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
@@ -29,7 +30,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getSumValue;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ITEM_DELIVERY_TYPE_ILLEGAL;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ITEM_DELIVERY_TYPE_REQUIRED;
-import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_SCHOOL_STATION_NOT_CONFIGURED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED;
 
 @Component
 public class TradeOrderDeliveryGroupSupport {
@@ -58,9 +59,9 @@ public class TradeOrderDeliveryGroupSupport {
             }
             String bizScene = item.getBizScene();
             if (BizSceneEnum.isPublication(bizScene)) {
-                if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.STATION.getType())) {
-                    if (item.getSubscriptionStudentId() == null || item.getSubscriptionStationId() == null) {
-                        throw exception(ORDER_SCHOOL_STATION_NOT_CONFIGURED);
+                if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.SCHOOL.getType())) {
+                    if (item.getSubscriptionStudentId() == null || item.getSubscriptionWarehouseId() == null) {
+                        throw exception(ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED);
                     }
                     String key = buildPublicationGroupKey(item.getSubscriptionStudentId(), resolvedDeliveryType);
                     TradeOrderDeliveryGroupDraft group = planMap.computeIfAbsent(key,
@@ -129,13 +130,14 @@ public class TradeOrderDeliveryGroupSupport {
                     .setStudentNameSnapshot(plan.getStudentNameSnapshot())
                     .setSchoolId(plan.getSchoolId())
                     .setSchoolNameSnapshot(plan.getSchoolNameSnapshot())
+                    .setSchoolAddressSnapshot(plan.getSchoolAddressSnapshot())
                     .setClassId(plan.getClassId())
                     .setClassNameSnapshot(plan.getClassNameSnapshot())
                     .setGradeCatalogId(plan.getGradeCatalogId())
                     .setGradeNameSnapshot(plan.getGradeNameSnapshot())
-                    .setStationId(plan.getStationId())
-                    .setStationNameSnapshot(plan.getStationNameSnapshot())
-                    .setStationAddressSnapshot(plan.getStationAddressSnapshot())
+                    .setWarehouseId(plan.getWarehouseId())
+                    .setWarehouseNameSnapshot(plan.getWarehouseNameSnapshot())
+                    .setWarehouseAddressSnapshot(plan.getWarehouseAddressSnapshot())
                     .setContactName(plan.getContactName())
                     .setContactMobile(plan.getContactMobile());
             if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType()) && plan.getAddress() != null) {
@@ -144,6 +146,10 @@ public class TradeOrderDeliveryGroupSupport {
                         .setReceiverAreaId(plan.getAddress().getAreaId())
                         .setReceiverAreaName(AreaUtils.format(plan.getAddress().getAreaId()))
                         .setReceiverDetailAddress(plan.getAddress().getDetailAddress());
+            } else if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType())) {
+                respVO.setReceiverName(resolveSchoolReceiverName(plan))
+                        .setReceiverMobile(StrUtil.nullToDefault(plan.getContactMobile(), ""))
+                        .setReceiverDetailAddress(plan.getSchoolAddressSnapshot());
             } else if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
                 respVO.setPickUpStoreId(plan.getPickUpStoreId())
                         .setPickUpVerifyCode(plan.getPickUpVerifyCode())
@@ -181,13 +187,14 @@ public class TradeOrderDeliveryGroupSupport {
                     .setStudentNameSnapshot(plan.getStudentNameSnapshot())
                     .setSchoolId(plan.getSchoolId())
                     .setSchoolNameSnapshot(plan.getSchoolNameSnapshot())
+                    .setSchoolAddressSnapshot(plan.getSchoolAddressSnapshot())
                     .setClassId(plan.getClassId())
                     .setClassNameSnapshot(plan.getClassNameSnapshot())
                     .setGradeCatalogId(plan.getGradeCatalogId())
                     .setGradeNameSnapshot(plan.getGradeNameSnapshot())
-                    .setStationId(plan.getStationId())
-                    .setStationNameSnapshot(plan.getStationNameSnapshot())
-                    .setStationAddressSnapshot(plan.getStationAddressSnapshot())
+                    .setWarehouseId(plan.getWarehouseId())
+                    .setWarehouseNameSnapshot(plan.getWarehouseNameSnapshot())
+                    .setWarehouseAddressSnapshot(plan.getWarehouseAddressSnapshot())
                     .setContactName(plan.getContactName())
                     .setContactMobile(plan.getContactMobile());
             if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType()) && plan.getAddress() != null) {
@@ -195,6 +202,10 @@ public class TradeOrderDeliveryGroupSupport {
                         .setReceiverMobile(plan.getAddress().getMobile())
                         .setReceiverAreaId(plan.getAddress().getAreaId().intValue())
                         .setReceiverDetailAddress(plan.getAddress().getDetailAddress());
+            } else if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType())) {
+                delivery.setReceiverName(resolveSchoolReceiverName(plan))
+                        .setReceiverMobile(StrUtil.nullToDefault(plan.getContactMobile(), ""))
+                        .setReceiverDetailAddress(plan.getSchoolAddressSnapshot());
             } else if (Objects.equals(plan.getDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
                 delivery.setPickUpStoreId(plan.getPickUpStoreId())
                         .setPickUpVerifyCode(plan.getPickUpVerifyCode())
@@ -216,6 +227,11 @@ public class TradeOrderDeliveryGroupSupport {
                 calculateRespBO.getItems().get(itemIndex).setDeliveryId(plan.getPersistedDelivery().getId());
             }
         }
+    }
+
+    private String resolveSchoolReceiverName(TradeOrderDeliveryGroupDraft plan) {
+        return StrUtil.blankToDefault(plan.getSchoolNameSnapshot(),
+                StrUtil.blankToDefault(plan.getContactName(), plan.getStudentNameSnapshot()));
     }
 
     private void assignPreviewDeliveryIds(List<TradeOrderDeliveryGroupDraft> plans) {

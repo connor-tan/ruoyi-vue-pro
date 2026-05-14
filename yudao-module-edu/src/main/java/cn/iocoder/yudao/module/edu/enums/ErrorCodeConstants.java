@@ -28,7 +28,6 @@ public interface ErrorCodeConstants {
     ErrorCode STATION_NOT_EXISTS = new ErrorCode(1_016_001_022, "站点不存在");
     ErrorCode STATION_NAME_DUPLICATE = new ErrorCode(1_016_001_023, "同一区域下站点名称已存在");
     ErrorCode STATION_DISABLED = new ErrorCode(1_016_001_024, "站点已停用，不能绑定到学校");
-    ErrorCode SCHOOL_STATION_AREA_NOT_MATCHED = new ErrorCode(1_016_001_025, "学校区域与站点区域不一致，不能绑定");
     ErrorCode STATION_IN_USE_BY_SCHOOL = new ErrorCode(1_016_001_026, "站点已绑定学校，无法执行当前操作");
     ErrorCode SCHOOL_YEAR_IN_USE_UPDATE = new ErrorCode(1_016_001_027, "学校学年已被班级引用，无法切换全局学年");
     ErrorCode YEAR_CATALOG_NOT_EXISTS = new ErrorCode(1_016_001_028, "学年目录不存在");

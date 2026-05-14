@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.module.member.api.address.MemberAddressApi;
 import cn.iocoder.yudao.module.member.api.address.dto.MemberAddressRespDTO;
 import cn.iocoder.yudao.module.pay.api.order.PayOrderApi;
@@ -71,7 +72,7 @@ import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_NORMA
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_MULTI_DELIVERY_FOR_STUDENT;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_OFFER_SKU_REQUIRED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_STUDENT_REQUIRED;
-import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_SCHOOL_STATION_NOT_CONFIGURED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_SPLIT_MARKETING_NOT_SUPPORTED;
 
 /**
@@ -195,7 +196,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                                 .setSkuId(item.getSkuId())
                                 .setCount(accumulatedCount));
                 if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())
-                        && !Objects.equals(deliveryType, DeliveryTypeEnum.STATION.getType())) {
+                        && !Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType())) {
                     throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
                 }
                 Integer existedDeliveryType = studentDeliveryTypeMap.putIfAbsent(eligibility.getStudentId(), deliveryType);
@@ -203,8 +204,8 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                     throw exception(ORDER_PUBLICATION_MULTI_DELIVERY_FOR_STUDENT);
                 }
                 fillPublicationItemFacts(item, eligibility);
-                if (Objects.equals(deliveryType, DeliveryTypeEnum.STATION.getType()) && eligibility.getStationId() == null) {
-                    throw exception(ORDER_SCHOOL_STATION_NOT_CONFIGURED);
+                if (Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType()) && eligibility.getWarehouseId() == null) {
+                    throw exception(ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED);
                 }
                 String groupKey = deliveryGroupSupport.buildPublicationGroupKey(eligibility.getStudentId(), deliveryType);
                 TradeOrderDeliveryGroupDraft group = groupMap.computeIfAbsent(groupKey,
@@ -233,13 +234,14 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                 .setSubscriptionStudentNameSnapshot(eligibility.getStudentNameSnapshot())
                 .setSubscriptionSchoolId(eligibility.getSchoolId())
                 .setSubscriptionSchoolNameSnapshot(eligibility.getSchoolNameSnapshot())
+                .setSubscriptionSchoolAddressSnapshot(eligibility.getSchoolAddressSnapshot())
                 .setSubscriptionClassId(eligibility.getClassId())
                 .setSubscriptionClassNameSnapshot(eligibility.getClassNameSnapshot())
                 .setSubscriptionGradeCatalogId(eligibility.getGradeCatalogId())
                 .setSubscriptionGradeNameSnapshot(eligibility.getGradeNameSnapshot())
-                .setSubscriptionStationId(eligibility.getStationId())
-                .setSubscriptionStationNameSnapshot(eligibility.getStationNameSnapshot())
-                .setSubscriptionStationAddressSnapshot(eligibility.getStationAddressSnapshot())
+                .setSubscriptionWarehouseId(eligibility.getWarehouseId())
+                .setSubscriptionWarehouseNameSnapshot(eligibility.getWarehouseNameSnapshot())
+                .setSubscriptionWarehouseAddressSnapshot(eligibility.getWarehouseAddressSnapshot())
                 .setSubscriptionContactName(eligibility.getContactName())
                 .setSubscriptionContactMobile(eligibility.getContactMobile())
                 .setSubscriptionWindowId(eligibility.getWindowId())
@@ -420,13 +422,27 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
             MemberAddressRespDTO address = expressGroup.getAddress();
             order.setReceiverName(address.getName()).setReceiverMobile(address.getMobile())
                     .setReceiverAreaId(address.getAreaId()).setReceiverDetailAddress(address.getDetailAddress());
-        } else if (Objects.equals(deliveryBuildResult.summaryDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
+        } else {
+            TradeOrderDeliveryGroupDraft schoolGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.SCHOOL.getType());
+            if (schoolGroup != null) {
+                fillSchoolOrderReceiver(order, schoolGroup);
+                return order;
+            }
             TradeOrderDeliveryGroupDraft pickUpGroup = deliveryBuildResult.findByDeliveryType(DeliveryTypeEnum.PICK_UP.getType());
-            order.setReceiverName(pickUpGroup.getReceiverName()).setReceiverMobile(pickUpGroup.getReceiverMobile());
-            order.setPickUpVerifyCode(pickUpGroup.getPickUpVerifyCode());
-            order.setPickUpStoreId(pickUpGroup.getPickUpStoreId());
+            if (pickUpGroup != null) {
+                order.setReceiverName(pickUpGroup.getReceiverName()).setReceiverMobile(pickUpGroup.getReceiverMobile());
+                order.setPickUpVerifyCode(pickUpGroup.getPickUpVerifyCode());
+                order.setPickUpStoreId(pickUpGroup.getPickUpStoreId());
+            }
         }
         return order;
+    }
+
+    private void fillSchoolOrderReceiver(TradeOrderDO order, TradeOrderDeliveryGroupDraft schoolGroup) {
+        order.setReceiverName(StrUtil.blankToDefault(schoolGroup.getSchoolNameSnapshot(),
+                        StrUtil.blankToDefault(schoolGroup.getContactName(), schoolGroup.getStudentNameSnapshot())))
+                .setReceiverMobile(StrUtil.nullToDefault(schoolGroup.getContactMobile(), ""))
+                .setReceiverDetailAddress(schoolGroup.getSchoolAddressSnapshot());
     }
 
     private void fillPickUpGroupFacts(TradeOrderDeliveryBuildResult deliveryBuildResult,

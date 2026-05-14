@@ -15,6 +15,7 @@ import cn.iocoder.yudao.module.subscription.controller.admin.offer.vo.*;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.*;
 import cn.iocoder.yudao.module.subscription.dal.mysql.*;
 import cn.iocoder.yudao.module.subscription.service.offersku.SubscriptionOfferSkuAvailabilityValidator;
+import cn.iocoder.yudao.module.subscription.service.offerskuissue.SubscriptionOfferSkuIssueDefaultTemplateService;
 import cn.iocoder.yudao.module.subscription.service.window.SubscriptionWindowService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,8 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     @Resource
     private SubscriptionWindowOfferSkuMapper offerSkuMapper;
     @Resource
+    private SubscriptionOfferSkuIssueMapper offerSkuIssueMapper;
+    @Resource
     private SubscriptionWindowOfferGradeRelMapper offerGradeRelMapper;
     @Resource
     private SubscriptionWindowService windowService;
@@ -57,6 +60,8 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     private SubscriptionRuleConditionMapper ruleConditionMapper;
     @Resource
     private SubscriptionOfferSkuAvailabilityValidator offerSkuAvailabilityValidator;
+    @Resource
+    private SubscriptionOfferSkuIssueDefaultTemplateService offerSkuIssueDefaultTemplateService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -137,6 +142,8 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
             offerMapper.insert(offer);
             offerSkus.forEach(sku -> sku.setOfferId(offer.getId()));
             offerSkuMapper.insertBatch(offerSkus);
+            offerSkuIssueDefaultTemplateService.copyDefaultIssuesForNewOfferSkus(window, publication,
+                    offerSkuMapper.selectListByOfferId(offer.getId()));
             offerIds.add(offer.getId());
             createdOfferSkuCount += offerSkus.size();
         }
@@ -257,12 +264,39 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     @Override
     public void deleteOffer(Long id) {
         validateOfferExists(id);
-        List<SubscriptionRuleDO> rules = ruleMapper.selectListByOfferIds(Collections.singleton(id));
+        deleteOffers(List.of(id));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void deleteOfferList(Collection<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return;
+        }
+        List<Long> offerIds = ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (CollUtil.isEmpty(offerIds)) {
+            return;
+        }
+        List<SubscriptionWindowOfferDO> offers = offerMapper.selectListByIds(offerIds);
+        if (offers.size() != offerIds.size()) {
+            throw exception(OFFER_NOT_EXISTS);
+        }
+        deleteOffers(offerIds);
+    }
+
+    private void deleteOffers(Collection<Long> offerIds) {
+        List<SubscriptionRuleDO> rules = ruleMapper.selectListByOfferIds(offerIds);
+        List<SubscriptionWindowOfferSkuDO> offerSkus = offerSkuMapper.selectListByOfferIds(offerIds);
+        Set<Long> offerSkuIds = convertSet(offerSkus, SubscriptionWindowOfferSkuDO::getId);
         ruleConditionMapper.deleteByRuleIds(convertSet(rules, SubscriptionRuleDO::getId));
-        ruleMapper.deleteByOfferId(id);
-        offerSkuMapper.deleteByOfferId(id);
-        offerGradeRelMapper.deleteByOfferId(id);
-        offerMapper.deleteById(id);
+        ruleMapper.deleteByOfferIds(offerIds);
+        offerSkuIssueMapper.deleteByOfferSkuIds(offerSkuIds);
+        offerSkuMapper.deleteByOfferIds(offerIds);
+        offerGradeRelMapper.deleteByOfferIds(offerIds);
+        offerMapper.deleteByIds(offerIds);
     }
 
     @Override

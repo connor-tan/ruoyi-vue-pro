@@ -103,15 +103,15 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
             respDTO.setStudentNameSnapshot(student.getStudentName());
             respDTO.setSchoolId(student.getSchoolId());
             respDTO.setSchoolNameSnapshot(student.getSchoolName());
+            respDTO.setSchoolAddressSnapshot(student.getSchoolAddress());
             respDTO.setClassId(student.getClassId());
             respDTO.setClassNameSnapshot(student.getClassName());
             respDTO.setGradeCatalogId(student.getGradeCatalogId());
             respDTO.setGradeNameSnapshot(student.getGradeName());
-            respDTO.setStationId(student.getStationId());
-            respDTO.setStationNameSnapshot(student.getStationName());
-            respDTO.setStationAddressSnapshot(student.getStationAddress());
-            respDTO.setContactName(student.getContactName());
-            respDTO.setContactMobile(student.getContactMobile());
+            respDTO.setWarehouseId(student.getWarehouseId());
+            respDTO.setWarehouseNameSnapshot(student.getWarehouseName());
+            respDTO.setWarehouseAddressSnapshot(student.getWarehouseAddress());
+            respDTO.setWarehousePrincipalSnapshot(student.getWarehousePrincipal());
         }
         SubscriptionWindowDO window = visibility.getWindow();
         if (window != null) {

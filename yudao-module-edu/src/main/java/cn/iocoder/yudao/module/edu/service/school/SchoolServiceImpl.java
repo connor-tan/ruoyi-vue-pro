@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.framework.ip.core.utils.AreaUtils;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolGradeSimpleRespVO;
@@ -41,6 +42,8 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.service.station.StationService;
+import cn.iocoder.yudao.module.repo.dal.dataobject.warehouse.RepoWarehouseDO;
+import cn.iocoder.yudao.module.repo.service.warehouse.RepoWarehouseService;
 import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -99,12 +102,15 @@ public class SchoolServiceImpl implements SchoolService {
     private AreaApi areaApi;
     @Resource
     private StationService stationService;
+    @Resource
+    private RepoWarehouseService warehouseService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createSchool(SchoolSaveReqVO createReqVO) {
         validateAreaSelectable(createReqVO.getAreaId());
-        stationService.validateStationBindable(createReqVO.getStationId(), createReqVO.getAreaId());
+        stationService.validateStationBindable(createReqVO.getStationId());
+        warehouseService.validateWarehouseBindable(createReqVO.getWarehouseId());
         List<String> stageCodes = normalizeStageCodes(createReqVO.getStageCodes());
         // 插入
         SchoolDO school = BeanUtils.toBean(createReqVO, SchoolDO.class);
@@ -125,7 +131,8 @@ public class SchoolServiceImpl implements SchoolService {
         if (!Objects.equals(school.getAreaId(), updateReqVO.getAreaId())) {
             validateAreaSelectable(updateReqVO.getAreaId());
         }
-        stationService.validateStationBindable(updateReqVO.getStationId(), updateReqVO.getAreaId());
+        stationService.validateStationBindable(updateReqVO.getStationId());
+        warehouseService.validateWarehouseBindable(updateReqVO.getWarehouseId());
         // 更新
         SchoolDO updateObj = BeanUtils.toBean(updateReqVO, SchoolDO.class);
         schoolMapper.updateById(updateObj);
@@ -187,6 +194,7 @@ public class SchoolServiceImpl implements SchoolService {
         SchoolDO school = schoolMapper.selectById(id);
         fillSchoolStages(school);
         fillSchoolStations(school);
+        fillSchoolWarehouses(school);
         return school;
     }
 
@@ -202,6 +210,7 @@ public class SchoolServiceImpl implements SchoolService {
         PageResult<SchoolDO> pageResult = schoolMapper.selectPage(pageReqVO, areaIds, stageSchoolIds);
         fillSchoolStages(pageResult.getList());
         fillSchoolStations(pageResult.getList());
+        fillSchoolWarehouses(pageResult.getList());
         return pageResult;
     }
 
@@ -211,6 +220,7 @@ public class SchoolServiceImpl implements SchoolService {
                 .orderByAsc(SchoolDO::getId));
         fillSchoolStages(schools);
         fillSchoolStations(schools);
+        fillSchoolWarehouses(schools);
         return schools.stream()
                 .map(this::buildSchoolSimpleResp)
                 .collect(Collectors.toList());
@@ -703,6 +713,28 @@ public class SchoolServiceImpl implements SchoolService {
         schools.forEach(school -> {
             StationDO station = stationMap.get(school.getStationId());
             school.setStationName(station == null ? null : station.getStationName());
+            school.setStationAreaId(station == null ? null : station.getAreaId());
+            school.setStationAreaName(station == null || station.getAreaId() == null
+                    ? null : AreaUtils.format(station.getAreaId().intValue()));
+        });
+    }
+
+    private void fillSchoolWarehouses(SchoolDO school) {
+        if (school == null) {
+            return;
+        }
+        fillSchoolWarehouses(List.of(school));
+    }
+
+    private void fillSchoolWarehouses(List<SchoolDO> schools) {
+        if (CollUtil.isEmpty(schools)) {
+            return;
+        }
+        Map<Long, RepoWarehouseDO> warehouseMap = warehouseService.getWarehouseMap(
+                schools.stream().map(SchoolDO::getWarehouseId).filter(Objects::nonNull).toList());
+        schools.forEach(school -> {
+            RepoWarehouseDO warehouse = warehouseMap.get(school.getWarehouseId());
+            school.setWarehouseName(warehouse == null ? null : warehouse.getName());
         });
     }
 
@@ -761,6 +793,10 @@ public class SchoolServiceImpl implements SchoolService {
         respVO.setSchoolName(school.getSchoolName());
         respVO.setStationId(school.getStationId());
         respVO.setStationName(school.getStationName());
+        respVO.setStationAreaId(school.getStationAreaId());
+        respVO.setStationAreaName(school.getStationAreaName());
+        respVO.setWarehouseId(school.getWarehouseId());
+        respVO.setWarehouseName(school.getWarehouseName());
         respVO.setStageCodes(school.getStageCodes());
         return respVO;
     }

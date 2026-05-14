@@ -3654,6 +3654,45 @@ LOCK TABLES `product_sku_publication` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `product_publication_sku_issue_template`
+--
+
+DROP TABLE IF EXISTS `product_publication_sku_issue_template`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `product_publication_sku_issue_template` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '默认期次模板编号',
+  `sku_id` bigint NOT NULL COMMENT '商品 SKU 编号',
+  `issue_no` int NOT NULL COMMENT '期号',
+  `issue_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '期次名称',
+  `publish_offset_days` int DEFAULT NULL COMMENT '计划出刊日期相对订刊窗口开始日期的偏移天数',
+  `delivery_offset_days` int DEFAULT NULL COMMENT '计划配送日期相对订刊窗口开始日期的偏移天数',
+  `sort` int NOT NULL DEFAULT '0' COMMENT '排序',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  `active_issue_no` int GENERATED ALWAYS AS ((case when (`deleted` = _binary'\0') then `issue_no` else NULL end)) STORED COMMENT '启用唯一期号',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_product_publication_sku_issue_template_no` (`sku_id`,`active_issue_no`),
+  KEY `idx_product_publication_sku_issue_template_sku` (`sku_id`,`status`,`sort`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='刊物 SKU 默认期次模板';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `product_publication_sku_issue_template`
+--
+
+LOCK TABLES `product_publication_sku_issue_template` WRITE;
+/*!40000 ALTER TABLE `product_publication_sku_issue_template` DISABLE KEYS */;
+/*!40000 ALTER TABLE `product_publication_sku_issue_template` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `product_spu`
 --
 
@@ -7318,3 +7357,180 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-04-20 16:08:49
+
+-- 校刊汇：学校配送仓库初始化补丁
+-- docker 主从开发环境只挂载本文件，仓库配送结构需要在 fresh install 中直接补齐。
+
+CREATE TABLE IF NOT EXISTS `repo_warehouse` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '仓库编号',
+  `name` varchar(64) NOT NULL COMMENT '仓库名称',
+  `address` varchar(255) NOT NULL COMMENT '仓库地址',
+  `sort` bigint NOT NULL DEFAULT 0 COMMENT '排序',
+  `remark` varchar(512) DEFAULT NULL COMMENT '备注',
+  `principal` varchar(64) DEFAULT NULL COMMENT '负责人',
+  `warehouse_price` decimal(24, 6) DEFAULT NULL COMMENT '仓储费，单位：元',
+  `truckage_price` decimal(24, 6) DEFAULT NULL COMMENT '搬运费，单位：元',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '开启状态',
+  `default_status` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否默认',
+  `creator` varchar(64) DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_repo_warehouse_name` (`name`, `deleted`),
+  KEY `idx_repo_warehouse_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='仓库';
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_school' AND COLUMN_NAME = 'warehouse_id'
+  ),
+  'SELECT 1',
+  "ALTER TABLE `edu_school` ADD COLUMN `warehouse_id` bigint DEFAULT NULL COMMENT '学校配送仓库编号' AFTER `school_address`"
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_school' AND INDEX_NAME = 'idx_edu_school_warehouse_id'
+  ),
+  'SELECT 1',
+  'ALTER TABLE `edu_school` ADD INDEX `idx_edu_school_warehouse_id` (`warehouse_id`)'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+ALTER TABLE `trade_order`
+  MODIFY COLUMN `receiver_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '收件人名称',
+  MODIFY COLUMN `receiver_mobile` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '收件人手机';
+
+CREATE TABLE IF NOT EXISTS `trade_order_delivery` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '配送单编号',
+  `order_id` bigint unsigned NOT NULL COMMENT '订单编号',
+  `delivery_type` tinyint NOT NULL COMMENT '配送类型',
+  `status` int NOT NULL COMMENT '配送状态',
+  `product_count` int NOT NULL DEFAULT '0' COMMENT '商品数量',
+  `pay_price` int NOT NULL DEFAULT '0' COMMENT '配送单实付金额，单位：分',
+  `delivery_price` int NOT NULL DEFAULT '0' COMMENT '配送单运费，单位：分',
+  `logistics_id` bigint DEFAULT NULL COMMENT '物流公司编号',
+  `logistics_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '物流单号',
+  `delivery_time` datetime DEFAULT NULL COMMENT '发货时间',
+  `receive_time` datetime DEFAULT NULL COMMENT '收货时间',
+  `receiver_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '收件人名称',
+  `receiver_mobile` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '收件人手机',
+  `receiver_area_id` int DEFAULT NULL COMMENT '收件地区编号',
+  `receiver_detail_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '收件详细地址',
+  `school_id` bigint DEFAULT NULL COMMENT '学校编号',
+  `school_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校名称快照',
+  `school_address_snapshot` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校地址快照',
+  `warehouse_id` bigint DEFAULT NULL COMMENT '学校配送仓库编号',
+  `warehouse_name_snapshot` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校配送仓库名称快照',
+  `warehouse_address_snapshot` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '学校配送仓库地址快照',
+  `contact_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '联系人',
+  `contact_mobile` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '联系电话',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_trade_order_delivery_order_id` (`order_id`),
+  KEY `idx_trade_order_delivery_order_type` (`order_id`, `delivery_type`),
+  KEY `idx_trade_order_delivery_warehouse_school` (`warehouse_id`, `school_id`),
+  KEY `idx_trade_order_delivery_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='交易订单配送单';
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_order_item' AND COLUMN_NAME = 'delivery_id'
+  ),
+  'SELECT 1',
+  "ALTER TABLE `trade_order_item` ADD COLUMN `delivery_id` bigint DEFAULT NULL COMMENT '配送单编号' AFTER `order_id`"
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (
+    SELECT 1 FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trade_order_item' AND INDEX_NAME = 'idx_trade_order_item_delivery_id'
+  ),
+  'SELECT 1',
+  'ALTER TABLE `trade_order_item` ADD KEY `idx_trade_order_item_delivery_id` (`delivery_id`)'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `system_dict_data`
+(`sort`, `label`, `value`, `dict_type`, `status`, `color_type`, `css_class`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT 3, '学校配送', '3', 'trade_delivery_type', 0, '', '', '', '1', NOW(), '1', NOW(), b'0'
+WHERE NOT EXISTS (
+  SELECT 1 FROM `system_dict_data`
+  WHERE `dict_type` = 'trade_delivery_type' AND `value` = '3' AND `deleted` = b'0'
+);
+
+UPDATE `system_dict_data`
+SET `label` = '学校配送',
+    `updater` = '1',
+    `update_time` = NOW()
+WHERE `dict_type` = 'trade_delivery_type'
+  AND `value` = '3'
+  AND `deleted` = b'0';
+
+INSERT INTO `system_dict_data`
+(`sort`, `label`, `value`, `dict_type`, `status`, `color_type`, `css_class`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT 4, '混合配送', '4', 'trade_delivery_type', 0, '', '', '', '1', NOW(), '1', NOW(), b'0'
+WHERE NOT EXISTS (
+  SELECT 1 FROM `system_dict_data`
+  WHERE `dict_type` = 'trade_delivery_type' AND `value` = '4' AND `deleted` = b'0'
+);
+
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`,
+                           `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '仓库管理', '', 1, 45, 0, '/repo', 'fa:archive', NULL, NULL,
+       0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'
+WHERE NOT EXISTS (SELECT 1 FROM `system_menu` WHERE `path` = '/repo' AND `deleted` = b'0');
+
+SET @repoMenuId := (SELECT `id` FROM `system_menu` WHERE `path` = '/repo' AND `deleted` = b'0' LIMIT 1);
+
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`,
+                           `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '仓库维护', 'repo:warehouse:query', 2, 1, @repoMenuId, 'warehouse', 'fa:archive',
+       'repo/warehouse/index', 'RepoWarehouse', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'
+WHERE @repoMenuId IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM `system_menu` WHERE `permission` = 'repo:warehouse:query' AND `deleted` = b'0');
+
+SET @warehouseMenuId := (
+  SELECT `id` FROM `system_menu` WHERE `permission` = 'repo:warehouse:query' AND `deleted` = b'0' LIMIT 1
+);
+
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`,
+                           `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '仓库新增', 'repo:warehouse:create', 3, 1, @warehouseMenuId, '', '', '', '',
+       0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'
+WHERE @warehouseMenuId IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM `system_menu` WHERE `permission` = 'repo:warehouse:create' AND `deleted` = b'0');
+
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`,
+                           `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '仓库修改', 'repo:warehouse:update', 3, 2, @warehouseMenuId, '', '', '', '',
+       0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'
+WHERE @warehouseMenuId IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM `system_menu` WHERE `permission` = 'repo:warehouse:update' AND `deleted` = b'0');
+
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`,
+                           `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '仓库删除', 'repo:warehouse:delete', 3, 3, @warehouseMenuId, '', '', '', '',
+       0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'
+WHERE @warehouseMenuId IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM `system_menu` WHERE `permission` = 'repo:warehouse:delete' AND `deleted` = b'0');
+
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`,
+                           `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '仓库导出', 'repo:warehouse:export', 3, 4, @warehouseMenuId, '', '', '', '',
+       0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0'
+WHERE @warehouseMenuId IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM `system_menu` WHERE `permission` = 'repo:warehouse:export' AND `deleted` = b'0');

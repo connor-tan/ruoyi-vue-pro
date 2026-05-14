@@ -30,6 +30,10 @@ public class SchoolSaveReqVO {
     @NotNull(message = "归属站点不能为空")
     private Long stationId;
 
+    @Schema(description = "学校配送仓库编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "学校配送仓库不能为空")
+    private Long warehouseId;
+
     @Schema(description = "学校代码")
     private String code;
 

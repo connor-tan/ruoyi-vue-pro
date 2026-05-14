@@ -15,6 +15,8 @@ public class EduStudentSubscriptionContextRespDTO {
 
     private String schoolName;
 
+    private String schoolAddress;
+
     private Long classId;
 
     private String className;
@@ -40,6 +42,14 @@ public class EduStudentSubscriptionContextRespDTO {
     private String contactName;
 
     private String contactMobile;
+
+    private Long warehouseId;
+
+    private String warehouseName;
+
+    private String warehouseAddress;
+
+    private String warehousePrincipal;
 
     private String blockedReason;
 
