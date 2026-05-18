@@ -259,8 +259,6 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
             return visibleSku.getOfferSku() != null
                     && Objects.equals(expected, String.valueOf(visibleSku.getOfferSku().getId()));
         }
-        ProductPublicationRespDTO.PublicationSkuDTO sku = visibleSku.getProductSku();
-        ProductPublicationRespDTO.PublicationSkuExtDTO skuExt = sku.getPublicationExt();
         ProductPublicationRespDTO.PublicationSpuExtDTO spuExt = publication.getPublicationExt();
         if (SubscriptionRuleFactorEnum.SKU_PUBLISHER.getCode().equals(factor)) {
             return spuExt != null && Objects.equals(expected, String.valueOf(spuExt.getPublisherId()));
@@ -272,12 +270,6 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
             return spuExt != null
                     && PublicationIssueModeEnum.isPeriodical(spuExt.getIssueMode())
                     && Objects.equals(expected, spuExt.getIssueCycle());
-        }
-        if (SubscriptionRuleFactorEnum.SKU_VOLUME_LABEL.getCode().equals(factor)) {
-            return skuExt != null && Objects.equals(expected, skuExt.getVolumeLabel());
-        }
-        if (SubscriptionRuleFactorEnum.SKU_EDITION_LABEL.getCode().equals(factor)) {
-            return skuExt != null && Objects.equals(expected, skuExt.getEditionLabel());
         }
         return false;
     }

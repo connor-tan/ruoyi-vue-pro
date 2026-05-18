@@ -93,12 +93,6 @@ public class ProductSkuSaveReqVO {
     @Data
     public static class PublicationSkuExtSaveReqVO {
 
-        @Schema(description = "册别", example = "上册")
-        private String volumeLabel;
-
-        @Schema(description = "版本", example = "人教版")
-        private String editionLabel;
-
         @Schema(description = "ISBN", example = "9787300000000")
         private String isbn;
 

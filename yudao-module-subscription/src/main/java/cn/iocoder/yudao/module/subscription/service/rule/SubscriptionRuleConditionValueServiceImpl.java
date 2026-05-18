@@ -2,7 +2,6 @@ package cn.iocoder.yudao.module.subscription.service.rule;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.iocoder.yudao.framework.common.biz.system.dict.dto.DictDataRespDTO;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.module.edu.api.gradecatalog.EduGradeCatalogApi;
 import cn.iocoder.yudao.module.edu.api.publication.EduPublicationPublisherApi;
@@ -21,7 +20,6 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -36,9 +34,6 @@ import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.RULE
 public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRuleConditionValueService {
 
     private static final String DICT_TYPE_EDU_CYCLE = "edu_cycle";
-    private static final String DICT_TYPE_PUBLICATION_VOLUME = "edu_publication_volume";
-    private static final String DICT_TYPE_PUBLICATION_EDITION = "edu_publication_edition";
-
     @Resource
     private EduSchoolApi schoolApi;
     @Resource
@@ -73,8 +68,6 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
                     .map(item -> option(item.getId(), item.getName()))
                     .toList();
             case SKU_ISSUE_CYCLE -> buildDictOptions(DICT_TYPE_EDU_CYCLE);
-            case SKU_VOLUME_LABEL -> buildDictOptions(DICT_TYPE_PUBLICATION_VOLUME);
-            case SKU_EDITION_LABEL -> buildDictOptions(DICT_TYPE_PUBLICATION_EDITION);
         };
     }
 
@@ -88,8 +81,7 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
             throw exception(RULE_FACTOR_INVALID);
         }
         return switch (factorEnum) {
-            case STUDENT_SCHOOL, STUDENT_GRADE, SKU_ISSUE_CYCLE, SKU_VOLUME_LABEL,
-                    SKU_EDITION_LABEL -> findLabel(getConditionValueList(factor, windowId, offerId), value);
+            case STUDENT_SCHOOL, STUDENT_GRADE, SKU_ISSUE_CYCLE -> findLabel(getConditionValueList(factor, windowId, offerId), value);
             case OFFER_SKU -> findOfferSkuLabel(offerId, value);
             case SKU_PUBLISHER -> validatePublisher(value);
             case SKU_PUBLICATION_TYPE -> validatePublicationType(value);
@@ -111,9 +103,7 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
     }
 
     private String buildOfferSkuLabel(SubscriptionOfferSkuRespVO item) {
-        List<String> meta = Arrays.asList(
-                        getDictLabel(DICT_TYPE_PUBLICATION_VOLUME, item.getVolumeLabel()),
-                        getDictLabel(DICT_TYPE_PUBLICATION_EDITION, item.getEditionLabel()),
+        List<String> meta = Collections.singletonList(
                         CollUtil.isEmpty(item.getApplicableGradeNames()) ? null : String.join("、", item.getApplicableGradeNames()))
                 .stream()
                 .filter(StrUtil::isNotBlank)
@@ -169,17 +159,6 @@ public class SubscriptionRuleConditionValueServiceImpl implements SubscriptionRu
                 .filter(item -> CommonStatusEnum.isEnable(item.getStatus()))
                 .map(item -> new SubscriptionRuleConditionValueRespVO(item.getValue(), item.getLabel()))
                 .toList();
-    }
-
-    private String getDictLabel(String dictType, String value) {
-        if (StrUtil.isBlank(value)) {
-            return null;
-        }
-        return dictDataApi.getDictDataList(dictType).stream()
-                .filter(item -> Objects.equals(item.getValue(), value))
-                .findFirst()
-                .map(DictDataRespDTO::getLabel)
-                .orElse(value);
     }
 
     private SubscriptionRuleConditionValueRespVO option(Long value, String label) {

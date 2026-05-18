@@ -23,6 +23,7 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.edu.service.station.StationService;
+import cn.iocoder.yudao.module.edu.service.student.bo.StudentWaitingEntryActivateRespBO;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
@@ -174,7 +175,30 @@ class StudentServiceImplTest {
         verify(studentClassMapper).insert(studentClassCaptor.capture());
         assertEquals(100L, studentClassCaptor.getValue().getStudentId());
         assertEquals(21L, studentClassCaptor.getValue().getClassId());
-        assertEquals(LocalDate.now(), studentClassCaptor.getValue().getStartDate());
+        assertEquals(LocalDate.now().minusDays(30), studentClassCaptor.getValue().getStartDate());
+    }
+
+    @Test
+    void bindAppStudent_shouldCreateWaitingEntryStudentForFutureEntry() {
+        mockParent();
+        mockFutureSelectedBindContext();
+        when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L)).thenReturn(List.of());
+        doAnswer(invocation -> {
+            StudentDO student = invocation.getArgument(0);
+            student.setId(100L);
+            return 1;
+        }).when(studentMapper).insert(any(StudentDO.class));
+
+        AppStudentBindRespVO result = service.bindAppStudent(9L, futureBindReq(false));
+
+        assertEquals("CREATED", result.getResult());
+        ArgumentCaptor<StudentDO> studentCaptor = ArgumentCaptor.forClass(StudentDO.class);
+        verify(studentMapper).insert(studentCaptor.capture());
+        assertEquals(StudentStatusEnum.WAITING_ENTRY.getStatus(), studentCaptor.getValue().getStatus());
+        ArgumentCaptor<StudentClassDO> studentClassCaptor = ArgumentCaptor.forClass(StudentClassDO.class);
+        verify(studentClassMapper).insert(studentClassCaptor.capture());
+        assertEquals(21L, studentClassCaptor.getValue().getClassId());
+        assertEquals(LocalDate.now().plusDays(30), studentClassCaptor.getValue().getStartDate());
     }
 
     @Test
@@ -232,7 +256,7 @@ class StudentServiceImplTest {
         when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
                 .thenReturn(List.of(student(1L, "小明", null, 11L, StudentStatusEnum.READING.getStatus())));
         when(studentClassMapper.selectCurrentListByStudentId(1L))
-                .thenReturn(List.of(studentClassRecord(1001L, 1L, 22L, LocalDate.now().minusDays(10))));
+                .thenReturn(List.of(studentClassRecord(1001L, 1L, 22L, LocalDate.now().minusDays(40))));
         when(schoolClassMapper.selectById(22L))
                 .thenReturn(schoolClass(22L, 11L, 101L, 32L, 2026, "2026级二年级1班"));
         when(schoolGradeMapper.selectById(32L)).thenReturn(schoolGrade(32L, 11L, 42L));
@@ -251,7 +275,7 @@ class StudentServiceImplTest {
         ArgumentCaptor<StudentClassDO> updateCaptor = ArgumentCaptor.forClass(StudentClassDO.class);
         verify(studentClassMapper).updateById(updateCaptor.capture());
         assertEquals(1001L, updateCaptor.getValue().getId());
-        assertEquals(LocalDate.now().minusDays(1), updateCaptor.getValue().getEndDate());
+        assertEquals(LocalDate.now().minusDays(31), updateCaptor.getValue().getEndDate());
         ArgumentCaptor<StudentClassDO> insertCaptor = ArgumentCaptor.forClass(StudentClassDO.class);
         verify(studentClassMapper).insert(insertCaptor.capture());
         assertEquals(1L, insertCaptor.getValue().getStudentId());
@@ -265,7 +289,7 @@ class StudentServiceImplTest {
         when(studentMapper.selectSimpleListByExactStudentNameAndSchoolId("小明", 11L))
                 .thenReturn(List.of(student(1L, "小明", null, 11L, StudentStatusEnum.READING.getStatus())));
         when(studentClassMapper.selectCurrentListByStudentId(1L))
-                .thenReturn(List.of(studentClassRecord(1001L, 1L, 23L, LocalDate.now().minusDays(10))));
+                .thenReturn(List.of(studentClassRecord(1001L, 1L, 23L, LocalDate.now().minusDays(40))));
         when(schoolClassMapper.selectById(23L))
                 .thenReturn(schoolClass(23L, 11L, 101L, 31L, 2026, "2026级一年级2班"));
 
@@ -310,6 +334,8 @@ class StudentServiceImplTest {
         when(schoolGradeMapper.selectById(31L)).thenReturn(schoolGrade(31L, 11L, 41L));
         when(gradeCatalogMapper.selectById(41L)).thenReturn(gradeCatalog(41L, "一年级", 1));
         when(schoolYearMapper.selectCurrentBySchoolId(eq(11L), any(LocalDate.class)))
+                .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().minusDays(30)));
+        when(schoolYearMapper.selectById(101L))
                 .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().minusDays(30)));
         when(schoolClassMapper.selectById(21L))
                 .thenReturn(schoolClass(21L, 11L, 102L, 31L, 2026, "历史学年一年级1班"));
@@ -403,6 +429,37 @@ class StudentServiceImplTest {
         assertEquals("TARGET_YEAR_CLASS_REQUIRED", result.get(1L).getBlockedReason());
     }
 
+    @Test
+    void getSubscriptionStudentContextMap_shouldBlockWaitingEntryWithoutTargetClass() {
+        when(studentMapper.selectList(any(SFunction.class), any(Collection.class)))
+                .thenReturn(List.of(student(1L, "小明", 11L, StudentStatusEnum.WAITING_ENTRY.getStatus())));
+        when(schoolMapper.selectById(11L)).thenReturn(school(11L, "实验小学"));
+        when(studentClassMapper.selectListByStudentIdsAndTargetYearCatalogId(any(Collection.class), eq(100L)))
+                .thenReturn(List.of());
+        when(schoolYearMapper.selectBySchoolIdAndYearCatalogId(11L, 100L))
+                .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().plusDays(30)));
+
+        Map<Long, EduStudentSubscriptionContextRespDTO> result = service.getSubscriptionStudentContextMap(
+                9L, List.of(1L), 2026, 2027, 100L);
+
+        assertEquals("TARGET_YEAR_CLASS_REQUIRED", result.get(1L).getBlockedReason());
+        assertEquals("待入学学生必须绑定目标学年班级", result.get(1L).getBlockedReasonDesc());
+    }
+
+    @Test
+    void activateWaitingEntryStudents_shouldActivateWhenCurrentClassUnique() {
+        when(studentMapper.selectListByStatusAndIdGreaterThan(StudentStatusEnum.WAITING_ENTRY.getStatus(), null, 500))
+                .thenReturn(List.of(student(1L, "小明", 11L, StudentStatusEnum.WAITING_ENTRY.getStatus())));
+        when(studentClassMapper.selectCurrentListByStudentIds(any(Collection.class)))
+                .thenReturn(List.of(studentClass(1L, 21L)));
+
+        StudentWaitingEntryActivateRespBO result = service.activateWaitingEntryStudents();
+
+        assertEquals(1, result.getScannedCount());
+        assertEquals(1, result.getActivatedCount());
+        verify(studentMapper).updateStatusById(1L, StudentStatusEnum.READING.getStatus());
+    }
+
     private StudentDO student(Long id, String studentName, Long currentSchoolId, Integer status) {
         return student(id, studentName, 9L, currentSchoolId, status);
     }
@@ -420,10 +477,19 @@ class StudentServiceImplTest {
     private AppStudentBindReqVO bindReq(Boolean forceUpdate) {
         AppStudentBindReqVO reqVO = new AppStudentBindReqVO();
         reqVO.setSchoolId(11L);
+        reqVO.setBindMode("CURRENT_READING");
+        reqVO.setSchoolYearId(101L);
         reqVO.setSchoolGradeId(31L);
         reqVO.setClassId(21L);
         reqVO.setStudentName(" 小明 ");
         reqVO.setForceUpdate(forceUpdate);
+        return reqVO;
+    }
+
+    private AppStudentBindReqVO futureBindReq(Boolean forceUpdate) {
+        AppStudentBindReqVO reqVO = bindReq(forceUpdate);
+        reqVO.setBindMode("FUTURE_ENTRY");
+        reqVO.setSchoolYearId(102L);
         return reqVO;
     }
 
@@ -440,8 +506,20 @@ class StudentServiceImplTest {
         when(gradeCatalogMapper.selectById(gradeCatalogId)).thenReturn(gradeCatalog(gradeCatalogId, gradeName, 1));
         when(schoolYearMapper.selectCurrentBySchoolId(eq(11L), any(LocalDate.class)))
                 .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().minusDays(30)));
+        when(schoolYearMapper.selectById(101L))
+                .thenReturn(schoolYear(101L, 11L, 100L, 2026, 2027, LocalDate.now().minusDays(30)));
         when(schoolClassMapper.selectById(classId))
                 .thenReturn(schoolClass(classId, 11L, 101L, schoolGradeId, 2026, className));
+    }
+
+    private void mockFutureSelectedBindContext() {
+        when(schoolMapper.selectById(11L)).thenReturn(school(11L, "实验小学"));
+        when(schoolGradeMapper.selectById(31L)).thenReturn(schoolGrade(31L, 11L, 41L));
+        when(gradeCatalogMapper.selectById(41L)).thenReturn(gradeCatalog(41L, "一年级", 1));
+        when(schoolYearMapper.selectById(102L))
+                .thenReturn(schoolYear(102L, 11L, 101L, 2027, 2028, LocalDate.now().plusDays(30)));
+        when(schoolClassMapper.selectById(21L))
+                .thenReturn(schoolClass(21L, 11L, 102L, 31L, 2027, "2027级一年级1班"));
     }
 
     private SchoolDO school(Long id, String schoolName) {

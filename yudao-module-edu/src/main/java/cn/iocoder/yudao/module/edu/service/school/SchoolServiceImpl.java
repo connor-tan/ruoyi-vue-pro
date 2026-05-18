@@ -11,6 +11,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolGradeSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolYearSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.GradeCatalogSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassRespVO;
@@ -54,6 +55,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -419,6 +421,19 @@ public class SchoolServiceImpl implements SchoolService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<AppSchoolYearSimpleRespVO> getAppBindableSchoolYearSimpleList(Long schoolId) {
+        validateSchoolExists(schoolId);
+        LocalDate today = LocalDate.now();
+        return schoolYearMapper.selectListBySchoolId(schoolId).stream()
+                .filter(schoolYear -> isCurrentSchoolYear(schoolYear, today) || isFutureSchoolYear(schoolYear, today))
+                .sorted(Comparator.comparing(SchoolYearDO::getStartDate,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(SchoolYearDO::getId))
+                .map(schoolYear -> buildAppSchoolYearSimpleResp(schoolYear, today))
+                .collect(Collectors.toList());
+    }
+
     private SchoolYearDO validateSchoolYearExists(Long id) {
         SchoolYearDO schoolYear = schoolYearMapper.selectById(id);
         if (schoolYear == null) {
@@ -548,6 +563,21 @@ public class SchoolServiceImpl implements SchoolService {
         }
         return schoolClassMapper.selectListBySchoolIdAndSchoolYearIdAndSchoolGradeId(
                         schoolId, currentSchoolYear.getId(), schoolGradeId)
+                .stream()
+                .map(this::buildAppSchoolClassSimpleResp)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<AppSchoolClassSimpleRespVO> getAppSchoolClassSimpleList(Long schoolId, Long schoolYearId,
+                                                                        Long schoolGradeId) {
+        validateSchoolExists(schoolId);
+        SchoolYearDO schoolYear = validateSchoolYearExists(schoolYearId);
+        validateSchoolYearBelongsToSchool(schoolYear, schoolId);
+        SchoolGradeDO schoolGrade = validateSchoolGradeExists(schoolGradeId);
+        validateSchoolGradeBelongsToSchool(schoolGrade, schoolId);
+        return schoolClassMapper.selectListBySchoolIdAndSchoolYearIdAndSchoolGradeId(
+                        schoolId, schoolYearId, schoolGradeId)
                 .stream()
                 .map(this::buildAppSchoolClassSimpleResp)
                 .collect(Collectors.toList());
@@ -881,6 +911,29 @@ public class SchoolServiceImpl implements SchoolService {
         respVO.setEndDate(schoolYear.getEndDate());
         respVO.setName(buildSchoolYearName(schoolYear));
         return respVO;
+    }
+
+    private AppSchoolYearSimpleRespVO buildAppSchoolYearSimpleResp(SchoolYearDO schoolYear, LocalDate today) {
+        AppSchoolYearSimpleRespVO respVO = new AppSchoolYearSimpleRespVO();
+        respVO.setId(schoolYear.getId());
+        respVO.setYearStart(schoolYear.getYearStart());
+        respVO.setYearEnd(schoolYear.getYearEnd());
+        respVO.setName(buildSchoolYearName(schoolYear));
+        respVO.setStartDate(schoolYear.getStartDate());
+        respVO.setEndDate(schoolYear.getEndDate());
+        respVO.setCurrent(isCurrentSchoolYear(schoolYear, today));
+        respVO.setFuture(isFutureSchoolYear(schoolYear, today));
+        return respVO;
+    }
+
+    private boolean isCurrentSchoolYear(SchoolYearDO schoolYear, LocalDate today) {
+        return schoolYear.getStartDate() != null && schoolYear.getEndDate() != null
+                && !schoolYear.getStartDate().isAfter(today)
+                && !schoolYear.getEndDate().isBefore(today);
+    }
+
+    private boolean isFutureSchoolYear(SchoolYearDO schoolYear, LocalDate today) {
+        return schoolYear.getStartDate() != null && schoolYear.getStartDate().isAfter(today);
     }
 
     private List<SchoolYearRespVO> buildSchoolYearRespList(List<SchoolYearDO> schoolYears) {

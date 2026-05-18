@@ -17,8 +17,6 @@ public class SubscriptionOfferSkuRespVO {
     private String issueMode;
     private Integer issueCount;
     private Integer issueTemplateCount;
-    private String volumeLabel;
-    private String editionLabel;
     private String isbn;
     private List<Long> applicableGradeCatalogIds;
     private List<String> applicableGradeNames;

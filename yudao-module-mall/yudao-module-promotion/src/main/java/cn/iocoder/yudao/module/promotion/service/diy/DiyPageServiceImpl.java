@@ -33,6 +33,8 @@ public class DiyPageServiceImpl implements DiyPageService {
 
     @Resource
     private DiyPageMapper diyPageMapper;
+    @Resource
+    private DiyPropertyCleanService diyPropertyCleanService;
 
     @Override
     public Long createDiyPage(DiyPageCreateReqVO createReqVO) {
@@ -121,6 +123,7 @@ public class DiyPageServiceImpl implements DiyPageService {
     public void updateDiyPageProperty(DiyPagePropertyUpdateRequestVO updateReqVO) {
         // 校验存在
         validateDiyPageExists(updateReqVO.getId());
+        updateReqVO.setProperty(diyPropertyCleanService.cleanInvalidSpuIds(updateReqVO.getProperty()));
         // 更新
         DiyPageDO updateObj = DiyPageConvert.INSTANCE.convert(updateReqVO);
         diyPageMapper.updateById(updateObj);

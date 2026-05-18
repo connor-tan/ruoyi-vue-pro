@@ -18,6 +18,7 @@ import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuCategoryRelMapper
 import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
 import cn.iocoder.yudao.module.product.enums.sku.ProductSkuStatusEnum;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
+import cn.iocoder.yudao.module.product.mq.producer.spu.ProductSpuProducer;
 import cn.iocoder.yudao.module.product.service.brand.ProductBrandService;
 import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.product.service.publication.ProductPublicationService;
@@ -62,6 +63,8 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     private ProductPublicationService productPublicationService;
     @Resource
     private List<ProductSceneHandler> productSceneHandlers;
+    @Resource
+    private ProductSpuProducer productSpuProducer;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -206,6 +209,7 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         productSpuCategoryRelMapper.deleteBySpuId(id);
         // 删除关联的 SKU
         productSkuService.deleteSkuBySpuId(id);
+        productSpuProducer.sendProductSpuDeleteMessage(id);
     }
 
     private ProductSpuDO validateSpuExists(Long id) {

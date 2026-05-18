@@ -69,4 +69,11 @@ public interface ErrorCodeConstants {
     ErrorCode STUDENT_BIND_CURRENT_CLASS_MULTI = new ErrorCode(1_017_001_027, "学生当前班级记录异常，请联系运营处理");
     ErrorCode STUDENT_BIND_CURRENT_YEAR_NOT_EXISTS = new ErrorCode(1_017_001_028, "学校当前学年未维护，请联系学校或运营处理");
     ErrorCode STUDENT_BIND_CLASS_NOT_CURRENT = new ErrorCode(1_017_001_029, "请选择学校当前学年下的班级");
+    ErrorCode STUDENT_BIND_SCHOOL_YEAR_NOT_CURRENT = new ErrorCode(1_017_001_030, "已在读学生请选择学校当前学年");
+    ErrorCode STUDENT_BIND_SCHOOL_YEAR_NOT_FUTURE = new ErrorCode(1_017_001_031, "即将入学学生请选择学校未来学年");
+    ErrorCode STUDENT_BIND_CLASS_NOT_SELECTED_YEAR = new ErrorCode(1_017_001_032, "请选择所选学年下的班级");
+    ErrorCode STUDENT_BIND_WAITING_ENTRY_CURRENT_CLASS_EXISTS = new ErrorCode(1_017_001_033, "系统中该学生已存在当前在读班级，请选择已在读或联系学校处理");
+    ErrorCode STUDENT_BIND_FUTURE_CLASS_MULTI = new ErrorCode(1_017_001_034, "学生待入学班级记录异常，请联系运营处理");
+    ErrorCode STUDENT_STATUS_WAITING_ENTRY_FUTURE_CLASS_REQUIRED = new ErrorCode(1_017_001_035, "待入学学生必须存在一条未来班级记录");
+    ErrorCode STUDENT_STATUS_WAITING_ENTRY_FUTURE_CLASS_MULTI = new ErrorCode(1_017_001_036, "待入学学生只能存在一条未来班级记录");
 }

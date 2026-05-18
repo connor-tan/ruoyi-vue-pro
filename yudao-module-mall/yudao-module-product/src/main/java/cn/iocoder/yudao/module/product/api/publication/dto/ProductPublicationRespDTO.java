@@ -107,10 +107,6 @@ public class ProductPublicationRespDTO {
     @Data
     public static class PublicationSkuExtDTO {
 
-        private String volumeLabel;
-
-        private String editionLabel;
-
         private String isbn;
 
         private String remark;

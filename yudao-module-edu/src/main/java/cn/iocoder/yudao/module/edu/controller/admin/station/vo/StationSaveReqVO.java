@@ -31,8 +31,7 @@ public class StationSaveReqVO {
     @Mobile
     private String contactMobile;
 
-    @Schema(description = "站点地址", requiredMode = Schema.RequiredMode.REQUIRED, example = "无锡市梁溪区站前路 1 号")
-    @NotEmpty(message = "站点地址不能为空")
+    @Schema(description = "站点地址", example = "无锡市梁溪区站前路 1 号")
     private String stationAddress;
 
     @Schema(description = "排序", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")

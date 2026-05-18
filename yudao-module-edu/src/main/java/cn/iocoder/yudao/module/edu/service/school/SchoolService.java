@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolGradeSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolYearSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.GradeCatalogSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.school.vo.SchoolClassRespVO;
@@ -217,6 +218,14 @@ public interface SchoolService {
      */
     List<SchoolYearSimpleRespVO> getSchoolYearList(Long schoolId);
 
+    /**
+     * 获得 App 可绑定学年精简列表，包含当前学年和未来学年。
+     *
+     * @param schoolId 学校编号
+     * @return 可绑定学年精简列表
+     */
+    List<AppSchoolYearSimpleRespVO> getAppBindableSchoolYearSimpleList(Long schoolId);
+
     // ==================== 子表（班级） ====================
 
     /**
@@ -282,5 +291,15 @@ public interface SchoolService {
      * @return 当前学年班级精简列表
      */
     List<AppSchoolClassSimpleRespVO> getAppCurrentSchoolClassSimpleList(Long schoolId, Long schoolGradeId);
+
+    /**
+     * 获得 App 指定学年和年级下的班级精简列表。
+     *
+     * @param schoolId 学校编号
+     * @param schoolYearId 学年编号
+     * @param schoolGradeId 学校年级编号
+     * @return 班级精简列表
+     */
+    List<AppSchoolClassSimpleRespVO> getAppSchoolClassSimpleList(Long schoolId, Long schoolYearId, Long schoolGradeId);
 
 }

@@ -48,7 +48,7 @@ class ProductPublicationServiceImplTest {
         ProductSkuSaveReqVO skuReq = new ProductSkuSaveReqVO();
         skuReq.setId(10L);
         ProductSkuSaveReqVO.PublicationSkuExtSaveReqVO skuExt = new ProductSkuSaveReqVO.PublicationSkuExtSaveReqVO();
-        skuExt.setVolumeLabel("上册");
+        skuExt.setIsbn("9787300000000");
         skuReq.setPublicationExt(skuExt);
         skuReq.setApplicableGradeCatalogIds(List.of(100L, 101L));
         reqVO.setSkus(List.of(skuReq));
@@ -83,7 +83,7 @@ class ProductPublicationServiceImplTest {
         ProductSkuSaveReqVO skuReq = new ProductSkuSaveReqVO();
         skuReq.setId(10L);
         ProductSkuSaveReqVO.PublicationSkuExtSaveReqVO skuExt = new ProductSkuSaveReqVO.PublicationSkuExtSaveReqVO();
-        skuExt.setVolumeLabel("上册");
+        skuExt.setIsbn("9787300000000");
         skuReq.setPublicationExt(skuExt);
         skuReq.setApplicableGradeCatalogIds(List.of(100L));
         ProductSkuSaveReqVO.PublicationSkuIssueTemplateSaveReqVO template =

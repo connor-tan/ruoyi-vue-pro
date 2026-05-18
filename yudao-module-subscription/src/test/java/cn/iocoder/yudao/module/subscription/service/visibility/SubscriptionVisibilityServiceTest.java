@@ -257,8 +257,6 @@ class SubscriptionVisibilityServiceTest {
 
     private ProductPublicationRespDTO.PublicationSkuDTO publicationSku(Long productSkuId, String name, List<Long> gradeIds) {
         ProductPublicationRespDTO.PublicationSkuExtDTO skuExt = new ProductPublicationRespDTO.PublicationSkuExtDTO();
-        skuExt.setVolumeLabel("上册");
-        skuExt.setEditionLabel("苏教版");
 
         ProductPublicationRespDTO.PublicationSkuDTO sku = new ProductPublicationRespDTO.PublicationSkuDTO();
         sku.setId(productSkuId);

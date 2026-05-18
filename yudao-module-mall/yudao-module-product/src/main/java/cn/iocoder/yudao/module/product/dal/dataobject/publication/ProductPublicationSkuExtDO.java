@@ -19,10 +19,6 @@ public class ProductPublicationSkuExtDO extends BaseDO {
     @TableId
     private Long skuId;
 
-    private String volumeLabel;
-
-    private String editionLabel;
-
     private String isbn;
 
     private String remark;

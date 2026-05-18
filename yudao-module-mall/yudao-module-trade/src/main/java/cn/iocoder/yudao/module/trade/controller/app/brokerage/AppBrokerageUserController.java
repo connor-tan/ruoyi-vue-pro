@@ -56,10 +56,11 @@ public class AppBrokerageUserController {
     @GetMapping("/get")
     @Operation(summary = "获得个人分销信息")
     public CommonResult<AppBrokerageUserRespVO> getBrokerageUser() {
-        Optional<BrokerageUserDO> user = Optional.ofNullable(brokerageUserService.getOrCreateBrokerageUser(getLoginUserId()));
+        Long userId = getLoginUserId();
+        Optional<BrokerageUserDO> user = Optional.ofNullable(brokerageUserService.getOrCreateBrokerageUser(userId));
         // 返回数据
         AppBrokerageUserRespVO respVO = new AppBrokerageUserRespVO()
-                .setBrokerageEnabled(user.map(BrokerageUserDO::getBrokerageEnabled).orElse(false))
+                .setBrokerageEnabled(brokerageUserService.getUserBrokerageEnabled(userId))
                 .setBrokeragePrice(user.map(BrokerageUserDO::getBrokeragePrice).orElse(0))
                 .setFrozenPrice(user.map(BrokerageUserDO::getFrozenPrice).orElse(0));
         return success(respVO);

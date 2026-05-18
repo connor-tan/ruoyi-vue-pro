@@ -20,6 +20,7 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STATION_DISAB
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STATION_IN_USE_BY_SCHOOL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -102,6 +103,23 @@ class StationServiceImplTest {
     }
 
     @Test
+    void updateStationShouldAllowEmptyAddress() {
+        when(stationMapper.selectById(1L)).thenReturn(station(1L, 100L, 0));
+        when(schoolMapper.countByStationId(1L)).thenReturn(0L);
+        StationSaveReqVO reqVO = new StationSaveReqVO();
+        reqVO.setId(1L);
+        reqVO.setStationName("梁溪站");
+        reqVO.setAreaId(100L);
+        reqVO.setStatus(0);
+        reqVO.setSort(0);
+
+        service.updateStation(reqVO);
+
+        verify(stationMapper).updateById(argThat(
+                (StationDO station) -> station.getStationAddress() == null));
+    }
+
+    @Test
     void deleteStationShouldRejectWhenSchoolBound() {
         when(stationMapper.selectById(1L)).thenReturn(station(1L, 100L, 0));
         when(schoolMapper.countByStationId(1L)).thenReturn(1L);
@@ -144,6 +162,20 @@ class StationServiceImplTest {
         service.createStation(reqVO);
 
         verify(areaApi).validateAreaSelectable(100);
+    }
+
+    @Test
+    void createStationShouldAllowEmptyAddress() {
+        StationSaveReqVO reqVO = new StationSaveReqVO();
+        reqVO.setStationName("无地址站点");
+        reqVO.setAreaId(100L);
+        reqVO.setStatus(0);
+        reqVO.setSort(0);
+
+        service.createStation(reqVO);
+
+        verify(stationMapper).insert(argThat(
+                (StationDO station) -> station.getStationAddress() == null));
     }
 
     private StationDO station(Long id, Long areaId, Integer status) {

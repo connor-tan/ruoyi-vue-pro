@@ -100,6 +100,17 @@ public interface StudentMapper extends BaseMapperX<StudentDO> {
                 .last("LIMIT " + limit));
     }
 
+    default List<StudentDO> selectListByStatusAndIdGreaterThan(Integer status, Long lastId, Integer limit) {
+        if (limit == null || limit <= 0) {
+            return List.of();
+        }
+        return selectList(new LambdaQueryWrapperX<StudentDO>()
+                .eq(StudentDO::getStatus, status)
+                .gtIfPresent(StudentDO::getId, lastId)
+                .orderByAsc(StudentDO::getId)
+                .last("LIMIT " + limit));
+    }
+
     List<Long> selectDistinctCurrentSchoolIds();
 
     List<Long> selectDistinctCurrentSchoolIdsByStatuses(@Param("statuses") Collection<Integer> statuses);

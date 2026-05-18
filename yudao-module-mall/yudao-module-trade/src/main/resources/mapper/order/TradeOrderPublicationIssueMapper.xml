@@ -55,8 +55,6 @@
                pi.sku_id AS skuId,
                pi.product_name_snapshot AS productNameSnapshot,
                MAX(sku.name) AS productSkuName,
-               MAX(sku_ext.volume_label) AS volumeLabel,
-               MAX(sku_ext.edition_label) AS editionLabel,
                MAX(sku_ext.isbn) AS isbn,
                pi.issue_id AS issueId,
                pi.issue_no AS issueNo,

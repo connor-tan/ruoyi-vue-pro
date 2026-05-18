@@ -86,6 +86,28 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
                 .orderByAsc(StudentClassDO::getId));
     }
 
+    default List<StudentClassDO> selectFutureListByStudentIds(Collection<Long> studentIds) {
+        if (studentIds == null || studentIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        LocalDate today = LocalDate.now();
+        return selectList(new LambdaQueryWrapperX<StudentClassDO>()
+                .in(StudentClassDO::getStudentId, studentIds)
+                .gt(StudentClassDO::getStartDate, today)
+                .orderByAsc(StudentClassDO::getStudentId)
+                .orderByAsc(StudentClassDO::getStartDate)
+                .orderByAsc(StudentClassDO::getId));
+    }
+
+    default List<StudentClassDO> selectFutureListByStudentId(Long studentId) {
+        LocalDate today = LocalDate.now();
+        return selectList(new LambdaQueryWrapperX<StudentClassDO>()
+                .eq(StudentClassDO::getStudentId, studentId)
+                .gt(StudentClassDO::getStartDate, today)
+                .orderByAsc(StudentClassDO::getStartDate)
+                .orderByAsc(StudentClassDO::getId));
+    }
+
     default List<StudentClassDO> selectListByStudentIdsAndTargetYear(Collection<Long> studentIds,
                                                                      Integer yearStart,
                                                                      Integer yearEnd) {

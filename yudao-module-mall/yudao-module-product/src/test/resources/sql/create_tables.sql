@@ -166,8 +166,6 @@ CREATE TABLE IF NOT EXISTS `product_publication_spu_ext` (
 
 CREATE TABLE IF NOT EXISTS `product_publication_sku_ext` (
     `sku_id` bigint NOT NULL COMMENT 'SKU 编号',
-    `volume_label` varchar(64) DEFAULT NULL COMMENT '册别',
-    `edition_label` varchar(64) DEFAULT NULL COMMENT '版本',
     `isbn` varchar(64) DEFAULT NULL COMMENT 'ISBN',
     `remark` varchar(255) DEFAULT NULL COMMENT '备注',
     "creator" varchar(64) DEFAULT '',

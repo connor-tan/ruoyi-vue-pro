@@ -7,9 +7,7 @@ public enum SubscriptionRuleFactorEnum {
     OFFER_SKU("OFFER_SKU", "窗口 SKU"),
     SKU_PUBLISHER("SKU_PUBLISHER", "出版社"),
     SKU_PUBLICATION_TYPE("SKU_PUBLICATION_TYPE", "刊物类型"),
-    SKU_ISSUE_CYCLE("SKU_ISSUE_CYCLE", "出刊周期"),
-    SKU_VOLUME_LABEL("SKU_VOLUME_LABEL", "册别"),
-    SKU_EDITION_LABEL("SKU_EDITION_LABEL", "版本");
+    SKU_ISSUE_CYCLE("SKU_ISSUE_CYCLE", "出刊周期");
 
     private final String code;
     private final String name;

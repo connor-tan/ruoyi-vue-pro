@@ -4,14 +4,12 @@
 
     <insert id="upsert">
         INSERT INTO product_publication_sku_ext (
-            sku_id, volume_label, edition_label, isbn, remark, deleted
+            sku_id, isbn, remark, deleted
         )
         VALUES (
-            #{ext.skuId}, #{ext.volumeLabel}, #{ext.editionLabel}, #{ext.isbn}, #{ext.remark}, b'0'
+            #{ext.skuId}, #{ext.isbn}, #{ext.remark}, b'0'
         )
         ON DUPLICATE KEY UPDATE
-            volume_label = VALUES(volume_label),
-            edition_label = VALUES(edition_label),
             isbn = VALUES(isbn),
             remark = VALUES(remark),
             deleted = b'0',

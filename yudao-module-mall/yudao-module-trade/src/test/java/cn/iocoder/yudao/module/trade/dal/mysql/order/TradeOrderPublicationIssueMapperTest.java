@@ -67,7 +67,7 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
     void selectPublicationDeliveryCandidatePage_shouldReturnReadableSkuFields() {
         insertOrder(1L, TradeOrderStatusEnum.UNDELIVERED.getStatus(), TradeOrderRefundStatusEnum.NONE.getStatus());
         insertIssue(9001L, 1L, false, PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
-        insertSku(6L, "测试刊物 SKU-全学年", "FULL", "GENERAL", "ISBN978-7-5436-9310-0");
+        insertSku(6L, "测试刊物 SKU-全学年", "ISBN978-7-5436-9310-0");
 
         IPage<TradePublicationDeliveryCandidateRespVO> page = publicationIssueMapper
                 .selectPublicationDeliveryCandidatePage(new Page<>(1, 10), candidateReqVO(),
@@ -77,8 +77,6 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         assertEquals(1, page.getRecords().size());
         TradePublicationDeliveryCandidateRespVO candidate = page.getRecords().get(0);
         assertEquals("测试刊物 SKU-全学年", candidate.getProductSkuName());
-        assertEquals("FULL", candidate.getVolumeLabel());
-        assertEquals("GENERAL", candidate.getEditionLabel());
         assertEquals("ISBN978-7-5436-9310-0", candidate.getIsbn());
         assertEquals(1, candidate.getTotalCount());
         assertEquals(1, candidate.getOrderCount());
@@ -150,16 +148,16 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
                 .setCanceled(canceled));
     }
 
-    private void insertSku(Long skuId, String skuName, String volumeLabel, String editionLabel, String isbn) {
+    private void insertSku(Long skuId, String skuName, String isbn) {
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.update("""
                 INSERT INTO product_sku (id, spu_id, name, deleted)
                 VALUES (?, ?, ?, FALSE)
                 """, skuId, 600L, skuName);
         jdbcTemplate.update("""
-                INSERT INTO product_publication_sku_ext (sku_id, volume_label, edition_label, isbn, deleted)
-                VALUES (?, ?, ?, ?, FALSE)
-                """, skuId, volumeLabel, editionLabel, isbn);
+                INSERT INTO product_publication_sku_ext (sku_id, isbn, deleted)
+                VALUES (?, ?, FALSE)
+                """, skuId, isbn);
     }
 
 }

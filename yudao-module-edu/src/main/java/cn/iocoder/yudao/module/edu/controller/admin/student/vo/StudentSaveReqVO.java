@@ -36,7 +36,7 @@ public class StudentSaveReqVO {
     @Schema(description = "学号")
     private Integer studentCode;
 
-    @Schema(description = "状态（1-在读，2-毕业，3-休学，4-待升学）", example = "1")
+    @Schema(description = "状态（1-在读，2-毕业，3-休学，4-待升学，5-待入学）", example = "1")
     @InEnum(value = StudentStatusEnum.class, message = "状态必须是 {value}")
     private Integer status;
 

@@ -4,6 +4,7 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolClassSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolGradeSimpleRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.app.school.vo.AppSchoolYearSimpleRespVO;
 import cn.iocoder.yudao.module.edu.service.school.SchoolService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,12 +45,29 @@ public class AppSchoolController {
         return success(schoolService.getAppSchoolGradeSimpleList(schoolId));
     }
 
+    @GetMapping("/school-year/bindable-simple-list")
+    @Operation(summary = "获得学校可绑定学年精简列表")
+    @Parameter(name = "schoolId", description = "学校编号", required = true, example = "1")
+    public CommonResult<List<AppSchoolYearSimpleRespVO>> getBindableSchoolYearSimpleList(
+            @RequestParam("schoolId") Long schoolId) {
+        return success(schoolService.getAppBindableSchoolYearSimpleList(schoolId));
+    }
+
     @GetMapping("/school-class/current-simple-list")
     @Operation(summary = "获得学校当前学年班级精简列表")
     public CommonResult<List<AppSchoolClassSimpleRespVO>> getCurrentSchoolClassSimpleList(
             @RequestParam("schoolId") Long schoolId,
             @RequestParam("schoolGradeId") Long schoolGradeId) {
         return success(schoolService.getAppCurrentSchoolClassSimpleList(schoolId, schoolGradeId));
+    }
+
+    @GetMapping("/school-class/simple-list")
+    @Operation(summary = "获得学校指定学年班级精简列表")
+    public CommonResult<List<AppSchoolClassSimpleRespVO>> getSchoolClassSimpleList(
+            @RequestParam("schoolId") Long schoolId,
+            @RequestParam("schoolYearId") Long schoolYearId,
+            @RequestParam("schoolGradeId") Long schoolGradeId) {
+        return success(schoolService.getAppSchoolClassSimpleList(schoolId, schoolYearId, schoolGradeId));
     }
 
 }

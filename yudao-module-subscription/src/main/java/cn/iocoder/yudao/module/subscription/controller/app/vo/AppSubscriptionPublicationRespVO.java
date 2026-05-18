@@ -45,8 +45,6 @@ public class AppSubscriptionPublicationRespVO {
         private Integer orderedQuantity;
         private Integer remainingQuantity;
         private String purchaseUnavailableReasonDesc;
-        private String volumeLabel;
-        private String editionLabel;
         private String isbn;
         private List<Long> applicableGradeCatalogIds;
         private List<String> applicableGradeNames;

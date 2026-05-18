@@ -8,7 +8,7 @@
   - `NORMAL`
   - `PUBLICATION`
 - SPU 表示一个刊物商品主体，不再按年级拆分 SPU。
-- 刊物的年级、版本、册别全部下沉到 SKU。
+- 刊物的适用年级下沉到 SKU；SKU 不再维护册别和版本字段。
 
 ## 刊物建模
 
@@ -20,7 +20,7 @@
   - 字段承载出版社、刊物类型、出刊周期、ISSN/CN/邮发代号
 - 刊物 SKU 扩展：
   - `product_publication_sku_ext`
-  - 字段承载册别、版本、ISBN、备注
+  - 字段承载 ISBN、备注
 - 刊物 SKU 适用年级：
   - `product_publication_sku_grade_rel`
   - 以 `sku_id + grade_catalog_id` 建模
@@ -64,5 +64,6 @@
 - 后续订刊域只消费统一商品模型与刊物只读 API。
 - 订刊窗口目标模型应为 `offer / offerSku`，不再回到 `windowSpu / windowSku` 的老语义。
 - 规则事实来源是刊物 SKU 结构化事实，而不是前端拼装字段或通用规格 JSON。
-- 第一版可作为规则因子的 SKU 事实包括：适用年级、出版社、刊物类型、出刊周期、册别、版本。
+- 当前可作为规则因子的稳定事实包括：适用年级、出版社、刊物类型、出刊周期、窗口 SKU。
+- `SKU_VOLUME_LABEL`、`SKU_EDITION_LABEL` 已废弃并物理清理，不再作为商品字段或规则因子。
 - 通用 `product_property` / `product_property_value` 不能直接作为规则因子；如果未来要开放，必须先在商品中心明确该属性的稳定 code、类型、取值边界和是否可参与规则。

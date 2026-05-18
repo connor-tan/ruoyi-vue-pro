@@ -225,8 +225,6 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         respVO.setApplicableGradeNames(productSku.getApplicableGradeNames());
         ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();
         if (ext != null) {
-            respVO.setVolumeLabel(ext.getVolumeLabel());
-            respVO.setEditionLabel(ext.getEditionLabel());
             respVO.setIsbn(ext.getIsbn());
         }
         return respVO;

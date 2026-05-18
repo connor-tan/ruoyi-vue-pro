@@ -35,6 +35,8 @@ public class DiyTemplateServiceImpl implements DiyTemplateService {
 
     @Resource
     private DiyPageService diyPageService;
+    @Resource
+    private DiyPropertyCleanService diyPropertyCleanService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -158,6 +160,7 @@ public class DiyTemplateServiceImpl implements DiyTemplateService {
     public void updateDiyTemplateProperty(DiyTemplatePropertyUpdateRequestVO updateReqVO) {
         // 校验存在
         validateDiyTemplateExists(updateReqVO.getId());
+        updateReqVO.setProperty(diyPropertyCleanService.cleanInvalidSpuIds(updateReqVO.getProperty()));
         // 更新模板属性
         DiyTemplateDO updateObj = DiyTemplateConvert.INSTANCE.convert(updateReqVO);
         diyTemplateMapper.updateById(updateObj);

@@ -49,12 +49,6 @@ public class TradePublicationDeliveryCandidateRespVO {
     @Schema(description = "商品 SKU 名称", example = "读者-全学年")
     private String productSkuName;
 
-    @Schema(description = "刊物 SKU 卷期字典值", example = "FULL")
-    private String volumeLabel;
-
-    @Schema(description = "刊物 SKU 版别字典值", example = "GENERAL")
-    private String editionLabel;
-
     @Schema(description = "ISBN", example = "ISBN978-7-5436-9310-0")
     private String isbn;
 

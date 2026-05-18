@@ -36,7 +36,6 @@ import cn.iocoder.yudao.module.product.dal.mysql.spu.ProductSpuMapper;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIdentifierRuleEnum;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIssueModeEnum;
-import cn.iocoder.yudao.module.system.api.dict.DictDataApi;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -54,8 +53,6 @@ import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.*;
 @Service
 public class ProductPublicationServiceImpl implements ProductPublicationService {
 
-    private static final String DICT_TYPE_PUBLICATION_VOLUME = "edu_publication_volume";
-    private static final String DICT_TYPE_PUBLICATION_EDITION = "edu_publication_edition";
     private static final Set<Integer> PUBLICATION_DELIVERY_TYPES = Set.of(
             DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.SCHOOL.getType());
 
@@ -81,9 +78,6 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
     private ProductPublicationSkuIssueTemplateMapper publicationSkuIssueTemplateMapper;
     @Resource
     private EduGradeCatalogApi gradeCatalogApi;
-    @Resource
-    private DictDataApi dictDataApi;
-
     @Override
     public ProductPublicationRespDTO getPublication(Long spuId) {
         if (spuId == null) {
@@ -267,8 +261,6 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             throw exception(PUBLICATION_SKU_REQUIRED);
         }
         validateGradeCatalogIds(skus);
-        Set<String> volumeLabels = new LinkedHashSet<>();
-        Set<String> editionLabels = new LinkedHashSet<>();
         for (ProductSkuSaveReqVO sku : skus) {
             if (sku.getPublicationExt() == null) {
                 throw exception(PUBLICATION_SKU_EXT_REQUIRED);
@@ -276,19 +268,12 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
             if (CollUtil.isEmpty(sku.getApplicableGradeCatalogIds())) {
                 throw exception(PUBLICATION_SKU_GRADE_REQUIRED);
             }
-            if (StrUtil.isNotBlank(sku.getPublicationExt().getVolumeLabel())) {
-                volumeLabels.add(sku.getPublicationExt().getVolumeLabel());
-            }
-            if (StrUtil.isNotBlank(sku.getPublicationExt().getEditionLabel())) {
-                editionLabels.add(sku.getPublicationExt().getEditionLabel());
-            }
             if (PublicationIdentifierRuleEnum.requiresSkuIsbn(type.getIdentifierRule())
                     && StrUtil.isBlank(sku.getPublicationExt().getIsbn())) {
                 throw exception(PUBLICATION_SKU_ISBN_REQUIRED);
             }
             validateIssueTemplatesForSave(ext.getIssueMode(), sku);
         }
-        validatePublicationSkuDictValues(volumeLabels, editionLabels);
         if (PublicationIdentifierRuleEnum.requiresTitleIdentifier(type.getIdentifierRule())
                 && StrUtil.isAllBlank(ext.getIssn(), ext.getCnCode(), ext.getPostDistributionCode())) {
             throw exception(PUBLICATION_TITLE_IDENTIFIER_REQUIRED);
@@ -309,15 +294,6 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         }
         if (deliveryTypes.contains(DeliveryTypeEnum.EXPRESS.getType()) && reqVO.getDeliveryTemplateId() == null) {
             throw exception(PUBLICATION_DELIVERY_TEMPLATE_REQUIRED);
-        }
-    }
-
-    private void validatePublicationSkuDictValues(Set<String> volumeLabels, Set<String> editionLabels) {
-        if (CollUtil.isNotEmpty(volumeLabels)) {
-            dictDataApi.validateDictDataList(DICT_TYPE_PUBLICATION_VOLUME, volumeLabels);
-        }
-        if (CollUtil.isNotEmpty(editionLabels)) {
-            dictDataApi.validateDictDataList(DICT_TYPE_PUBLICATION_EDITION, editionLabels);
         }
     }
 

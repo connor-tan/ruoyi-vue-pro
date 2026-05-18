@@ -16,7 +16,8 @@ public enum StudentStatusEnum implements ArrayValuable<Integer> {
     READING(1, "在读"),
     GRADUATED(2, "毕业"),
     SUSPENDED(3, "休学"),
-    PENDING_ADVANCE(4, "待升学");
+    PENDING_ADVANCE(4, "待升学"),
+    WAITING_ENTRY(5, "待入学");
 
     public static final Integer[] ARRAYS = Arrays.stream(values())
             .map(StudentStatusEnum::getStatus)

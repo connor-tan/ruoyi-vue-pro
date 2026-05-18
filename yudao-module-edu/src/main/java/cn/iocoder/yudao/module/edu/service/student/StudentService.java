@@ -10,6 +10,7 @@ import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassRespV
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentPageReqVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentRespVO;
 import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentSaveReqVO;
+import cn.iocoder.yudao.module.edu.service.student.bo.StudentWaitingEntryActivateRespBO;
 import jakarta.validation.Valid;
 
 import java.util.Collection;
@@ -106,6 +107,13 @@ public interface StudentService {
             Integer targetYearStart,
             Integer targetYearEnd,
             Long targetYearCatalogId);
+
+    /**
+     * 激活已到入班日期的待入学学生。
+     *
+     * @return 激活结果
+     */
+    StudentWaitingEntryActivateRespBO activateWaitingEntryStudents();
 
     // ==================== 子表（学生班级区间记录） ====================
 
