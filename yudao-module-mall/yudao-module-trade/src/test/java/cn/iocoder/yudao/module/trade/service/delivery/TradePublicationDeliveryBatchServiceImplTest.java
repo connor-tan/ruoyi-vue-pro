@@ -1,8 +1,13 @@
 package cn.iocoder.yudao.module.trade.service.delivery;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchCreateReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateChildReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidatePageReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.delivery.TradePublicationDeliveryBatchDO;
 import cn.iocoder.yudao.module.trade.dal.mysql.delivery.TradePublicationDeliveryBatchItemMapper;
 import cn.iocoder.yudao.module.trade.dal.mysql.delivery.TradePublicationDeliveryBatchMapper;
@@ -13,6 +18,7 @@ import cn.iocoder.yudao.module.trade.enums.delivery.PublicationDeliveryStatusEnu
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.service.delivery.bo.TradePublicationDeliveryCandidateItemBO;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderPublicationIssueService;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,12 +29,14 @@ import org.springframework.dao.DuplicateKeyException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.LongStream;
 
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_ITEM_UPDATE_FAIL;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_EXPRESS_BATCH_TOO_LARGE;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_EXPRESS_LOGISTICS_REQUIRED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_GROUP_DELIVERY_EXPRESS_NOT_SUPPORTED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_ISSUE_DELIVERY_DUPLICATE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -38,6 +46,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -89,6 +98,82 @@ class TradePublicationDeliveryBatchServiceImplTest {
         assertEquals(200L, batchId);
         verify(deliveryExpressService).validateDeliveryExpress(1L);
         verify(publicationIssueService).afterIssueDelivered(eq(Set.of(9001L)), any(LocalDateTime.class));
+    }
+
+    @Test
+    void createGroupAndDeliver_shouldCreateIssueBatchForEachChildAggregate() {
+        when(publicationIssueMapper.selectPublicationDeliveryCandidateChildList(any(),
+                eq(TradeOrderStatusEnum.UNDELIVERED.getStatus()),
+                eq(PublicationDeliveryStatusEnum.UNDELIVERED.getStatus())))
+                .thenReturn(List.of(childAggregate(5L, 6L, 1, 3),
+                        childAggregate(7L, 8L, 2, 2)));
+        when(publicationIssueMapper.selectPublicationDeliveryCandidateItemList(any(),
+                eq(TradeOrderStatusEnum.UNDELIVERED.getStatus()),
+                eq(PublicationDeliveryStatusEnum.UNDELIVERED.getStatus()), any()))
+                .thenAnswer(invocation -> {
+                    TradePublicationDeliveryCandidatePageReqVO reqVO = invocation.getArgument(0);
+                    return List.of(candidateItem(reqVO.getOfferSkuId() + 9000,
+                            DeliveryTypeEnum.SCHOOL.getType())
+                            .setOfferSkuId(reqVO.getOfferSkuId())
+                            .setSkuId(reqVO.getSkuId())
+                            .setIssueNo(reqVO.getIssueNo()));
+                });
+        mockBatchInsert();
+        when(tradeNoRedisDAO.generate(TradeNoRedisDAO.PUBLICATION_DELIVERY_BATCH_NO_PREFIX)).thenReturn("pd100");
+        when(publicationIssueMapper.updateDeliveredByIds(any(),
+                eq(PublicationDeliveryStatusEnum.UNDELIVERED.getStatus()), any(), any(LocalDateTime.class)))
+                .thenReturn(1);
+
+        TradePublicationDeliveryBatchGroupCreateRespVO resp = service.createGroupAndDeliver(createGroupReqVO(), 9L);
+
+        assertEquals(2, resp.getBatchCount());
+        assertEquals(5, resp.getTotalCount());
+        verify(publicationDeliveryBatchMapper, times(2)).insert(any(TradePublicationDeliveryBatchDO.class));
+        verify(publicationIssueService, times(2)).afterIssueDelivered(any(), any(LocalDateTime.class));
+        verify(publicationIssueMapper, never()).selectPublicationDeliveryCandidateChildPage(any(), any(), any(), any());
+    }
+
+    @Test
+    void getCandidateChildPage_shouldReturnPagedChildAggregates() {
+        Page<TradePublicationDeliveryCandidateRespVO> page = new Page<>(1, 10);
+        page.setRecords(List.of(childAggregate(5L, 6L, 1, 3)));
+        page.setTotal(1);
+        when(publicationIssueMapper.selectPublicationDeliveryCandidateChildPage(any(),
+                any(TradePublicationDeliveryCandidateChildReqVO.class),
+                eq(TradeOrderStatusEnum.UNDELIVERED.getStatus()),
+                eq(PublicationDeliveryStatusEnum.UNDELIVERED.getStatus()))).thenReturn(page);
+
+        PageResult<TradePublicationDeliveryCandidateRespVO> resp = service.getCandidateChildPage(createChildReqVO());
+
+        assertEquals(1L, resp.getTotal());
+        assertEquals(1, resp.getList().size());
+        assertEquals(5L, resp.getList().get(0).getOfferSkuId());
+        verify(publicationIssueMapper, never()).selectPublicationDeliveryCandidateChildList(any(), any(), any());
+    }
+
+    @Test
+    void getCandidateChildPage_shouldRejectWhenSchoolWarehouseMissing() {
+        TradePublicationDeliveryCandidateChildReqVO reqVO = createChildReqVO();
+        reqVO.setWarehouseId(null);
+
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> service.getCandidateChildPage(reqVO));
+
+        assertEquals(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND.getCode(), ex.getCode());
+        verify(publicationIssueMapper, never()).selectPublicationDeliveryCandidateChildPage(any(), any(), any(), any());
+    }
+
+    @Test
+    void createGroupAndDeliver_shouldRejectExpressDeliveryType() {
+        TradePublicationDeliveryBatchGroupCreateReqVO reqVO = createGroupReqVO();
+        reqVO.setDeliveryType(DeliveryTypeEnum.EXPRESS.getType());
+        reqVO.setWarehouseId(null);
+
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> service.createGroupAndDeliver(reqVO, 9L));
+
+        assertEquals(PUBLICATION_GROUP_DELIVERY_EXPRESS_NOT_SUPPORTED.getCode(), ex.getCode());
+        verify(publicationIssueMapper, never()).selectPublicationDeliveryCandidateChildList(any(), any(), any());
     }
 
     @Test
@@ -163,9 +248,10 @@ class TradePublicationDeliveryBatchServiceImplTest {
     }
 
     private void mockBatchInsert() {
+        AtomicLong id = new AtomicLong(200L);
         doAnswer(invocation -> {
             TradePublicationDeliveryBatchDO batch = invocation.getArgument(0);
-            batch.setId(200L);
+            batch.setId(id.getAndIncrement());
             return 1;
         }).when(publicationDeliveryBatchMapper).insert(any(TradePublicationDeliveryBatchDO.class));
     }
@@ -188,6 +274,45 @@ class TradePublicationDeliveryBatchServiceImplTest {
                         .setOrderIssueId(9001L)
                         .setLogisticsId(1L)
                         .setLogisticsNo("SF100")));
+    }
+
+    private TradePublicationDeliveryBatchGroupCreateReqVO createGroupReqVO() {
+        TradePublicationDeliveryBatchGroupCreateReqVO reqVO = new TradePublicationDeliveryBatchGroupCreateReqVO();
+        reqVO.setDeliveryType(DeliveryTypeEnum.SCHOOL.getType());
+        reqVO.setSchoolId(1L);
+        reqVO.setWarehouseId(2L);
+        reqVO.setWindowId(3L);
+        return reqVO;
+    }
+
+    private TradePublicationDeliveryCandidateChildReqVO createChildReqVO() {
+        TradePublicationDeliveryCandidateChildReqVO reqVO = new TradePublicationDeliveryCandidateChildReqVO();
+        reqVO.setDeliveryType(DeliveryTypeEnum.SCHOOL.getType());
+        reqVO.setSchoolId(1L);
+        reqVO.setWarehouseId(2L);
+        reqVO.setWindowId(3L);
+        reqVO.setPageNo(1);
+        reqVO.setPageSize(10);
+        return reqVO;
+    }
+
+    private TradePublicationDeliveryCandidateRespVO childAggregate(Long offerSkuId, Long skuId, Integer issueNo,
+                                                                   Integer totalCount) {
+        return new TradePublicationDeliveryCandidateRespVO()
+                .setDeliveryType(DeliveryTypeEnum.SCHOOL.getType())
+                .setSchoolId(1L)
+                .setSchoolNameSnapshot("实验小学")
+                .setWarehouseId(2L)
+                .setWarehouseNameSnapshot("城北站")
+                .setWindowId(3L)
+                .setWindowNameSnapshot("2026 春季订刊")
+                .setOfferId(4L)
+                .setOfferSkuId(offerSkuId)
+                .setSkuId(skuId)
+                .setProductNameSnapshot("测试刊物")
+                .setIssueNo(issueNo)
+                .setIssueName("第" + issueNo + "期")
+                .setTotalCount(totalCount);
     }
 
     private TradePublicationDeliveryCandidateItemBO candidateItem(Long orderIssueId, Integer deliveryType) {

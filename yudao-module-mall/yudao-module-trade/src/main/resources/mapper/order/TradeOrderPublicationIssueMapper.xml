@@ -45,21 +45,21 @@
             resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
         SELECT pi.delivery_type AS deliveryType,
                pi.school_id AS schoolId,
-               pi.school_name_snapshot AS schoolNameSnapshot,
+               MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
                pi.warehouse_id AS warehouseId,
-               pi.warehouse_name_snapshot AS warehouseNameSnapshot,
+               MAX(pi.warehouse_name_snapshot) AS warehouseNameSnapshot,
                pi.window_id AS windowId,
-               pi.window_name_snapshot AS windowNameSnapshot,
+               MAX(pi.window_name_snapshot) AS windowNameSnapshot,
                pi.offer_id AS offerId,
                pi.offer_sku_id AS offerSkuId,
                pi.sku_id AS skuId,
-               pi.product_name_snapshot AS productNameSnapshot,
+               MAX(pi.product_name_snapshot) AS productNameSnapshot,
                MAX(sku.name) AS productSkuName,
                MAX(sku_ext.isbn) AS isbn,
                pi.issue_id AS issueId,
                pi.issue_no AS issueNo,
-               pi.issue_name AS issueName,
-               pi.planned_delivery_date AS plannedDeliveryDate,
+               MAX(pi.issue_name) AS issueName,
+               MIN(pi.planned_delivery_date) AS plannedDeliveryDate,
                COALESCE(SUM(pi.count), 0) AS totalCount,
                COUNT(DISTINCT pi.order_id) AS orderCount,
                COUNT(DISTINCT pi.student_id) AS studentCount
@@ -69,20 +69,90 @@
         <include refid="PublicationIssueCandidateWhere"/>
         GROUP BY pi.delivery_type,
                  pi.school_id,
-                 pi.school_name_snapshot,
                  pi.warehouse_id,
-                 pi.warehouse_name_snapshot,
                  pi.window_id,
-                 pi.window_name_snapshot,
                  pi.offer_id,
                  pi.offer_sku_id,
                  pi.sku_id,
-                 pi.product_name_snapshot,
                  pi.issue_id,
-                 pi.issue_no,
-                 pi.issue_name,
-                 pi.planned_delivery_date
+                 pi.issue_no
         ORDER BY pi.delivery_type ASC, pi.issue_no ASC, pi.warehouse_id ASC, pi.offer_sku_id ASC, pi.sku_id ASC
+    </select>
+
+    <select id="selectPublicationDeliveryCandidateGroupPage"
+            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupRespVO">
+        SELECT pi.delivery_type AS deliveryType,
+               pi.school_id AS schoolId,
+               MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
+               pi.warehouse_id AS warehouseId,
+               MAX(pi.warehouse_name_snapshot) AS warehouseNameSnapshot,
+               pi.window_id AS windowId,
+               MAX(pi.window_name_snapshot) AS windowNameSnapshot,
+               COALESCE(SUM(pi.count), 0) AS totalCount,
+               COUNT(DISTINCT pi.order_id) AS orderCount,
+               COUNT(DISTINCT pi.student_id) AS studentCount,
+               COUNT(DISTINCT CONCAT(COALESCE(pi.offer_id, 0), '#',
+                                     COALESCE(pi.offer_sku_id, 0), '#',
+                                     COALESCE(pi.sku_id, 0))) AS publicationGroupCount,
+               COUNT(DISTINCT CONCAT(COALESCE(pi.offer_id, 0), '#',
+                                     COALESCE(pi.offer_sku_id, 0), '#',
+                                     COALESCE(pi.sku_id, 0), '#',
+                                     COALESCE(pi.issue_id, 0), '#',
+                                     COALESCE(pi.issue_no, 0))) AS issueGroupCount
+        <include refid="PublicationIssueCandidateFrom"/>
+        <include refid="PublicationIssueCandidateWhere"/>
+        GROUP BY pi.delivery_type,
+                 pi.school_id,
+                 pi.warehouse_id,
+                 pi.window_id
+        ORDER BY pi.delivery_type ASC, pi.warehouse_id ASC, pi.school_id ASC, pi.window_id ASC
+    </select>
+
+    <sql id="PublicationDeliveryCandidateChildSelect">
+        SELECT pi.delivery_type AS deliveryType,
+               pi.school_id AS schoolId,
+               MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
+               pi.warehouse_id AS warehouseId,
+               MAX(pi.warehouse_name_snapshot) AS warehouseNameSnapshot,
+               pi.window_id AS windowId,
+               MAX(pi.window_name_snapshot) AS windowNameSnapshot,
+               pi.offer_id AS offerId,
+               pi.offer_sku_id AS offerSkuId,
+               pi.sku_id AS skuId,
+               MAX(pi.product_name_snapshot) AS productNameSnapshot,
+               MAX(sku.name) AS productSkuName,
+               MAX(sku_ext.isbn) AS isbn,
+               pi.issue_id AS issueId,
+               pi.issue_no AS issueNo,
+               MAX(pi.issue_name) AS issueName,
+               MIN(pi.planned_delivery_date) AS plannedDeliveryDate,
+               COALESCE(SUM(pi.count), 0) AS totalCount,
+               COUNT(DISTINCT pi.order_id) AS orderCount,
+               COUNT(DISTINCT pi.student_id) AS studentCount
+        <include refid="PublicationIssueCandidateFrom"/>
+        LEFT JOIN product_sku sku ON sku.id = pi.sku_id AND sku.deleted = FALSE
+        LEFT JOIN product_publication_sku_ext sku_ext ON sku_ext.sku_id = pi.sku_id AND sku_ext.deleted = FALSE
+        <include refid="PublicationIssueCandidateWhere"/>
+        GROUP BY pi.delivery_type,
+                 pi.school_id,
+                 pi.warehouse_id,
+                 pi.window_id,
+                 pi.offer_id,
+                 pi.offer_sku_id,
+                 pi.sku_id,
+                 pi.issue_id,
+                 pi.issue_no
+        ORDER BY pi.delivery_type ASC, pi.issue_no ASC, pi.warehouse_id ASC, pi.offer_sku_id ASC, pi.sku_id ASC
+    </sql>
+
+    <select id="selectPublicationDeliveryCandidateChildList"
+            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
+        <include refid="PublicationDeliveryCandidateChildSelect"/>
+    </select>
+
+    <select id="selectPublicationDeliveryCandidateChildPage"
+            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
+        <include refid="PublicationDeliveryCandidateChildSelect"/>
     </select>
 
     <select id="selectPublicationDeliveryCandidateItemList"

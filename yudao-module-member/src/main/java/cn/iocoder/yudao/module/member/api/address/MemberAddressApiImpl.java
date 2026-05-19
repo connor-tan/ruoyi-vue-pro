@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import jakarta.annotation.Resource;
+import java.util.List;
 
 /**
  * 用户收件地址 API 实现类
@@ -28,6 +29,11 @@ public class MemberAddressApiImpl implements MemberAddressApi {
     @Override
     public MemberAddressRespDTO getDefaultAddress(Long userId) {
         return AddressConvert.INSTANCE.convert02(addressService.getDefaultUserAddress(userId));
+    }
+
+    @Override
+    public List<MemberAddressRespDTO> getAddressList(Long userId) {
+        return AddressConvert.INSTANCE.convertList02(addressService.getAddressList(userId));
     }
 
 }

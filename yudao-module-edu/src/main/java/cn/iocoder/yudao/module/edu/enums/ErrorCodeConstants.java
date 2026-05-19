@@ -76,4 +76,6 @@ public interface ErrorCodeConstants {
     ErrorCode STUDENT_BIND_FUTURE_CLASS_MULTI = new ErrorCode(1_017_001_034, "学生待入学班级记录异常，请联系运营处理");
     ErrorCode STUDENT_STATUS_WAITING_ENTRY_FUTURE_CLASS_REQUIRED = new ErrorCode(1_017_001_035, "待入学学生必须存在一条未来班级记录");
     ErrorCode STUDENT_STATUS_WAITING_ENTRY_FUTURE_CLASS_MULTI = new ErrorCode(1_017_001_036, "待入学学生只能存在一条未来班级记录");
+    ErrorCode STUDENT_STATUS_REQUIRED = new ErrorCode(1_017_001_037, "状态不能为空");
+    ErrorCode STUDENT_CLASS_SCHOOL_YEAR_START_DATE_REQUIRED = new ErrorCode(1_017_001_038, "班级所属学年开学日期不能为空");
 }

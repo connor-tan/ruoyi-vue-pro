@@ -24,7 +24,9 @@ public class ProductSpuProducer {
      * @param spuId 商品 SPU 编号
      */
     public void sendProductSpuDeleteMessage(Long spuId) {
-        applicationContext.publishEvent(new ProductSpuDeleteMessage().setSpuId(spuId));
+        ProductSpuDeleteMessage message = new ProductSpuDeleteMessage();
+        message.setSpuId(spuId);
+        applicationContext.publishEvent(message);
     }
 
 }

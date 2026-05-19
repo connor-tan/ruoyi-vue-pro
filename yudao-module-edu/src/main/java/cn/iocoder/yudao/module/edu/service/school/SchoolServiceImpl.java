@@ -973,6 +973,7 @@ public class SchoolServiceImpl implements SchoolService {
             respVO.setGradeName(schoolClass.getGradeName());
             respVO.setAliasName(schoolClass.getAliasName());
             respVO.setSchoolYearName(schoolClass.getSchoolYearName());
+            respVO.setSchoolYearStartDate(schoolClass.getSchoolYearStartDate());
             return respVO;
         }).collect(Collectors.toList());
     }
@@ -1016,6 +1017,7 @@ public class SchoolServiceImpl implements SchoolService {
         respVO.setCreateTime(schoolClass.getCreateTime());
         if (schoolYear != null) {
             respVO.setSchoolYearName(buildSchoolYearName(schoolYear));
+            respVO.setSchoolYearStartDate(schoolYear.getStartDate());
         }
         if (gradeCatalog != null) {
             respVO.setStage(gradeCatalog.getStage());

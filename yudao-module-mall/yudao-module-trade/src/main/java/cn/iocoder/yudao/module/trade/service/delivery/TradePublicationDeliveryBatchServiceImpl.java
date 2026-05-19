@@ -5,9 +5,14 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.mybatis.core.util.MyBatisUtils;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchCreateReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchPageReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchRespVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateChildReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupPageReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateItemRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidatePageReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO;
@@ -31,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,6 +49,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_BATCH_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_GROUP_DELIVERY_EXPRESS_NOT_SUPPORTED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_EXPRESS_LOGISTICS_REQUIRED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_EXPRESS_BATCH_TOO_LARGE;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_ISSUE_DELIVERY_DUPLICATE;
@@ -79,6 +86,35 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     }
 
     @Override
+    public PageResult<TradePublicationDeliveryCandidateGroupRespVO> getCandidateGroupPage(
+            TradePublicationDeliveryCandidateGroupPageReqVO reqVO) {
+        IPage<TradePublicationDeliveryCandidateGroupRespVO> page = publicationIssueMapper
+                .selectPublicationDeliveryCandidateGroupPage(MyBatisUtils.buildPage(reqVO), reqVO,
+                        TradeOrderStatusEnum.UNDELIVERED.getStatus(),
+                        PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        return new PageResult<>(page.getRecords(), page.getTotal());
+    }
+
+    @Override
+    public List<TradePublicationDeliveryCandidateRespVO> getCandidateChildList(
+            TradePublicationDeliveryCandidateChildReqVO reqVO) {
+        validateGroupScopeReq(reqVO);
+        return publicationIssueMapper.selectPublicationDeliveryCandidateChildList(reqVO,
+                TradeOrderStatusEnum.UNDELIVERED.getStatus(), PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+    }
+
+    @Override
+    public PageResult<TradePublicationDeliveryCandidateRespVO> getCandidateChildPage(
+            TradePublicationDeliveryCandidateChildReqVO reqVO) {
+        validateGroupScopeReq(reqVO);
+        IPage<TradePublicationDeliveryCandidateRespVO> page = publicationIssueMapper
+                .selectPublicationDeliveryCandidateChildPage(MyBatisUtils.buildPage(reqVO), reqVO,
+                        TradeOrderStatusEnum.UNDELIVERED.getStatus(),
+                        PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        return new PageResult<>(page.getRecords(), page.getTotal());
+    }
+
+    @Override
     public List<TradePublicationDeliveryCandidateItemRespVO> getCandidateItemList(
             TradePublicationDeliveryCandidatePageReqVO reqVO) {
         List<TradePublicationDeliveryCandidateItemBO> items = publicationIssueMapper.selectPublicationDeliveryCandidateItemList(
@@ -91,6 +127,37 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createAndDeliver(TradePublicationDeliveryBatchCreateReqVO reqVO, Long operatorUserId) {
+        return createAndDeliverInternal(reqVO, operatorUserId, LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public TradePublicationDeliveryBatchGroupCreateRespVO createGroupAndDeliver(
+            TradePublicationDeliveryBatchGroupCreateReqVO reqVO, Long operatorUserId) {
+        validateGroupCreateReq(reqVO);
+        List<TradePublicationDeliveryCandidateRespVO> children = publicationIssueMapper
+                .selectPublicationDeliveryCandidateChildList(reqVO, TradeOrderStatusEnum.UNDELIVERED.getStatus(),
+                        PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        if (CollUtil.isEmpty(children)) {
+            throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+        }
+        LocalDateTime deliveryTime = LocalDateTime.now();
+        List<Long> batchIds = new ArrayList<>(children.size());
+        int totalCount = 0;
+        for (TradePublicationDeliveryCandidateRespVO child : children) {
+            Long batchId = createAndDeliverInternal(buildCreateReqVO(child, reqVO.getRemark()),
+                    operatorUserId, deliveryTime);
+            batchIds.add(batchId);
+            totalCount += child.getTotalCount() == null ? 0 : child.getTotalCount();
+        }
+        return new TradePublicationDeliveryBatchGroupCreateRespVO()
+                .setBatchCount(batchIds.size())
+                .setBatchIds(batchIds)
+                .setTotalCount(totalCount);
+    }
+
+    private Long createAndDeliverInternal(TradePublicationDeliveryBatchCreateReqVO reqVO, Long operatorUserId,
+                                          LocalDateTime deliveryTime) {
         TradePublicationDeliveryCandidatePageReqVO candidateReqVO = buildCandidateReqVO(reqVO);
         validateCreateReq(reqVO);
         List<TradePublicationDeliveryCandidateItemBO> items = publicationIssueMapper.selectPublicationDeliveryCandidateItemList(
@@ -102,7 +169,6 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
         validateExpressBatchSize(reqVO.getDeliveryType(), items);
         Map<Long, TradePublicationDeliveryBatchCreateReqVO.ExpressItem> expressItemMap = buildExpressItemMap(reqVO, items);
 
-        LocalDateTime deliveryTime = LocalDateTime.now();
         TradePublicationDeliveryBatchDO batch = buildBatch(items, operatorUserId, reqVO.getRemark(), deliveryTime);
         publicationDeliveryBatchMapper.insert(batch);
 
@@ -146,6 +212,43 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
                 .setSkuId(reqVO.getSkuId())
                 .setIssueId(reqVO.getIssueId())
                 .setIssueNo(reqVO.getIssueNo());
+    }
+
+    private TradePublicationDeliveryBatchCreateReqVO buildCreateReqVO(TradePublicationDeliveryCandidateRespVO child,
+                                                                      String remark) {
+        return new TradePublicationDeliveryBatchCreateReqVO()
+                .setSchoolId(child.getSchoolId())
+                .setWarehouseId(child.getWarehouseId())
+                .setDeliveryType(child.getDeliveryType())
+                .setWindowId(child.getWindowId())
+                .setOfferId(child.getOfferId())
+                .setOfferSkuId(child.getOfferSkuId())
+                .setSkuId(child.getSkuId())
+                .setIssueId(child.getIssueId())
+                .setIssueNo(child.getIssueNo())
+                .setRemark(remark);
+    }
+
+    private void validateGroupScopeReq(TradePublicationDeliveryCandidatePageReqVO reqVO) {
+        if (reqVO.getDeliveryType() == null || reqVO.getSchoolId() == null || reqVO.getWindowId() == null) {
+            throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+        }
+        if (Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType())) {
+            if (reqVO.getWarehouseId() == null) {
+                throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+            }
+            return;
+        }
+        if (!Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+            throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+        }
+    }
+
+    private void validateGroupCreateReq(TradePublicationDeliveryBatchGroupCreateReqVO reqVO) {
+        validateGroupScopeReq(reqVO);
+        if (Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+            throw exception(PUBLICATION_GROUP_DELIVERY_EXPRESS_NOT_SUPPORTED);
+        }
     }
 
     private TradePublicationDeliveryBatchDO buildBatch(List<TradePublicationDeliveryCandidateItemBO> items,

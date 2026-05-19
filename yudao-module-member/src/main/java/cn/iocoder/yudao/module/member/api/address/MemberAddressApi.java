@@ -2,6 +2,8 @@ package cn.iocoder.yudao.module.member.api.address;
 
 import cn.iocoder.yudao.module.member.api.address.dto.MemberAddressRespDTO;
 
+import java.util.List;
+
 /**
  * 用户收件地址 API 接口
  *
@@ -25,5 +27,13 @@ public interface MemberAddressApi {
      * @return 用户收件地址
      */
     MemberAddressRespDTO getDefaultAddress(Long userId);
+
+    /**
+     * 获得用户收件地址列表
+     *
+     * @param userId 用户编号
+     * @return 用户收件地址列表
+     */
+    List<MemberAddressRespDTO> getAddressList(Long userId);
 
 }

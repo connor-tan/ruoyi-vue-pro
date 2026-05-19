@@ -2,9 +2,14 @@ package cn.iocoder.yudao.module.trade.controller.admin.delivery;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchCreateReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchPageReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchRespVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateChildReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupPageReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateItemRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidatePageReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO;
@@ -45,6 +50,30 @@ public class TradePublicationDeliveryBatchController {
         return success(publicationDeliveryBatchService.getCandidatePage(reqVO));
     }
 
+    @GetMapping("/candidate-group-page")
+    @Operation(summary = "获得刊物期次发货候选主表分页")
+    @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:query')")
+    public CommonResult<PageResult<TradePublicationDeliveryCandidateGroupRespVO>> getCandidateGroupPage(
+            @Valid TradePublicationDeliveryCandidateGroupPageReqVO reqVO) {
+        return success(publicationDeliveryBatchService.getCandidateGroupPage(reqVO));
+    }
+
+    @GetMapping("/candidate-child-list")
+    @Operation(summary = "获得刊物期次发货候选子表列表")
+    @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:query')")
+    public CommonResult<List<TradePublicationDeliveryCandidateRespVO>> getCandidateChildList(
+            @Valid TradePublicationDeliveryCandidateChildReqVO reqVO) {
+        return success(publicationDeliveryBatchService.getCandidateChildList(reqVO));
+    }
+
+    @GetMapping("/candidate-child-page")
+    @Operation(summary = "获得刊物期次发货候选子表分页")
+    @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:query')")
+    public CommonResult<PageResult<TradePublicationDeliveryCandidateRespVO>> getCandidateChildPage(
+            @Valid TradePublicationDeliveryCandidateChildReqVO reqVO) {
+        return success(publicationDeliveryBatchService.getCandidateChildPage(reqVO));
+    }
+
     @GetMapping("/candidate-item-list")
     @Operation(summary = "获得刊物期次发货候选明细")
     @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:query')")
@@ -58,6 +87,14 @@ public class TradePublicationDeliveryBatchController {
     @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:create')")
     public CommonResult<Long> createAndDeliver(@Valid @RequestBody TradePublicationDeliveryBatchCreateReqVO reqVO) {
         return success(publicationDeliveryBatchService.createAndDeliver(reqVO, getLoginUserId()));
+    }
+
+    @PostMapping("/create-group-and-deliver")
+    @Operation(summary = "创建刊物学校配送候选主表下全部批次并发货")
+    @PreAuthorize("@ss.hasPermission('trade:publication-delivery-batch:create')")
+    public CommonResult<TradePublicationDeliveryBatchGroupCreateRespVO> createGroupAndDeliver(
+            @Valid @RequestBody TradePublicationDeliveryBatchGroupCreateReqVO reqVO) {
+        return success(publicationDeliveryBatchService.createGroupAndDeliver(reqVO, getLoginUserId()));
     }
 
     @GetMapping("/page")

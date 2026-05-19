@@ -192,9 +192,10 @@ CREATE TABLE IF NOT EXISTS `product_publication_sku_issue_template` (
     "updater" varchar(64) DEFAULT '',
     "update_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted" bit NOT NULL DEFAULT FALSE,
+    `active_issue_no` int GENERATED ALWAYS AS (CASE WHEN `deleted` = FALSE THEN `issue_no` ELSE NULL END),
     "tenant_id" bigint not null default  '0',
     PRIMARY KEY("id"),
-    UNIQUE KEY `uk_product_publication_sku_issue_template_no` (`sku_id`, `issue_no`)
+    UNIQUE KEY `uk_product_publication_sku_issue_template_no` (`sku_id`, `active_issue_no`)
 ) COMMENT '刊物 SKU 默认期次模板';
 
 CREATE TABLE IF NOT EXISTS `product_publication_sku_grade_rel` (

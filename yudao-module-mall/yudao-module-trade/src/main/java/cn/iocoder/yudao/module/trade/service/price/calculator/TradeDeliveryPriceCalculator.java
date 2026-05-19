@@ -102,12 +102,17 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
 
     private void calculateExpress(TradePriceCalculateReqBO param, TradePriceCalculateRespBO result, List<OrderItem> expressItems) {
         // 0. 得到收件地址区域
+        Integer receiverAreaId = param.getReceiverAreaId();
         if (param.getAddressId() == null) {
             // 价格计算时，如果为空就不算~最终下单，会校验该字段不允许空
-            return;
+            if (receiverAreaId == null) {
+                return;
+            }
+        } else {
+            MemberAddressRespDTO address = addressApi.getAddress(param.getAddressId(), param.getUserId());
+            Assert.notNull(address, "收件人({})的地址，不能为空", param.getUserId());
+            receiverAreaId = address.getAreaId();
         }
-        MemberAddressRespDTO address = addressApi.getAddress(param.getAddressId(), param.getUserId());
-        Assert.notNull(address, "收件人({})的地址，不能为空", param.getUserId());
 
         // 情况一：全局包邮
         if (isGlobalExpressFree(result)) {
@@ -122,10 +127,10 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
         // 情况三：快递模版
         Set<Long> deliveryTemplateIds = convertSet(expressItems, OrderItem::getDeliveryTemplateId);
         Map<Long, DeliveryExpressTemplateRespBO> expressTemplateMap =
-                deliveryExpressTemplateService.getExpressTemplateMapByIdsAndArea(deliveryTemplateIds, address.getAreaId());
+                deliveryExpressTemplateService.getExpressTemplateMapByIdsAndArea(deliveryTemplateIds, receiverAreaId);
         // 2.2 计算配送费用
         if (CollUtil.isEmpty(expressTemplateMap)) {
-            log.error("[calculate][找不到商品 templateIds {} areaId{} 对应的运费模板]", deliveryTemplateIds, address.getAreaId());
+            log.error("[calculate][找不到商品 templateIds {} areaId{} 对应的运费模板]", deliveryTemplateIds, receiverAreaId);
             throw exception(PRICE_CALCULATE_DELIVERY_PRICE_TEMPLATE_NOT_FOUND);
         }
         calculateDeliveryPrice(expressItems, expressTemplateMap, result);

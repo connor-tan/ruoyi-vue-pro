@@ -5,6 +5,9 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
+import cn.iocoder.yudao.module.edu.api.student.EduStudentApi;
+import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
 import cn.iocoder.yudao.module.member.api.address.MemberAddressApi;
 import cn.iocoder.yudao.module.member.api.address.dto.MemberAddressRespDTO;
 import cn.iocoder.yudao.module.pay.api.order.PayOrderApi;
@@ -17,6 +20,8 @@ import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.subscription.api.order.SubscriptionOrderEligibilityApi;
 import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityReqDTO;
 import cn.iocoder.yudao.module.subscription.api.order.dto.SubscriptionOrderEligibilityRespDTO;
+import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderAdminOnlineCreateReqVO;
+import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderAdminOnlineSettlementReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderCreateReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementRespVO;
@@ -65,9 +70,13 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getSumValue;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
-import static cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getTerminal;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ITEM_DELIVERY_TYPE_ILLEGAL;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ITEM_DELIVERY_TYPE_REQUIRED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ADMIN_ONLINE_EXPRESS_ADDRESS_REQUIRED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ADMIN_ONLINE_ITEM_INVALID;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ADMIN_ONLINE_ITEM_REQUIRED;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ADMIN_ONLINE_ONLY_PUBLICATION;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ADMIN_ONLINE_PARENT_REQUIRED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_NORMAL_STUDENT_NOT_ALLOWED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_MULTI_DELIVERY_FOR_STUDENT;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_PUBLICATION_OFFER_SKU_REQUIRED;
@@ -105,6 +114,8 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
     @Resource
     private ProductSpuApi productSpuApi;
     @Resource
+    private EduStudentApi eduStudentApi;
+    @Resource
     private SubscriptionOrderEligibilityApi subscriptionOrderEligibilityApi;
     @Resource
     private TradeOrderProperties tradeOrderProperties;
@@ -115,12 +126,14 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
 
     @Override
     public AppTradeOrderSettlementRespVO settlementOrder(Long userId, AppTradeOrderSettlementReqVO settlementReqVO) {
+        TradeOrderCheckoutContext context = TradeOrderCheckoutContext.member(userId);
         MemberAddressRespDTO address = getAddress(userId, settlementReqVO.getAddressId());
+        context.setExpressAddress(address);
         if (address != null) {
             settlementReqVO.setAddressId(address.getId());
         }
 
-        TradePriceCalculateRespBO calculateRespBO = calculatePrice(userId, settlementReqVO);
+        TradePriceCalculateRespBO calculateRespBO = calculatePrice(context, settlementReqVO);
         TradeOrderDeliveryBuildResult deliveryBuildResult = deliveryGroupSupport.buildDeliveryBuildResult(
                 calculateRespBO, address, false);
         fillPickUpGroupFacts(deliveryBuildResult, settlementReqVO, false);
@@ -137,16 +150,136 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         return addressApi.getDefaultAddress(userId);
     }
 
-    private TradePriceCalculateRespBO calculatePrice(Long userId, AppTradeOrderSettlementReqVO settlementReqVO) {
-        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(userId, settlementReqVO);
+    @Override
+    public List<MemberAddressRespDTO> getAdminOnlineAddressList(Long studentId) {
+        Long parentUserId = getAdminOnlineParentUserId(studentId);
+        return addressApi.getAddressList(parentUserId);
+    }
+
+    @Override
+    public AppTradeOrderSettlementRespVO settlementAdminOnlineOrder(
+            TradeOrderAdminOnlineSettlementReqVO settlementReqVO) {
+        TradeOrderCheckoutContext context = buildAdminOnlineContext(settlementReqVO);
+        AppTradeOrderSettlementReqVO appReqVO = buildAdminOnlineSettlementReq(settlementReqVO);
+        applyAdminOnlineExpressAddress(settlementReqVO, appReqVO, context);
+
+        TradePriceCalculateRespBO calculateRespBO = calculatePrice(context, appReqVO);
+        TradeOrderDeliveryBuildResult deliveryBuildResult = deliveryGroupSupport.buildDeliveryBuildResult(
+                calculateRespBO, context.getExpressAddress(), false);
+        deliveryGroupSupport.applyPreviewDeliveryIdsToOrderItems(calculateRespBO, deliveryBuildResult);
+
+        return TradeOrderConvert.INSTANCE.convert(calculateRespBO, context.getExpressAddress(),
+                deliveryGroupSupport.buildSettlementDeliveries(deliveryBuildResult));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.ADMIN_CREATE)
+    public TradeOrderDO createAdminOnlineOrder(TradeOrderAdminOnlineCreateReqVO createReqVO) {
+        TradeOrderCheckoutContext context = buildAdminOnlineContext(createReqVO);
+        AppTradeOrderCreateReqVO appReqVO = buildAdminOnlineCreateReq(createReqVO);
+        applyAdminOnlineExpressAddress(createReqVO, appReqVO, context);
+        return doCreateOrder(context, appReqVO);
+    }
+
+    private TradeOrderCheckoutContext buildAdminOnlineContext(TradeOrderAdminOnlineSettlementReqVO reqVO) {
+        validateAdminOnlineItems(reqVO.getItems());
+        Long parentUserId = getAdminOnlineParentUserId(reqVO.getStudentId());
+        return TradeOrderCheckoutContext.adminOnline(parentUserId);
+    }
+
+    private void validateAdminOnlineItems(List<TradeOrderAdminOnlineSettlementReqVO.Item> items) {
+        if (CollUtil.isEmpty(items)) {
+            throw exception(ORDER_ADMIN_ONLINE_ITEM_REQUIRED);
+        }
+        for (TradeOrderAdminOnlineSettlementReqVO.Item item : items) {
+            if (item == null || item.getOfferSkuId() == null || item.getSkuId() == null
+                    || item.getCount() == null || item.getCount() < 1) {
+                throw exception(ORDER_ADMIN_ONLINE_ITEM_INVALID);
+            }
+        }
+    }
+
+    private Long getAdminOnlineParentUserId(Long studentId) {
+        Map<Long, EduStudentSubscriptionContextRespDTO> contextMap =
+                eduStudentApi.getAdminSubscriptionStudentContextMap(Collections.singleton(studentId), null, null, null);
+        EduStudentSubscriptionContextRespDTO student = contextMap.get(studentId);
+        if (student == null || student.getParentUserId() == null) {
+            throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
+        }
+        return student.getParentUserId();
+    }
+
+    private AppTradeOrderSettlementReqVO buildAdminOnlineSettlementReq(TradeOrderAdminOnlineSettlementReqVO reqVO) {
+        AppTradeOrderSettlementReqVO appReqVO = new AppTradeOrderSettlementReqVO();
+        appReqVO.setDeliveryType(reqVO.getDeliveryType());
+        appReqVO.setPointStatus(false);
+        appReqVO.setItems(convertList(reqVO.getItems(), item -> new AppTradeOrderSettlementReqVO.Item()
+                .setSkuId(item.getSkuId())
+                .setCount(item.getCount())
+                .setDeliveryType(reqVO.getDeliveryType())
+                .setStudentId(reqVO.getStudentId())
+                .setOfferSkuId(item.getOfferSkuId())));
+        return appReqVO;
+    }
+
+    private AppTradeOrderCreateReqVO buildAdminOnlineCreateReq(TradeOrderAdminOnlineCreateReqVO reqVO) {
+        AppTradeOrderCreateReqVO appReqVO = new AppTradeOrderCreateReqVO();
+        AppTradeOrderSettlementReqVO settlementReqVO = buildAdminOnlineSettlementReq(reqVO);
+        appReqVO.setDeliveryType(settlementReqVO.getDeliveryType());
+        appReqVO.setPointStatus(settlementReqVO.getPointStatus());
+        appReqVO.setItems(settlementReqVO.getItems());
+        appReqVO.setRemark(reqVO.getRemark());
+        return appReqVO;
+    }
+
+    private void applyAdminOnlineExpressAddress(TradeOrderAdminOnlineSettlementReqVO reqVO,
+                                                AppTradeOrderSettlementReqVO appReqVO,
+                                                TradeOrderCheckoutContext context) {
+        if (!Objects.equals(reqVO.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+            return;
+        }
+        MemberAddressRespDTO address;
+        if (reqVO.getAddressId() != null) {
+            address = addressApi.getAddress(reqVO.getAddressId(), context.getUserId());
+        } else {
+            if (StrUtil.isBlank(reqVO.getReceiverName()) || StrUtil.isBlank(reqVO.getReceiverMobile())
+                    || reqVO.getReceiverAreaId() == null || StrUtil.isBlank(reqVO.getReceiverDetailAddress())) {
+                throw exception(ORDER_ADMIN_ONLINE_EXPRESS_ADDRESS_REQUIRED);
+            }
+            address = new MemberAddressRespDTO()
+                    .setName(reqVO.getReceiverName().trim())
+                    .setMobile(reqVO.getReceiverMobile().trim())
+                    .setAreaId(reqVO.getReceiverAreaId())
+                    .setDetailAddress(reqVO.getReceiverDetailAddress().trim())
+                    .setDefaultStatus(false)
+                    .setUserId(context.getUserId());
+        }
+        if (address == null) {
+            throw exception(ORDER_ADMIN_ONLINE_EXPRESS_ADDRESS_REQUIRED);
+        }
+        context.setExpressAddress(address);
+        if (address.getId() != null) {
+            appReqVO.setAddressId(address.getId());
+        }
+    }
+
+    private TradePriceCalculateRespBO calculatePrice(TradeOrderCheckoutContext context,
+                                                     AppTradeOrderSettlementReqVO settlementReqVO) {
+        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(context, settlementReqVO);
         return calculatePrice(prepared, settlementReqVO);
     }
 
-    private TradeOrderPreparedCalculateRequest prepareCalculateRequest(Long userId,
+    private TradeOrderPreparedCalculateRequest prepareCalculateRequest(TradeOrderCheckoutContext context,
                                                                        AppTradeOrderSettlementReqVO settlementReqVO) {
-        List<CartDO> cartList = cartService.getCartList(userId,
+        List<CartDO> cartList = context.isAdminOnline()
+                ? Collections.emptyList()
+                : cartService.getCartList(context.getUserId(),
                 convertSet(settlementReqVO.getItems(), AppTradeOrderSettlementReqVO.Item::getCartId));
-        TradePriceCalculateReqBO baseReqBO = TradeOrderConvert.INSTANCE.convert(userId, settlementReqVO, cartList);
+        TradePriceCalculateReqBO baseReqBO = TradeOrderConvert.INSTANCE.convert(context.getUserId(), settlementReqVO, cartList);
+        if (context.getExpressAddress() != null) {
+            baseReqBO.setReceiverAreaId(context.getExpressAddress().getAreaId());
+        }
         baseReqBO.getItems().forEach(item -> Assert.isTrue(Boolean.TRUE.equals(item.getSelected()),
                 "商品({}) 未设置为选中", item.getSkuId()));
 
@@ -176,6 +309,9 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
             String bizScene = spu.getBizScene();
             item.setDeliveryType(deliveryType);
 
+            if (context.isAdminOnline() && !BizSceneEnum.isPublication(bizScene)) {
+                throw exception(ORDER_ADMIN_ONLINE_ONLY_PUBLICATION);
+            }
             if (BizSceneEnum.isPublication(bizScene)) {
                 publicationPresent = true;
                 Long studentId = item.getSubscriptionStudentId();
@@ -190,11 +326,18 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                         offerSkuId, item.getCount());
                 SubscriptionOrderEligibilityRespDTO eligibility = subscriptionOrderEligibilityApi.validateOrder(
                         new SubscriptionOrderEligibilityReqDTO()
-                                .setUserId(userId)
+                                .setUserId(context.isAdminOnline() ? null : context.getUserId())
+                                .setAdmin(context.isAdminOnline())
                                 .setStudentId(studentId)
                                 .setOfferSkuId(offerSkuId)
                                 .setSkuId(item.getSkuId())
                                 .setCount(accumulatedCount));
+                if (context.isAdminOnline() && eligibility.getParentUserId() == null) {
+                    throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
+                }
+                if (context.isAdminOnline() && !Objects.equals(context.getUserId(), eligibility.getParentUserId())) {
+                    throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
+                }
                 if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())
                         && !Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType())) {
                     throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
@@ -314,6 +457,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                 .setItems(new ArrayList<>(groupDraft.getItemIndexes().size()));
         if (Objects.equals(groupDraft.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
             groupReqBO.setAddressId(settlementReqVO.getAddressId());
+            groupReqBO.setReceiverAreaId(baseReqBO.getReceiverAreaId());
         } else if (Objects.equals(groupDraft.getDeliveryType(), DeliveryTypeEnum.PICK_UP.getType())) {
             groupReqBO.setPickUpStoreId(settlementReqVO.getPickUpStoreId());
         }
@@ -379,13 +523,23 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
     @Transactional(rollbackFor = Exception.class)
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.MEMBER_CREATE)
     public TradeOrderDO createOrder(Long userId, AppTradeOrderCreateReqVO createReqVO) {
-        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(userId, createReqVO);
-        TradePriceCalculateRespBO calculateRespBO = calculatePrice(prepared, createReqVO);
+        TradeOrderCheckoutContext context = TradeOrderCheckoutContext.member(userId);
         MemberAddressRespDTO address = getAddress(userId, createReqVO.getAddressId());
+        context.setExpressAddress(address);
+        if (address != null) {
+            createReqVO.setAddressId(address.getId());
+        }
+        return doCreateOrder(context, createReqVO);
+    }
+
+    private TradeOrderDO doCreateOrder(TradeOrderCheckoutContext context, AppTradeOrderCreateReqVO createReqVO) {
+        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(context, createReqVO);
+        TradePriceCalculateRespBO calculateRespBO = calculatePrice(prepared, createReqVO);
+        MemberAddressRespDTO address = context.getExpressAddress();
         TradeOrderDeliveryBuildResult deliveryBuildResult = deliveryGroupSupport.buildDeliveryBuildResult(
                 calculateRespBO, address, true);
         fillPickUpGroupFacts(deliveryBuildResult, createReqVO, true);
-        TradeOrderDO order = buildTradeOrder(userId, createReqVO, calculateRespBO, deliveryBuildResult);
+        TradeOrderDO order = buildTradeOrder(context, createReqVO, calculateRespBO, deliveryBuildResult);
         List<TradeOrderItemDO> previewOrderItems = buildTradeOrderItems(order, calculateRespBO);
 
         tradeOrderHandlers.forEach(handler -> handler.beforeOrderCreate(order, previewOrderItems));
@@ -403,16 +557,16 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         return order;
     }
 
-    private TradeOrderDO buildTradeOrder(Long userId, AppTradeOrderCreateReqVO createReqVO,
+    private TradeOrderDO buildTradeOrder(TradeOrderCheckoutContext context, AppTradeOrderCreateReqVO createReqVO,
                                          TradePriceCalculateRespBO calculateRespBO,
                                          TradeOrderDeliveryBuildResult deliveryBuildResult) {
-        TradeOrderDO order = TradeOrderConvert.INSTANCE.convert(userId, createReqVO, calculateRespBO);
+        TradeOrderDO order = TradeOrderConvert.INSTANCE.convert(context.getUserId(), createReqVO, calculateRespBO);
         order.setType(calculateRespBO.getType());
         order.setNo(tradeNoRedisDAO.generate(TradeNoRedisDAO.TRADE_ORDER_NO_PREFIX));
         order.setStatus(TradeOrderStatusEnum.UNPAID.getStatus());
         order.setRefundStatus(TradeOrderRefundStatusEnum.NONE.getStatus());
         order.setProductCount(getSumValue(calculateRespBO.getItems(), TradePriceCalculateRespBO.OrderItem::getCount, Integer::sum));
-        order.setUserIp(getClientIP()).setTerminal(getTerminal()).setOrderSource(TradeOrderSourceEnum.APP.getSource());
+        order.setUserIp(getClientIP()).setTerminal(context.getTerminal()).setOrderSource(context.getOrderSource().getSource());
         order.setGiveCouponTemplateCounts(calculateRespBO.getGiveCouponTemplateCounts());
         order.setAdjustPrice(0).setPayStatus(false);
         order.setRefundStatus(TradeOrderRefundStatusEnum.NONE.getStatus()).setRefundPrice(0);
@@ -488,6 +642,58 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
 
         tradeOrderMapper.updateById(new TradeOrderDO().setId(order.getId()).setPayOrderId(payOrderId));
         order.setPayOrderId(payOrderId);
+    }
+
+    private static final class TradeOrderCheckoutContext {
+
+        private final Long userId;
+        private final boolean adminOnline;
+        private final TradeOrderSourceEnum orderSource;
+        private final Integer terminal;
+        private MemberAddressRespDTO expressAddress;
+
+        private TradeOrderCheckoutContext(Long userId, boolean adminOnline,
+                                          TradeOrderSourceEnum orderSource, Integer terminal) {
+            this.userId = userId;
+            this.adminOnline = adminOnline;
+            this.orderSource = orderSource;
+            this.terminal = terminal;
+        }
+
+        static TradeOrderCheckoutContext member(Long userId) {
+            return new TradeOrderCheckoutContext(userId, false, TradeOrderSourceEnum.APP,
+                    cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils.getTerminal());
+        }
+
+        static TradeOrderCheckoutContext adminOnline(Long parentUserId) {
+            return new TradeOrderCheckoutContext(parentUserId, true, TradeOrderSourceEnum.ADMIN_ONLINE,
+                    TerminalEnum.ADMIN.getTerminal());
+        }
+
+        Long getUserId() {
+            return userId;
+        }
+
+        boolean isAdminOnline() {
+            return adminOnline;
+        }
+
+        TradeOrderSourceEnum getOrderSource() {
+            return orderSource;
+        }
+
+        Integer getTerminal() {
+            return terminal;
+        }
+
+        MemberAddressRespDTO getExpressAddress() {
+            return expressAddress;
+        }
+
+        void setExpressAddress(MemberAddressRespDTO expressAddress) {
+            this.expressAddress = expressAddress;
+        }
+
     }
 
 }

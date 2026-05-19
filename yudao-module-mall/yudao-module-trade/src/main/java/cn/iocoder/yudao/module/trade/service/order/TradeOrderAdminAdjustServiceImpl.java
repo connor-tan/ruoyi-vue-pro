@@ -35,6 +35,7 @@ import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDAT
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_ADDRESS_FAIL_STATUS_NOT_DELIVERED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_ALREADY;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_ADMIN_MANUAL;
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_ADMIN_ONLINE;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_PAID;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_UPDATE_PRICE_FAIL_PRICE_ERROR;
 
@@ -72,6 +73,9 @@ public class TradeOrderAdminAdjustServiceImpl implements TradeOrderAdminAdjustSe
         }
         if (TradeOrderSourceEnum.isAdmin(order.getOrderSource())) {
             throw exception(ORDER_UPDATE_PRICE_FAIL_ADMIN_MANUAL);
+        }
+        if (TradeOrderSourceEnum.isAdminOnline(order.getOrderSource())) {
+            throw exception(ORDER_UPDATE_PRICE_FAIL_ADMIN_ONLINE);
         }
         if (order.getAdjustPrice() > 0) {
             throw exception(ORDER_UPDATE_PRICE_FAIL_ALREADY);

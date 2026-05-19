@@ -4,9 +4,12 @@ import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
+import cn.iocoder.yudao.framework.ip.core.utils.AreaUtils;
+import cn.iocoder.yudao.module.member.api.address.dto.MemberAddressRespDTO;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.*;
+import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderSettlementRespVO;
 import cn.iocoder.yudao.module.trade.convert.order.TradeOrderConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDeliveryDO;
@@ -15,6 +18,7 @@ import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderLogDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderAdminAdjustService;
+import cn.iocoder.yudao.module.trade.service.order.TradeOrderCheckoutService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderFulfillmentService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderLogService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderManualService;
@@ -66,6 +70,8 @@ public class TradeOrderController {
     private TradeOrderPublicationIssueService publicationIssueService;
     @Resource
     private TradeOrderManualService tradeOrderManualService;
+    @Resource
+    private TradeOrderCheckoutService tradeOrderCheckoutService;
 
     @Resource
     private MemberUserApi memberUserApi;
@@ -180,6 +186,34 @@ public class TradeOrderController {
                 ExcelUtils.read(file, TradeOrderManualImportExcelVO.class)));
     }
 
+    @GetMapping("/admin-online/address-list")
+    @Operation(summary = "获得后台在线下单学生家长地址列表")
+    @Parameter(name = "studentId", description = "学生编号", required = true)
+    @PreAuthorize("@ss.hasPermission('trade:order:create')")
+    public CommonResult<List<TradeOrderAdminOnlineAddressRespVO>> getAdminOnlineAddressList(
+            @RequestParam("studentId") Long studentId) {
+        return success(convertAdminOnlineAddressList(tradeOrderCheckoutService.getAdminOnlineAddressList(studentId)));
+    }
+
+    @PostMapping("/admin-online/settlement")
+    @Operation(summary = "后台在线订刊下单结算")
+    @PreAuthorize("@ss.hasPermission('trade:order:create')")
+    public CommonResult<AppTradeOrderSettlementRespVO> settlementAdminOnlineOrder(
+            @Valid @RequestBody TradeOrderAdminOnlineSettlementReqVO reqVO) {
+        return success(tradeOrderCheckoutService.settlementAdminOnlineOrder(reqVO));
+    }
+
+    @PostMapping("/admin-online/create")
+    @Operation(summary = "后台在线订刊下单创建订单")
+    @PreAuthorize("@ss.hasPermission('trade:order:create')")
+    public CommonResult<TradeOrderAdminOnlineCreateRespVO> createAdminOnlineOrder(
+            @Valid @RequestBody TradeOrderAdminOnlineCreateReqVO reqVO) {
+        TradeOrderDO order = tradeOrderCheckoutService.createAdminOnlineOrder(reqVO);
+        return success(new TradeOrderAdminOnlineCreateRespVO()
+                .setId(order.getId())
+                .setPayOrderId(order.getPayOrderId()));
+    }
+
     @PutMapping("/{id}/confirm-offline-pay")
     @Operation(summary = "确认后台订单线下收款")
     @Parameter(name = "id", description = "交易订单编号", required = true)
@@ -277,6 +311,17 @@ public class TradeOrderController {
                 TradeOrderPublicationIssueDO::getOrderItemId);
         items.forEach(item -> item.setPublicationIssues(
                 TradeOrderConvert.INSTANCE.convertPublicationIssues(issueMap.get(item.getId()))));
+    }
+
+    private List<TradeOrderAdminOnlineAddressRespVO> convertAdminOnlineAddressList(List<MemberAddressRespDTO> list) {
+        return convertList(list, address -> new TradeOrderAdminOnlineAddressRespVO()
+                .setId(address.getId())
+                .setName(address.getName())
+                .setMobile(address.getMobile())
+                .setAreaId(address.getAreaId())
+                .setAreaName(AreaUtils.format(address.getAreaId()))
+                .setDetailAddress(address.getDetailAddress())
+                .setDefaultStatus(address.getDefaultStatus()));
     }
 
 }

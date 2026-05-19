@@ -5,6 +5,8 @@ import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindReqVO;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentBindRespVO;
 import cn.iocoder.yudao.module.edu.controller.app.student.vo.AppStudentSimpleRespVO;
+import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentClassSaveReqVO;
+import cn.iocoder.yudao.module.edu.controller.admin.student.vo.StudentSaveReqVO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.GradeCatalogDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolClassDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
@@ -86,6 +88,46 @@ class StudentServiceImplTest {
         ReflectionTestUtils.setField(service, "schoolYearMapper", schoolYearMapper);
         ReflectionTestUtils.setField(service, "stationService", stationService);
         ReflectionTestUtils.setField(service, "memberUserApi", memberUserApi);
+    }
+
+    @Test
+    void createStudent_shouldRejectNullStatus() {
+        StudentSaveReqVO reqVO = studentSaveReq();
+        reqVO.setStatus(null);
+
+        assertThrows(ServiceException.class, () -> service.createStudent(reqVO));
+
+        verify(studentMapper, never()).insert(any(StudentDO.class));
+        verify(studentClassMapper, never()).insertBatch(any());
+    }
+
+    @Test
+    void createStudent_shouldBackfillClassStartDateFromSchoolYear() {
+        StudentSaveReqVO reqVO = studentSaveReq();
+        reqVO.setStatus(StudentStatusEnum.WAITING_ENTRY.getStatus());
+        StudentClassSaveReqVO classReqVO = studentClassSaveReq(21L, LocalDate.now().plusDays(1), null);
+        reqVO.setStudentClasses(List.of(classReqVO));
+        LocalDate schoolYearStartDate = LocalDate.now().plusDays(30);
+        mockParent();
+        when(schoolMapper.selectById(11L)).thenReturn(school(11L, "实验小学"));
+        when(schoolClassMapper.selectList(any(SFunction.class), any(Collection.class)))
+                .thenReturn(List.of(schoolClass(21L, 11L, 102L, 31L, 2027, "2027级一年级1班")));
+        when(schoolYearMapper.selectList(any(SFunction.class), any(Collection.class)))
+                .thenReturn(List.of(schoolYear(102L, 11L, 101L, 2027, 2028, schoolYearStartDate)));
+        doAnswer(invocation -> {
+            StudentDO student = invocation.getArgument(0);
+            student.setId(100L);
+            return 1;
+        }).when(studentMapper).insert(any(StudentDO.class));
+
+        service.createStudent(reqVO);
+
+        ArgumentCaptor<List<StudentClassDO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(studentClassMapper).insertBatch(captor.capture());
+        assertEquals(1, captor.getValue().size());
+        assertEquals(100L, captor.getValue().get(0).getStudentId());
+        assertEquals(21L, captor.getValue().get(0).getClassId());
+        assertEquals(schoolYearStartDate, captor.getValue().get(0).getStartDate());
     }
 
     @Test
@@ -490,6 +532,24 @@ class StudentServiceImplTest {
         AppStudentBindReqVO reqVO = bindReq(forceUpdate);
         reqVO.setBindMode("FUTURE_ENTRY");
         reqVO.setSchoolYearId(102L);
+        return reqVO;
+    }
+
+    private StudentSaveReqVO studentSaveReq() {
+        StudentSaveReqVO reqVO = new StudentSaveReqVO();
+        reqVO.setStudentName("小明");
+        reqVO.setBelongTo(9L);
+        reqVO.setCurrentSchoolId(11L);
+        reqVO.setEntryYear(2027);
+        reqVO.setStatus(StudentStatusEnum.READING.getStatus());
+        return reqVO;
+    }
+
+    private StudentClassSaveReqVO studentClassSaveReq(Long classId, LocalDate startDate, LocalDate endDate) {
+        StudentClassSaveReqVO reqVO = new StudentClassSaveReqVO();
+        reqVO.setClassId(classId);
+        reqVO.setStartDate(startDate);
+        reqVO.setEndDate(endDate);
         return reqVO;
     }
 

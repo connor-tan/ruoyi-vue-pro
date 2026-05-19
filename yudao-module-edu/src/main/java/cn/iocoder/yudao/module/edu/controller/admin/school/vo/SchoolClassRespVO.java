@@ -1,10 +1,13 @@
 package cn.iocoder.yudao.module.edu.controller.admin.school.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.fasterxml.jackson.annotation.JsonFormat;
+
+import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
@@ -29,6 +32,10 @@ public class SchoolClassRespVO {
 
     @Schema(description = "学年名称", example = "2023-2024学年")
     private String schoolYearName;
+
+    @Schema(description = "学年开学日期", example = "2023-09-01")
+    @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY)
+    private LocalDate schoolYearStartDate;
 
     @Schema(description = "阶段", requiredMode = Schema.RequiredMode.REQUIRED, example = "primary")
     private String stage;

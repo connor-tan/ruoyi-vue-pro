@@ -62,7 +62,7 @@ public class PayOrderController {
             @Parameter(name = "id", description = "编号", required = true, example = "1024"),
             @Parameter(name = "sync", description = "是否同步", example = "true")
     })
-    @PreAuthorize("@ss.hasPermission('pay:order:query')")
+    @PreAuthorize("@ss.hasAnyPermissions('pay:order:query', 'trade:order:create')")
     public CommonResult<PayOrderRespVO> getOrder(@RequestParam("id") Long id,
                                                  @RequestParam(value = "sync", required = false) Boolean sync) {
         PayOrderDO order = orderService.getOrder(id);

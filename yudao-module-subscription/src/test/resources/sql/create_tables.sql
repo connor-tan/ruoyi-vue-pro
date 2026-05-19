@@ -122,9 +122,10 @@ CREATE TABLE IF NOT EXISTS `product_publication_sku_issue_template` (
     `updater` varchar(64) DEFAULT '',
     `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `deleted` bit NOT NULL DEFAULT FALSE,
+    `active_issue_no` int GENERATED ALWAYS AS (CASE WHEN `deleted` = FALSE THEN `issue_no` ELSE NULL END),
     `tenant_id` bigint NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_product_publication_sku_issue_template_no` (`sku_id`, `issue_no`)
+    UNIQUE KEY `uk_product_publication_sku_issue_template_no` (`sku_id`, `active_issue_no`)
 );
 
 CREATE TABLE IF NOT EXISTS `subscription_window_offer` (
@@ -199,7 +200,8 @@ CREATE TABLE IF NOT EXISTS `subscription_offer_sku_issue` (
     `updater` varchar(64) DEFAULT '',
     `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `deleted` bit NOT NULL DEFAULT FALSE,
+    `active_issue_no` int GENERATED ALWAYS AS (CASE WHEN `deleted` = FALSE THEN `issue_no` ELSE NULL END),
     `tenant_id` bigint NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_subscription_offer_sku_issue_no` (`offer_sku_id`, `issue_no`)
+    UNIQUE KEY `uk_subscription_offer_sku_issue_no` (`offer_sku_id`, `active_issue_no`)
 );

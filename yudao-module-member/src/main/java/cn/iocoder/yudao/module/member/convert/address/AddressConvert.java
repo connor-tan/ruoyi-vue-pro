@@ -35,6 +35,8 @@ public interface AddressConvert {
 
     MemberAddressRespDTO convert02(MemberAddressDO bean);
 
+    List<MemberAddressRespDTO> convertList02(List<MemberAddressDO> list);
+
     @Named("convertAreaIdToAreaName")
     default String convertAreaIdToAreaName(Integer areaId) {
         return AreaUtils.format(areaId);

@@ -100,6 +100,7 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
         EduStudentSubscriptionContextRespDTO student = visibility.getStudent();
         if (student != null) {
             respDTO.setStudentId(student.getStudentId());
+            respDTO.setParentUserId(student.getParentUserId());
             respDTO.setStudentNameSnapshot(student.getStudentName());
             respDTO.setSchoolId(student.getSchoolId());
             respDTO.setSchoolNameSnapshot(student.getSchoolName());
@@ -112,6 +113,8 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
             respDTO.setWarehouseNameSnapshot(student.getWarehouseName());
             respDTO.setWarehouseAddressSnapshot(student.getWarehouseAddress());
             respDTO.setWarehousePrincipalSnapshot(student.getWarehousePrincipal());
+            respDTO.setContactName(student.getContactName());
+            respDTO.setContactMobile(student.getContactMobile());
         }
         SubscriptionWindowDO window = visibility.getWindow();
         if (window != null) {

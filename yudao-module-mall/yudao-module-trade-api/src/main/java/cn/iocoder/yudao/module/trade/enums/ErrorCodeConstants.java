@@ -83,6 +83,15 @@ public interface ErrorCodeConstants {
             "后台手工订单金额请在创建或导入时确定，不能通过订单调价修改");
     ErrorCode ORDER_MANUAL_IMPORT_GROUP_FIELD_CONFLICT = new ErrorCode(1_011_000_077,
             "同一导入订单号的{}不一致，请统一填写");
+    ErrorCode PUBLICATION_GROUP_DELIVERY_EXPRESS_NOT_SUPPORTED = new ErrorCode(1_011_000_078,
+            "快递刊物请展开刊物期次后逐单录入物流发货");
+    ErrorCode ORDER_ADMIN_ONLINE_PARENT_REQUIRED = new ErrorCode(1_011_000_079, "学生未绑定家长，不能后台在线下单");
+    ErrorCode ORDER_ADMIN_ONLINE_ITEM_REQUIRED = new ErrorCode(1_011_000_080, "后台在线下单至少需要选择一个刊物");
+    ErrorCode ORDER_ADMIN_ONLINE_EXPRESS_ADDRESS_REQUIRED = new ErrorCode(1_011_000_081, "快递配送必须选择家长地址或填写完整收件信息");
+    ErrorCode ORDER_ADMIN_ONLINE_ONLY_PUBLICATION = new ErrorCode(1_011_000_082, "后台在线下单仅支持刊物商品");
+    ErrorCode ORDER_UPDATE_PRICE_FAIL_ADMIN_ONLINE = new ErrorCode(1_011_000_083,
+            "后台在线下单金额由在线结算确定，不能通过订单调价修改");
+    ErrorCode ORDER_ADMIN_ONLINE_ITEM_INVALID = new ErrorCode(1_011_000_084, "后台在线下单刊物明细不完整");
 
     // ========== After Sale 模块 1-011-000-100 ==========
     ErrorCode AFTER_SALE_NOT_FOUND = new ErrorCode(1_011_000_100, "售后单不存在");

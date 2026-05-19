@@ -82,8 +82,10 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_IN_USE_BY_FLOW;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_NOT_EXISTS;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PARENT_NOT_EXISTS;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_CLASS_SCHOOL_YEAR_START_DATE_REQUIRED;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATUS_CURRENT_CLASS_FORBIDDEN;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATUS_READING_CURRENT_CLASS_REQUIRED;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATUS_REQUIRED;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATUS_WAITING_ENTRY_FUTURE_CLASS_MULTI;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_STATUS_WAITING_ENTRY_FUTURE_CLASS_REQUIRED;
 
@@ -491,6 +493,7 @@ public class StudentServiceImpl implements StudentService {
         EduStudentSubscriptionContextRespDTO respDTO = new EduStudentSubscriptionContextRespDTO();
         respDTO.setStudentId(student.getId());
         respDTO.setStudentName(student.getStudentName());
+        respDTO.setParentUserId(student.getBelongTo());
         respDTO.setStatus(student.getStatus());
         fillSubscriptionSchool(respDTO, schoolId);
         return respDTO;
@@ -602,6 +605,9 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private void validateStudentSaveReqVO(StudentSaveReqVO reqVO) {
+        if (reqVO.getStatus() == null) {
+            throw exception(STUDENT_STATUS_REQUIRED);
+        }
         validateParentExists(reqVO.getBelongTo());
         validateSchoolExists(reqVO.getCurrentSchoolId());
         validateStudentClassList(reqVO.getCurrentSchoolId(), reqVO.getEntryYear(), reqVO.getStudentClasses());
@@ -911,7 +917,29 @@ public class StudentServiceImpl implements StudentService {
         if (schoolClassMap.size() != classIds.size()) {
             throw exception(SCHOOL_CLASS_NOT_EXISTS);
         }
+        Map<Long, SchoolYearDO> schoolYearMap = getSchoolYearMap(convertSet(schoolClassMap.values(),
+                SchoolClassDO::getSchoolYearId));
         for (StudentClassSaveReqVO studentClass : studentClasses) {
+            SchoolClassDO schoolClass = schoolClassMap.get(studentClass.getClassId());
+            if (!Objects.equals(schoolClass.getSchoolId(), schoolId)) {
+                throw exception(STUDENT_CLASS_NOT_BELONG_TO_SCHOOL);
+            }
+            if (!Objects.equals(schoolClass.getEntryYear(), entryYear)) {
+                throw exception(STUDENT_CLASS_ENTRY_YEAR_NOT_MATCH);
+            }
+
+            SchoolYearDO schoolYear = schoolYearMap.get(schoolClass.getSchoolYearId());
+            if (schoolYear == null) {
+                throw exception(SCHOOL_YEAR_NOT_EXISTS);
+            }
+            if (!Objects.equals(schoolYear.getSchoolId(), schoolId)) {
+                throw exception(SCHOOL_YEAR_NOT_BELONG_TO_SCHOOL);
+            }
+            if (schoolYear.getStartDate() == null) {
+                throw exception(STUDENT_CLASS_SCHOOL_YEAR_START_DATE_REQUIRED);
+            }
+            studentClass.setStartDate(schoolYear.getStartDate());
+
             if (!startDates.add(studentClass.getStartDate())) {
                 throw exception(STUDENT_CLASS_DUPLICATE_START_DATE);
             }
@@ -920,14 +948,6 @@ public class StudentServiceImpl implements StudentService {
             } else if (studentClass.getEndDate() != null
                     && studentClass.getEndDate().isBefore(studentClass.getStartDate())) {
                 throw exception(STUDENT_CLASS_END_DATE_INVALID);
-            }
-
-            SchoolClassDO schoolClass = schoolClassMap.get(studentClass.getClassId());
-            if (!Objects.equals(schoolClass.getSchoolId(), schoolId)) {
-                throw exception(STUDENT_CLASS_NOT_BELONG_TO_SCHOOL);
-            }
-            if (!Objects.equals(schoolClass.getEntryYear(), entryYear)) {
-                throw exception(STUDENT_CLASS_ENTRY_YEAR_NOT_MATCH);
             }
         }
         if (currentClassCount > 1) {
@@ -991,6 +1011,15 @@ public class StudentServiceImpl implements StudentService {
         }
         return schoolClassMapper.selectList(SchoolClassDO::getId, classIds).stream()
                 .collect(Collectors.toMap(SchoolClassDO::getId,
+                        Function.identity(), (item1, item2) -> item1));
+    }
+
+    private Map<Long, SchoolYearDO> getSchoolYearMap(Set<Long> schoolYearIds) {
+        if (CollUtil.isEmpty(schoolYearIds)) {
+            return Collections.emptyMap();
+        }
+        return schoolYearMapper.selectList(SchoolYearDO::getId, schoolYearIds).stream()
+                .collect(Collectors.toMap(SchoolYearDO::getId,
                         Function.identity(), (item1, item2) -> item1));
     }
 

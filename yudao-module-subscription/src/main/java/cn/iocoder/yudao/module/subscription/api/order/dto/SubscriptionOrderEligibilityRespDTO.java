@@ -9,6 +9,7 @@ import java.util.List;
 public class SubscriptionOrderEligibilityRespDTO {
 
     private Long studentId;
+    private Long parentUserId;
     private String studentNameSnapshot;
     private Long schoolId;
     private String schoolNameSnapshot;

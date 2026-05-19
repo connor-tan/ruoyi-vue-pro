@@ -9,6 +9,8 @@ public class EduStudentSubscriptionContextRespDTO {
 
     private String studentName;
 
+    private Long parentUserId;
+
     private Integer status;
 
     private Long schoolId;

@@ -12,7 +12,8 @@ public enum TradeOrderSourceEnum implements ArrayValuable<String> {
 
     APP("APP", "APP 下单"),
     ADMIN_MANUAL("ADMIN_MANUAL", "后台手动新建"),
-    ADMIN_IMPORT("ADMIN_IMPORT", "后台批量导入");
+    ADMIN_IMPORT("ADMIN_IMPORT", "后台批量导入"),
+    ADMIN_ONLINE("ADMIN_ONLINE", "后台在线下单");
 
     public static final String[] ARRAYS = Arrays.stream(values())
             .map(TradeOrderSourceEnum::getSource).toArray(String[]::new);
@@ -28,6 +29,10 @@ public enum TradeOrderSourceEnum implements ArrayValuable<String> {
 
     public static boolean isAdmin(String source) {
         return ADMIN_MANUAL.getSource().equals(source) || ADMIN_IMPORT.getSource().equals(source);
+    }
+
+    public static boolean isAdminOnline(String source) {
+        return ADMIN_ONLINE.getSource().equals(source);
     }
 
 }

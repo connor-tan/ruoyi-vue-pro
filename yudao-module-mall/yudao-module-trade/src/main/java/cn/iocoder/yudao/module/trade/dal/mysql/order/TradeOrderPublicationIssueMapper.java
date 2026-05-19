@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.trade.dal.mysql.order;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidatePageReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
@@ -54,6 +55,23 @@ public interface TradeOrderPublicationIssueMapper extends BaseMapperX<TradeOrder
     }
 
     IPage<TradePublicationDeliveryCandidateRespVO> selectPublicationDeliveryCandidatePage(
+            IPage<?> page,
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+            @Param("orderStatus") Integer orderStatus,
+            @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus);
+
+    IPage<TradePublicationDeliveryCandidateGroupRespVO> selectPublicationDeliveryCandidateGroupPage(
+            IPage<?> page,
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+            @Param("orderStatus") Integer orderStatus,
+            @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus);
+
+    List<TradePublicationDeliveryCandidateRespVO> selectPublicationDeliveryCandidateChildList(
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+            @Param("orderStatus") Integer orderStatus,
+            @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus);
+
+    IPage<TradePublicationDeliveryCandidateRespVO> selectPublicationDeliveryCandidateChildPage(
             IPage<?> page,
             @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
             @Param("orderStatus") Integer orderStatus,

@@ -50,6 +50,12 @@ public class TradePriceCalculateReqBO {
      */
     private Long addressId;
     /**
+     * 手填收件地区编号。
+     *
+     * 后台在线下单可不写入会员地址簿，但仍需要按收件地区计算快递运费。
+     */
+    private Integer receiverAreaId;
+    /**
      * 自提门店编号
      *
      * 对应 PickUpStoreDO 的 id 编号
