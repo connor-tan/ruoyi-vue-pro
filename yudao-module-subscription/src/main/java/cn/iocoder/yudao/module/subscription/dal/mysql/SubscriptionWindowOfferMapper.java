@@ -45,12 +45,28 @@ public interface SubscriptionWindowOfferMapper extends BaseMapperX<SubscriptionW
                 .last("LIMIT 1"));
     }
 
+    default SubscriptionWindowOfferDO selectByIdForUpdate(Long id) {
+        return selectOne(new LambdaQueryWrapperX<SubscriptionWindowOfferDO>()
+                .eq(SubscriptionWindowOfferDO::getId, id)
+                .last("FOR UPDATE"));
+    }
+
     default List<SubscriptionWindowOfferDO> selectListByIds(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyList();
         }
         return selectList(new LambdaQueryWrapperX<SubscriptionWindowOfferDO>()
                 .in(SubscriptionWindowOfferDO::getId, ids));
+    }
+
+    default List<SubscriptionWindowOfferDO> selectListByIdsForUpdate(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return selectList(new LambdaQueryWrapperX<SubscriptionWindowOfferDO>()
+                .in(SubscriptionWindowOfferDO::getId, ids)
+                .orderByAsc(SubscriptionWindowOfferDO::getId)
+                .last("FOR UPDATE"));
     }
 
     default int deleteByWindowId(Long windowId) {

@@ -47,6 +47,15 @@ public interface NotifySendService {
     Long sendSingleNotify( Long userId, Integer userType,
                            String templateCode, Map<String, Object> templateParams);
 
+    /**
+     * 发送站内信给模板配置的管理后台默认接收人
+     *
+     * @param templateCode 站内信模板编号
+     * @param templateParams 站内信模板参数
+     * @return 发送日志编号集合
+     */
+    List<Long> sendNotifyToAdminTemplateReceivers(String templateCode, Map<String, Object> templateParams);
+
     default void sendBatchNotify(List<String> mobiles, List<Long> userIds, Integer userType,
                                  String templateCode, Map<String, Object> templateParams) {
         throw new UnsupportedOperationException("暂时不支持该操作，感兴趣可以实现该功能哟！");

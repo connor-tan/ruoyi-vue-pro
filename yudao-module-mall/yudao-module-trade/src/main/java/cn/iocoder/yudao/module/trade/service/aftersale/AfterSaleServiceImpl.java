@@ -38,6 +38,7 @@ import cn.iocoder.yudao.module.trade.framework.aftersale.core.annotations.AfterS
 import cn.iocoder.yudao.module.trade.framework.aftersale.core.utils.AfterSaleLogUtils;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
 import cn.iocoder.yudao.module.trade.service.delivery.DeliveryExpressService;
+import cn.iocoder.yudao.module.trade.service.message.TradeMessageService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderAfterSaleSyncService;
 import cn.iocoder.yudao.module.trade.service.order.TradeOrderQueryService;
 import jakarta.annotation.Resource;
@@ -83,6 +84,8 @@ public class AfterSaleServiceImpl implements AfterSaleService {
 
     @Resource
     private TradeOrderProperties tradeOrderProperties;
+    @Resource
+    private TradeMessageService tradeMessageService;
 
     @Override
     public PageResult<AfterSaleDO> getAfterSalePage(AfterSalePageReqVO pageReqVO) {
@@ -366,6 +369,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
             // 特殊：退款为 0 的订单，直接标记为完成（积分商城）。关联案例：https://t.zsxq.com/AQEvL
             updateAfterSaleStatus(afterSale.getId(), AfterSaleStatusEnum.WAIT_REFUND.getStatus(), new AfterSaleDO()
                     .setStatus(AfterSaleStatusEnum.COMPLETE.getStatus()).setRefundTime(LocalDateTime.now()));
+            tradeMessageService.sendMessageWhenAfterSaleRefunded(afterSale);
             newStatus = AfterSaleStatusEnum.COMPLETE.getStatus();
         } else {
             // 发起退款单。注意，需要在事务提交后，再进行发起，避免重复发起
@@ -415,6 +419,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
 
             // 更新交易订单项的售后状态为【已完成】
             tradeOrderAfterSaleSyncService.updateOrderItemWhenAfterSaleSuccess(afterSale.getOrderItemId(), afterSale.getRefundPrice());
+            tradeMessageService.sendMessageWhenAfterSaleRefunded(afterSale);
             // 【情况二：退款失败】
         } else if (PayRefundStatusEnum.isFailure(payRefund.getStatus())) {
             // 记录售后日志

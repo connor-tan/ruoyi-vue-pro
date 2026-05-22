@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.system.controller.admin.notify.vo.template.Notify
 import cn.iocoder.yudao.module.system.dal.dataobject.notify.NotifyTemplateDO;
 import cn.iocoder.yudao.module.system.dal.mysql.notify.NotifyTemplateMapper;
 import cn.iocoder.yudao.module.system.dal.redis.RedisKeyConstants;
+import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import com.google.common.annotations.VisibleForTesting;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +18,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -42,15 +45,19 @@ public class NotifyTemplateServiceImpl implements NotifyTemplateService {
 
     @Resource
     private NotifyTemplateMapper notifyTemplateMapper;
+    @Resource
+    private AdminUserService adminUserService;
 
     @Override
     public Long createNotifyTemplate(NotifyTemplateSaveReqVO createReqVO) {
         // 校验站内信编码是否重复
         validateNotifyTemplateCodeDuplicate(null, createReqVO.getCode());
+        List<Long> receiverUserIds = validateAndNormalizeReceiverUserIds(createReqVO.getReceiverUserIds());
 
         // 插入
         NotifyTemplateDO notifyTemplate = BeanUtils.toBean(createReqVO, NotifyTemplateDO.class);
         notifyTemplate.setParams(parseTemplateContentParams(notifyTemplate.getContent()));
+        notifyTemplate.setReceiverUserIds(receiverUserIds);
         notifyTemplateMapper.insert(notifyTemplate);
         return notifyTemplate.getId();
     }
@@ -63,16 +70,27 @@ public class NotifyTemplateServiceImpl implements NotifyTemplateService {
         validateNotifyTemplateExists(updateReqVO.getId());
         // 校验站内信编码是否重复
         validateNotifyTemplateCodeDuplicate(updateReqVO.getId(), updateReqVO.getCode());
+        List<Long> receiverUserIds = validateAndNormalizeReceiverUserIds(updateReqVO.getReceiverUserIds());
 
         // 更新
         NotifyTemplateDO updateObj = BeanUtils.toBean(updateReqVO, NotifyTemplateDO.class);
         updateObj.setParams(parseTemplateContentParams(updateObj.getContent()));
+        updateObj.setReceiverUserIds(receiverUserIds);
         notifyTemplateMapper.updateById(updateObj);
     }
 
     @VisibleForTesting
     public List<String> parseTemplateContentParams(String content) {
         return ReUtil.findAllGroup1(PATTERN_PARAMS, content);
+    }
+
+    private List<Long> validateAndNormalizeReceiverUserIds(List<Long> receiverUserIds) {
+        if (receiverUserIds == null) {
+            return Collections.emptyList();
+        }
+        List<Long> result = receiverUserIds.stream().filter(Objects::nonNull).distinct().toList();
+        adminUserService.validateUserList(result);
+        return result;
     }
 
     @Override

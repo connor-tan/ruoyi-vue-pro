@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.subscription.service.order;
 
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
@@ -17,6 +18,7 @@ import cn.iocoder.yudao.module.subscription.service.visibility.SubscriptionVisib
 import cn.iocoder.yudao.module.trade.api.order.TradeSubscriptionOrderApi;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,8 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.ORDER_MAX_QUANTITY_EXCEEDED;
+import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.ORDER_OFFER_SKU_NOT_AVAILABLE;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionOrderEligibilityServiceImplTest {
@@ -90,6 +93,44 @@ class SubscriptionOrderEligibilityServiceImplTest {
         assertEquals(ORDER_MAX_QUANTITY_EXCEEDED.getCode(), ex.getCode());
     }
 
+    @Test
+    void validateOrder_shouldLockAnchorWhenRequested() {
+        SubscriptionWindowOfferSkuDO offerSku = offerSku();
+        SubscriptionWindowOfferDO offer = offer();
+        SubscriptionVisibilityResultBO visibility = visibility();
+        SubscriptionOrderEligibilityReqDTO reqDTO = req();
+        reqDTO.setLockAnchor(true);
+        when(offerSkuService.validateOfferSkuExists(OFFER_SKU_ID)).thenReturn(offerSku);
+        when(offerService.validateOfferExistsForUpdate(OFFER_ID)).thenReturn(offer);
+        when(offerSkuService.validateOfferSkuExistsForUpdate(OFFER_SKU_ID)).thenReturn(offerSku);
+        when(visibilityService.calculate(eq(USER_ID), eq(STUDENT_ID), eq(WINDOW_ID))).thenReturn(visibility);
+        when(tradeSubscriptionOrderApi.getEffectiveSubscriptionOrderItemQuantity(STUDENT_ID, OFFER_SKU_ID))
+                .thenReturn(0);
+
+        SubscriptionOrderEligibilityRespDTO result = eligibilityService.validateOrder(reqDTO);
+
+        assertEquals(OFFER_SKU_ID, result.getOfferSkuId());
+        InOrder inOrder = inOrder(offerSkuService, offerService);
+        inOrder.verify(offerSkuService).validateOfferSkuExists(OFFER_SKU_ID);
+        inOrder.verify(offerService).validateOfferExistsForUpdate(OFFER_ID);
+        inOrder.verify(offerSkuService).validateOfferSkuExistsForUpdate(OFFER_SKU_ID);
+        verify(offerService, never()).validateOfferExists(OFFER_ID);
+    }
+
+    @Test
+    void validateOrder_shouldRejectWhenOfferSkuDisabled() {
+        SubscriptionWindowOfferSkuDO offerSku = offerSku();
+        offerSku.setStatus(CommonStatusEnum.DISABLE.getStatus());
+        when(offerSkuService.validateOfferSkuExists(OFFER_SKU_ID)).thenReturn(offerSku);
+        when(offerService.validateOfferExists(OFFER_ID)).thenReturn(offer());
+
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> eligibilityService.validateOrder(req()));
+
+        assertEquals(ORDER_OFFER_SKU_NOT_AVAILABLE.getCode(), ex.getCode());
+        verify(visibilityService, never()).calculate(any(), any(), any());
+    }
+
     private SubscriptionOrderEligibilityReqDTO req() {
         SubscriptionOrderEligibilityReqDTO reqDTO = new SubscriptionOrderEligibilityReqDTO();
         reqDTO.setUserId(USER_ID);
@@ -105,6 +146,7 @@ class SubscriptionOrderEligibilityServiceImplTest {
                 .id(OFFER_SKU_ID)
                 .offerId(OFFER_ID)
                 .productSkuId(SKU_ID)
+                .status(CommonStatusEnum.ENABLE.getStatus())
                 .maxQuantityPerStudent(1)
                 .build();
     }
@@ -113,6 +155,7 @@ class SubscriptionOrderEligibilityServiceImplTest {
         return SubscriptionWindowOfferDO.builder()
                 .id(OFFER_ID)
                 .windowId(WINDOW_ID)
+                .status(CommonStatusEnum.ENABLE.getStatus())
                 .build();
     }
 

@@ -7,11 +7,14 @@ import cn.iocoder.yudao.module.system.controller.admin.notify.vo.template.Notify
 import cn.iocoder.yudao.module.system.controller.admin.notify.vo.template.NotifyTemplateSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.notify.NotifyTemplateDO;
 import cn.iocoder.yudao.module.system.dal.mysql.notify.NotifyTemplateMapper;
+import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import jakarta.annotation.Resource;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
@@ -22,6 +25,7 @@ import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServic
 import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.*;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.NOTIFY_TEMPLATE_NOT_EXISTS;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verify;
 
 /**
  * {@link NotifyTemplateServiceImpl} 的单元测试类
@@ -37,11 +41,14 @@ public class NotifyTemplateServiceImplTest extends BaseDbUnitTest {
     @Resource
     private NotifyTemplateMapper notifyTemplateMapper;
 
+    @MockitoBean
+    private AdminUserService adminUserService;
+
     @Test
     public void testCreateNotifyTemplate_success() {
         // 准备参数
         NotifyTemplateSaveReqVO reqVO = randomPojo(NotifyTemplateSaveReqVO.class,
-                o -> o.setStatus(randomCommonStatus()))
+                o -> o.setStatus(randomCommonStatus()).setReceiverUserIds(List.of(1L, 2L)))
                 .setId(null); // 防止 id 被赋值
 
         // 调用
@@ -51,6 +58,7 @@ public class NotifyTemplateServiceImplTest extends BaseDbUnitTest {
         // 校验记录的属性是否正确
         NotifyTemplateDO notifyTemplate = notifyTemplateMapper.selectById(notifyTemplateId);
         assertPojoEquals(reqVO, notifyTemplate, "id");
+        verify(adminUserService).validateUserList(reqVO.getReceiverUserIds());
     }
 
     @Test
@@ -62,6 +70,7 @@ public class NotifyTemplateServiceImplTest extends BaseDbUnitTest {
         NotifyTemplateSaveReqVO reqVO = randomPojo(NotifyTemplateSaveReqVO.class, o -> {
             o.setId(dbNotifyTemplate.getId()); // 设置更新的 ID
             o.setStatus(randomCommonStatus());
+            o.setReceiverUserIds(List.of(1L, 2L));
         });
 
         // 调用
@@ -69,6 +78,22 @@ public class NotifyTemplateServiceImplTest extends BaseDbUnitTest {
         // 校验是否更新正确
         NotifyTemplateDO notifyTemplate = notifyTemplateMapper.selectById(reqVO.getId()); // 获取最新的
         assertPojoEquals(reqVO, notifyTemplate);
+        verify(adminUserService).validateUserList(reqVO.getReceiverUserIds());
+    }
+
+    @Test
+    public void testCreateNotifyTemplate_successWithNullReceiverUserIds() {
+        // 准备参数
+        NotifyTemplateSaveReqVO reqVO = randomPojo(NotifyTemplateSaveReqVO.class,
+                o -> o.setStatus(randomCommonStatus()).setReceiverUserIds(null))
+                .setId(null);
+
+        // 调用
+        Long notifyTemplateId = notifyTemplateService.createNotifyTemplate(reqVO);
+
+        // 断言
+        NotifyTemplateDO notifyTemplate = notifyTemplateMapper.selectById(notifyTemplateId);
+        assertEquals(List.of(), notifyTemplate.getReceiverUserIds());
     }
 
     @Test

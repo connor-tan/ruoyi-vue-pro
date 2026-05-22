@@ -598,6 +598,7 @@ CREATE TABLE IF NOT EXISTS "system_notify_template" (
     "content" varchar NOT NULL,
     "type" varchar NOT NULL,
     "params" varchar,
+    "receiver_user_ids" varchar,
     "status" varchar NOT NULL,
     "remark" varchar,
     "creator" varchar DEFAULT '',

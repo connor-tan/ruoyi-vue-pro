@@ -34,6 +34,9 @@ public class NotifyTemplateRespVO {
     @Schema(description = "参数数组", example = "name,code")
     private List<String> params;
 
+    @Schema(description = "默认接收人用户编号数组", example = "1,2")
+    private List<Long> receiverUserIds;
+
     @Schema(description = "状态，参见 CommonStatusEnum 枚举", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer status;
 

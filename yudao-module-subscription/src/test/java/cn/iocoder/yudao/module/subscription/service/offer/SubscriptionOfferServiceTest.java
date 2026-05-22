@@ -163,9 +163,10 @@ class SubscriptionOfferServiceTest {
     @Test
     void deleteOffer_shouldKeepSingleDeleteCleanupSemantics() {
         when(offerMapper.selectById(OFFER_ID)).thenReturn(offer());
+        when(offerMapper.selectListByIdsForUpdate(List.of(OFFER_ID))).thenReturn(List.of(offer()));
         SubscriptionRuleDO rule = SubscriptionRuleDO.builder().id(100L).offerId(OFFER_ID).build();
         when(ruleMapper.selectListByOfferIds(List.of(OFFER_ID))).thenReturn(List.of(rule));
-        when(offerSkuMapper.selectListByOfferIds(List.of(OFFER_ID))).thenReturn(List.of(offerSku(OFFER_SKU_ID)));
+        when(offerSkuMapper.selectListByOfferIdsForUpdate(List.of(OFFER_ID))).thenReturn(List.of(offerSku(OFFER_SKU_ID)));
 
         offerService.deleteOffer(OFFER_ID);
 
@@ -181,11 +182,12 @@ class SubscriptionOfferServiceTest {
     void deleteOfferList_shouldDeleteOffersAndRelations() {
         List<Long> offerIds = List.of(OFFER_ID, OFFER_ID + 1);
         when(offerMapper.selectListByIds(offerIds)).thenReturn(List.of(offer(OFFER_ID), offer(OFFER_ID + 1)));
+        when(offerMapper.selectListByIdsForUpdate(offerIds)).thenReturn(List.of(offer(OFFER_ID), offer(OFFER_ID + 1)));
         List<SubscriptionRuleDO> rules = List.of(
                 SubscriptionRuleDO.builder().id(100L).offerId(OFFER_ID).build(),
                 SubscriptionRuleDO.builder().id(101L).offerId(OFFER_ID + 1).build());
         when(ruleMapper.selectListByOfferIds(offerIds)).thenReturn(rules);
-        when(offerSkuMapper.selectListByOfferIds(offerIds)).thenReturn(List.of(
+        when(offerSkuMapper.selectListByOfferIdsForUpdate(offerIds)).thenReturn(List.of(
                 offerSku(OFFER_SKU_ID), offerSku(OFFER_SKU_ID + 1)));
 
         offerService.deleteOfferList(offerIds);

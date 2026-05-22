@@ -190,6 +190,8 @@ class SubscriptionOfferSkuServiceTest {
     @Test
     void deleteOfferSku_shouldDeleteIssuesBeforeOfferSku() {
         when(offerSkuMapper.selectById(OFFER_SKU_ID)).thenReturn(offerSku(OFFER_ID));
+        when(offerService.validateOfferExistsForUpdate(OFFER_ID)).thenReturn(offer(OFFER_ID));
+        when(offerSkuMapper.selectByIdForUpdate(OFFER_SKU_ID)).thenReturn(offerSku(OFFER_ID));
 
         offerSkuService.deleteOfferSku(OFFER_SKU_ID);
 

@@ -61,6 +61,11 @@ public class NotifyTemplateDO extends BaseDO {
     @TableField(typeHandler = JacksonTypeHandler.class)
     private List<String> params;
     /**
+     * 默认接收人用户编号数组
+     */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<Long> receiverUserIds;
+    /**
      * 状态
      *
      * 枚举 {@link CommonStatusEnum}

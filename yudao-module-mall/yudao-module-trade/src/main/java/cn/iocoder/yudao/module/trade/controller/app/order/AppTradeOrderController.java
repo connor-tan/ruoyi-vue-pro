@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.trade.controller.app.order;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.idempotent.core.annotation.Idempotent;
 import cn.iocoder.yudao.module.pay.api.notify.dto.PayOrderNotifyReqDTO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.*;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.item.AppTradeOrderItemCommentCreateReqVO;
@@ -265,6 +266,7 @@ public class AppTradeOrderController {
     }
 
     @PostMapping("/item/create-comment")
+    @Idempotent
     @Operation(summary = "创建交易订单项的评价")
     public CommonResult<Long> createOrderItemComment(@RequestBody AppTradeOrderItemCommentCreateReqVO createReqVO) {
         return success(tradeOrderCommentService.createOrderItemCommentByMember(getLoginUserId(), createReqVO));

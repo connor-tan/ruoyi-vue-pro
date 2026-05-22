@@ -7,6 +7,7 @@ import lombok.*;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 
 @Schema(description = "管理后台 - 站内信模版创建/修改 Request VO")
 @Data
@@ -34,6 +35,9 @@ public class NotifyTemplateSaveReqVO {
     @Schema(description = "模版内容", requiredMode = Schema.RequiredMode.REQUIRED, example = "我是模版内容")
     @NotEmpty(message = "模版内容不能为空")
     private String content;
+
+    @Schema(description = "默认接收人用户编号数组", example = "1,2")
+    private List<Long> receiverUserIds;
 
     @Schema(description = "状态，参见 CommonStatusEnum 枚举", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     @NotNull(message = "状态不能为空")

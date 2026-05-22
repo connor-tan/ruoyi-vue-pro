@@ -26,6 +26,7 @@ import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties;
 import cn.iocoder.yudao.module.trade.service.cart.CartService;
+import cn.iocoder.yudao.module.trade.service.message.TradeMessageService;
 import cn.iocoder.yudao.module.trade.service.order.handler.TradeOrderHandler;
 import cn.iocoder.yudao.module.trade.service.order.support.TradeOrderDeliveryGroupSupport;
 import cn.iocoder.yudao.module.trade.service.price.TradePriceService;
@@ -96,6 +97,8 @@ class TradeOrderCheckoutServiceImplTest {
     private TradeOrderDeliveryGroupSupport deliveryGroupSupport = new TradeOrderDeliveryGroupSupport();
     @Mock
     private TradeOrderPublicationIssueService publicationIssueService;
+    @Mock
+    private TradeMessageService tradeMessageService;
     @InjectMocks
     private TradeOrderCheckoutServiceImpl tradeOrderCheckoutService;
 
@@ -125,6 +128,8 @@ class TradeOrderCheckoutServiceImplTest {
         verify(subscriptionOrderEligibilityApi, times(2)).validateOrder(captor.capture());
         assertEquals(List.of(1, 2), captor.getAllValues().stream()
                 .map(SubscriptionOrderEligibilityReqDTO::getCount).toList());
+        assertEquals(List.of(false, false), captor.getAllValues().stream()
+                .map(SubscriptionOrderEligibilityReqDTO::getLockAnchor).toList());
     }
 
     @Test
@@ -233,6 +238,11 @@ class TradeOrderCheckoutServiceImplTest {
         assertEquals("13900001111", pickUpDelivery.getReceiverMobile());
         assertTrue(pickUpDelivery.getPickUpVerifyCode().matches("\\d{8}"));
         assertEquals(TradeOrderStatusEnum.UNPAID.getStatus(), pickUpDelivery.getStatus());
+        ArgumentCaptor<SubscriptionOrderEligibilityReqDTO> eligibilityCaptor =
+                ArgumentCaptor.forClass(SubscriptionOrderEligibilityReqDTO.class);
+        verify(subscriptionOrderEligibilityApi).validateOrder(eligibilityCaptor.capture());
+        assertEquals(Boolean.TRUE, eligibilityCaptor.getValue().getLockAnchor());
+        verify(tradeMessageService).sendMessageWhenOrderCreated(order);
     }
 
     @Test

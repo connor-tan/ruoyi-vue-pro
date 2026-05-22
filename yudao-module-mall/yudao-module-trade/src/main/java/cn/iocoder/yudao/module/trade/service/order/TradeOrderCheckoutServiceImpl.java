@@ -43,6 +43,7 @@ import cn.iocoder.yudao.module.trade.framework.order.config.TradeOrderProperties
 import cn.iocoder.yudao.module.trade.framework.order.core.annotations.TradeOrderLog;
 import cn.iocoder.yudao.module.trade.framework.order.core.utils.TradeOrderLogUtils;
 import cn.iocoder.yudao.module.trade.service.cart.CartService;
+import cn.iocoder.yudao.module.trade.service.message.TradeMessageService;
 import cn.iocoder.yudao.module.trade.service.order.bo.TradeOrderDeliveryBuildResult;
 import cn.iocoder.yudao.module.trade.service.order.bo.TradeOrderDeliveryGroupDraft;
 import cn.iocoder.yudao.module.trade.service.order.bo.TradeOrderPreparedCalculateRequest;
@@ -123,6 +124,8 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
     private TradeOrderDeliveryGroupSupport deliveryGroupSupport;
     @Resource
     private TradeOrderPublicationIssueService publicationIssueService;
+    @Resource
+    private TradeMessageService tradeMessageService;
 
     @Override
     public AppTradeOrderSettlementRespVO settlementOrder(Long userId, AppTradeOrderSettlementReqVO settlementReqVO) {
@@ -266,12 +269,13 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
 
     private TradePriceCalculateRespBO calculatePrice(TradeOrderCheckoutContext context,
                                                      AppTradeOrderSettlementReqVO settlementReqVO) {
-        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(context, settlementReqVO);
+        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(context, settlementReqVO, false);
         return calculatePrice(prepared, settlementReqVO);
     }
 
     private TradeOrderPreparedCalculateRequest prepareCalculateRequest(TradeOrderCheckoutContext context,
-                                                                       AppTradeOrderSettlementReqVO settlementReqVO) {
+                                                                       AppTradeOrderSettlementReqVO settlementReqVO,
+                                                                       boolean lockPublicationAnchor) {
         List<CartDO> cartList = context.isAdminOnline()
                 ? Collections.emptyList()
                 : cartService.getCartList(context.getUserId(),
@@ -331,7 +335,8 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                                 .setStudentId(studentId)
                                 .setOfferSkuId(offerSkuId)
                                 .setSkuId(item.getSkuId())
-                                .setCount(accumulatedCount));
+                                .setCount(accumulatedCount)
+                                .setLockAnchor(lockPublicationAnchor));
                 if (context.isAdminOnline() && eligibility.getParentUserId() == null) {
                     throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
                 }
@@ -529,11 +534,13 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         if (address != null) {
             createReqVO.setAddressId(address.getId());
         }
-        return doCreateOrder(context, createReqVO);
+        TradeOrderDO order = doCreateOrder(context, createReqVO);
+        tradeMessageService.sendMessageWhenOrderCreated(order);
+        return order;
     }
 
     private TradeOrderDO doCreateOrder(TradeOrderCheckoutContext context, AppTradeOrderCreateReqVO createReqVO) {
-        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(context, createReqVO);
+        TradeOrderPreparedCalculateRequest prepared = prepareCalculateRequest(context, createReqVO, true);
         TradePriceCalculateRespBO calculateRespBO = calculatePrice(prepared, createReqVO);
         MemberAddressRespDTO address = context.getExpressAddress();
         TradeOrderDeliveryBuildResult deliveryBuildResult = deliveryGroupSupport.buildDeliveryBuildResult(

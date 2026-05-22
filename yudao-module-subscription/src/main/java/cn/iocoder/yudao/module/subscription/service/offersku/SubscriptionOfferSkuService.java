@@ -26,4 +26,6 @@ public interface SubscriptionOfferSkuService {
 
     SubscriptionWindowOfferSkuDO validateOfferSkuExists(Long id);
 
+    SubscriptionWindowOfferSkuDO validateOfferSkuExistsForUpdate(Long id);
+
 }

@@ -1,10 +1,12 @@
 package cn.iocoder.yudao.module.system.api.notify;
 
 import cn.iocoder.yudao.module.system.api.notify.dto.NotifySendSingleToUserReqDTO;
+import cn.iocoder.yudao.module.system.api.notify.dto.NotifySendToTemplateReceiverReqDTO;
 import cn.iocoder.yudao.module.system.service.notify.NotifySendService;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
+import java.util.List;
 
 /**
  * 站内信发送 API 实现类
@@ -27,6 +29,11 @@ public class NotifyMessageSendApiImpl implements NotifyMessageSendApi {
     public Long sendSingleMessageToMember(NotifySendSingleToUserReqDTO reqDTO) {
         return notifySendService.sendSingleNotifyToMember(reqDTO.getUserId(),
                 reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
+    }
+
+    @Override
+    public List<Long> sendMessageToAdminTemplateReceivers(NotifySendToTemplateReceiverReqDTO reqDTO) {
+        return notifySendService.sendNotifyToAdminTemplateReceivers(reqDTO.getTemplateCode(), reqDTO.getTemplateParams());
     }
 
 }

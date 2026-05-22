@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static cn.hutool.core.util.RandomUtil.randomEle;
@@ -146,6 +147,53 @@ class NotifySendServiceImplTest extends BaseMockitoUnitTest {
         // 断言
         assertNull(resultMessageId);
         verify(notifyTemplateService, never()).formatNotifyTemplateContent(anyString(), anyMap());
+        verify(notifyMessageService, never()).createNotifyMessage(anyLong(), anyInt(), any(), anyString(), anyMap());
+    }
+
+    @Test
+    public void testSendNotifyToAdminTemplateReceivers_success() {
+        // 准备参数
+        String templateCode = randomString();
+        Map<String, Object> templateParams = MapUtil.<String, Object>builder().put("orderNo", "NO1").build();
+        NotifyTemplateDO template = randomPojo(NotifyTemplateDO.class, o -> {
+            o.setStatus(CommonStatusEnum.ENABLE.getStatus());
+            o.setContent("订单{orderNo}");
+            o.setParams(Lists.newArrayList("orderNo"));
+            o.setReceiverUserIds(List.of(1L, 2L));
+        });
+        when(notifyTemplateService.getNotifyTemplateByCodeFromCache(eq(templateCode))).thenReturn(template);
+        String content = randomString();
+        when(notifyTemplateService.formatNotifyTemplateContent(eq(template.getContent()), eq(templateParams)))
+                .thenReturn(content);
+        when(notifyMessageService.createNotifyMessage(eq(1L), eq(UserTypeEnum.ADMIN.getValue()),
+                eq(template), eq(content), eq(templateParams))).thenReturn(11L);
+        when(notifyMessageService.createNotifyMessage(eq(2L), eq(UserTypeEnum.ADMIN.getValue()),
+                eq(template), eq(content), eq(templateParams))).thenReturn(12L);
+
+        // 调用
+        List<Long> messageIds = notifySendService.sendNotifyToAdminTemplateReceivers(templateCode, templateParams);
+
+        // 断言
+        assertEquals(List.of(11L, 12L), messageIds);
+    }
+
+    @Test
+    public void testSendNotifyToAdminTemplateReceivers_noReceiver() {
+        // 准备参数
+        String templateCode = randomString();
+        Map<String, Object> templateParams = MapUtil.<String, Object>builder().put("orderNo", "NO1").build();
+        NotifyTemplateDO template = randomPojo(NotifyTemplateDO.class, o -> {
+            o.setStatus(CommonStatusEnum.ENABLE.getStatus());
+            o.setParams(Lists.newArrayList("orderNo"));
+            o.setReceiverUserIds(List.of());
+        });
+        when(notifyTemplateService.getNotifyTemplateByCodeFromCache(eq(templateCode))).thenReturn(template);
+
+        // 调用
+        List<Long> messageIds = notifySendService.sendNotifyToAdminTemplateReceivers(templateCode, templateParams);
+
+        // 断言
+        assertEquals(List.of(), messageIds);
         verify(notifyMessageService, never()).createNotifyMessage(anyLong(), anyInt(), any(), anyString(), anyMap());
     }
 

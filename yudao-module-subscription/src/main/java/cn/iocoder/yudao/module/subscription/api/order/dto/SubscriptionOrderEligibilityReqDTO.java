@@ -29,4 +29,11 @@ public class SubscriptionOrderEligibilityReqDTO {
     @Min(value = 1, message = "订购数量必须大于 0")
     private Integer count;
 
+    /**
+     * 是否锁定订刊窗口锚点。
+     *
+     * 创建订单时传 true，用 FOR UPDATE 锁定 offer/offerSku，避免运营并发删除窗口刊物或窗口 SKU 后仍按旧快照下单。
+     */
+    private Boolean lockAnchor;
+
 }

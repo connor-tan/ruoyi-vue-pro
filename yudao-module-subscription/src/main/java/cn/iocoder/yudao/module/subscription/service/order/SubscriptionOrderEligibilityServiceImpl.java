@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.subscription.service.order;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.module.product.api.publication.dto.ProductPublicationRespDTO;
 import cn.iocoder.yudao.module.publication.api.enums.PublicationIssueModeEnum;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
@@ -51,7 +52,20 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
         if (!Objects.equals(offerSku.getProductSkuId(), reqDTO.getSkuId())) {
             throw exception(ORDER_OFFER_SKU_PRODUCT_SKU_MISMATCH);
         }
-        SubscriptionWindowOfferDO offer = offerService.validateOfferExists(offerSku.getOfferId());
+        SubscriptionWindowOfferDO offer;
+        if (Boolean.TRUE.equals(reqDTO.getLockAnchor())) {
+            offer = offerService.validateOfferExistsForUpdate(offerSku.getOfferId());
+            offerSku = offerSkuService.validateOfferSkuExistsForUpdate(reqDTO.getOfferSkuId());
+            if (!Objects.equals(offerSku.getOfferId(), offer.getId())) {
+                throw exception(ORDER_OFFER_SKU_NOT_AVAILABLE);
+            }
+            if (!Objects.equals(offerSku.getProductSkuId(), reqDTO.getSkuId())) {
+                throw exception(ORDER_OFFER_SKU_PRODUCT_SKU_MISMATCH);
+            }
+        } else {
+            offer = offerService.validateOfferExists(offerSku.getOfferId());
+        }
+        validateOrderAnchorAvailable(offer, offerSku);
         SubscriptionVisibilityResultBO visibility = Boolean.TRUE.equals(reqDTO.getAdmin())
                 ? visibilityService.calculateForAdmin(reqDTO.getStudentId(), offer.getWindowId())
                 : visibilityService.calculate(reqDTO.getUserId(), reqDTO.getStudentId(), offer.getWindowId());
@@ -68,6 +82,13 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
             throw exception(ORDER_MAX_QUANTITY_EXCEEDED);
         }
         return buildResp(visibility, offer, offerSku, visibleSku, maxQuantity, orderedQuantity);
+    }
+
+    private void validateOrderAnchorAvailable(SubscriptionWindowOfferDO offer,
+                                              SubscriptionWindowOfferSkuDO offerSku) {
+        if (!CommonStatusEnum.isEnable(offer.getStatus()) || !CommonStatusEnum.isEnable(offerSku.getStatus())) {
+            throw exception(ORDER_OFFER_SKU_NOT_AVAILABLE);
+        }
     }
 
     private SubscriptionVisibilityResultBO.VisibleOfferSku findVisibleSku(SubscriptionVisibilityResultBO visibility,

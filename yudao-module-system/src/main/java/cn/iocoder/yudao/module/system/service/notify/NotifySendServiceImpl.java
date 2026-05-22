@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.system.service.notify;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.module.system.dal.dataobject.notify.NotifyTemplateDO;
@@ -9,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import jakarta.annotation.Resource;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -55,6 +58,31 @@ public class NotifySendServiceImpl implements NotifySendService {
         // 发送站内信
         String content = notifyTemplateService.formatNotifyTemplateContent(template.getContent(), templateParams);
         return notifyMessageService.createNotifyMessage(userId, userType, template, content, templateParams);
+    }
+
+    @Override
+    public List<Long> sendNotifyToAdminTemplateReceivers(String templateCode, Map<String, Object> templateParams) {
+        // 校验模版
+        NotifyTemplateDO template = validateNotifyTemplate(templateCode);
+        if (Objects.equals(template.getStatus(), CommonStatusEnum.DISABLE.getStatus())) {
+            log.info("[sendNotifyToAdminTemplateReceivers][模版({})已经关闭，无法发送]", templateCode);
+            return List.of();
+        }
+        if (CollUtil.isEmpty(template.getReceiverUserIds())) {
+            log.info("[sendNotifyToAdminTemplateReceivers][模版({})未配置默认接收人，跳过发送]", templateCode);
+            return List.of();
+        }
+        // 校验参数
+        validateTemplateParams(template, templateParams);
+
+        // 发送站内信
+        String content = notifyTemplateService.formatNotifyTemplateContent(template.getContent(), templateParams);
+        List<Long> messageIds = new ArrayList<>(template.getReceiverUserIds().size());
+        for (Long receiverUserId : template.getReceiverUserIds()) {
+            messageIds.add(notifyMessageService.createNotifyMessage(receiverUserId, UserTypeEnum.ADMIN.getValue(),
+                    template, content, templateParams));
+        }
+        return messageIds;
     }
 
     @VisibleForTesting

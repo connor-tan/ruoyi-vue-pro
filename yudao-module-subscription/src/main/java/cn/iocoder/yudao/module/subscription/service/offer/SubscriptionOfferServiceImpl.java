@@ -288,8 +288,12 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     }
 
     private void deleteOffers(Collection<Long> offerIds) {
+        List<SubscriptionWindowOfferDO> lockedOffers = offerMapper.selectListByIdsForUpdate(offerIds);
+        if (lockedOffers.size() != offerIds.size()) {
+            throw exception(OFFER_NOT_EXISTS);
+        }
         List<SubscriptionRuleDO> rules = ruleMapper.selectListByOfferIds(offerIds);
-        List<SubscriptionWindowOfferSkuDO> offerSkus = offerSkuMapper.selectListByOfferIds(offerIds);
+        List<SubscriptionWindowOfferSkuDO> offerSkus = offerSkuMapper.selectListByOfferIdsForUpdate(offerIds);
         Set<Long> offerSkuIds = convertSet(offerSkus, SubscriptionWindowOfferSkuDO::getId);
         ruleConditionMapper.deleteByRuleIds(convertSet(rules, SubscriptionRuleDO::getId));
         ruleMapper.deleteByOfferIds(offerIds);
@@ -307,6 +311,15 @@ public class SubscriptionOfferServiceImpl implements SubscriptionOfferService {
     @Override
     public SubscriptionWindowOfferDO validateOfferExists(Long id) {
         SubscriptionWindowOfferDO offer = getOffer(id);
+        if (offer == null) {
+            throw exception(OFFER_NOT_EXISTS);
+        }
+        return offer;
+    }
+
+    @Override
+    public SubscriptionWindowOfferDO validateOfferExistsForUpdate(Long id) {
+        SubscriptionWindowOfferDO offer = id == null ? null : offerMapper.selectByIdForUpdate(id);
         if (offer == null) {
             throw exception(OFFER_NOT_EXISTS);
         }

@@ -176,6 +176,8 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
     @Override
     public void deleteOfferSku(Long id) {
         SubscriptionWindowOfferSkuDO offerSku = validateOfferSkuExists(id);
+        offerService.validateOfferExistsForUpdate(offerSku.getOfferId());
+        offerSku = validateOfferSkuExistsForUpdate(id);
         offerSkuIssueMapper.deleteByOfferSkuId(id);
         offerSkuMapper.deleteById(id);
         offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(offerSku.getOfferId());
@@ -189,6 +191,15 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
     @Override
     public SubscriptionWindowOfferSkuDO validateOfferSkuExists(Long id) {
         SubscriptionWindowOfferSkuDO offerSku = getOfferSku(id);
+        if (offerSku == null) {
+            throw exception(OFFER_SKU_NOT_EXISTS);
+        }
+        return offerSku;
+    }
+
+    @Override
+    public SubscriptionWindowOfferSkuDO validateOfferSkuExistsForUpdate(Long id) {
+        SubscriptionWindowOfferSkuDO offerSku = id == null ? null : offerSkuMapper.selectByIdForUpdate(id);
         if (offerSku == null) {
             throw exception(OFFER_SKU_NOT_EXISTS);
         }

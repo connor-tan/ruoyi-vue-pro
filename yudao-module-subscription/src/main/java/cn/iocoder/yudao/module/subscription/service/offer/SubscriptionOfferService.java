@@ -30,6 +30,8 @@ public interface SubscriptionOfferService {
 
     SubscriptionWindowOfferDO validateOfferExists(Long id);
 
+    SubscriptionWindowOfferDO validateOfferExistsForUpdate(Long id);
+
     SubscriptionOfferRespVO getOfferResp(Long id);
 
     PageResult<SubscriptionOfferRespVO> getOfferPage(SubscriptionOfferPageReqVO reqVO);

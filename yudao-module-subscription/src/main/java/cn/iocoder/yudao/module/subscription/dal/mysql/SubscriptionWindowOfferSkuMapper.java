@@ -36,6 +36,23 @@ public interface SubscriptionWindowOfferSkuMapper extends BaseMapperX<Subscripti
                 .last("LIMIT 1"));
     }
 
+    default SubscriptionWindowOfferSkuDO selectByIdForUpdate(Long id) {
+        return selectOne(new LambdaQueryWrapperX<SubscriptionWindowOfferSkuDO>()
+                .eq(SubscriptionWindowOfferSkuDO::getId, id)
+                .last("FOR UPDATE"));
+    }
+
+    default List<SubscriptionWindowOfferSkuDO> selectListByOfferIdsForUpdate(Collection<Long> offerIds) {
+        if (offerIds == null || offerIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return selectList(new LambdaQueryWrapperX<SubscriptionWindowOfferSkuDO>()
+                .in(SubscriptionWindowOfferSkuDO::getOfferId, offerIds)
+                .orderByAsc(SubscriptionWindowOfferSkuDO::getOfferId)
+                .orderByAsc(SubscriptionWindowOfferSkuDO::getId)
+                .last("FOR UPDATE"));
+    }
+
     default SubscriptionWindowOfferSkuDO selectByOfferIdAndProductSkuIdAndIdNot(Long offerId, Long productSkuId,
                                                                                 Long excludeId) {
         return selectOne(new LambdaQueryWrapperX<SubscriptionWindowOfferSkuDO>()
