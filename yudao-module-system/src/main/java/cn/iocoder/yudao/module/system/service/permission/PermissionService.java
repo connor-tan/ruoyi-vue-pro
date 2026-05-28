@@ -44,6 +44,22 @@ public interface PermissionService {
     void assignRoleMenu(Long roleId, Set<Long> menuIds);
 
     /**
+     * 获得当前登录用户可查看的指定角色菜单编号集合
+     *
+     * @param roleId 角色编号
+     * @return 菜单编号集合
+     */
+    Set<Long> getRoleMenuListByRoleIdForCurrentUser(Long roleId);
+
+    /**
+     * 获得用户受限后的菜单范围。返回 null 表示不限制，返回空集合表示无可见菜单。
+     *
+     * @param userId 用户编号
+     * @return 菜单编号集合
+     */
+    Set<Long> getUserMenuScopeByUserId(Long userId);
+
+    /**
      * 处理角色删除时，删除关联授权数据
      *
      * @param roleId 角色编号

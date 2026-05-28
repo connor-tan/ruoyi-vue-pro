@@ -3,7 +3,9 @@ package cn.iocoder.yudao.module.system.service.permission;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.biz.system.permission.dto.DeptDataPermissionRespDTO;
+import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
@@ -14,6 +16,7 @@ import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.permission.RoleMenuMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.permission.UserRoleMapper;
 import cn.iocoder.yudao.module.system.enums.permission.DataScopeEnum;
+import cn.iocoder.yudao.module.system.enums.permission.RoleCodeEnum;
 import cn.iocoder.yudao.module.system.service.dept.DeptService;
 import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import jakarta.annotation.Resource;
@@ -27,10 +30,12 @@ import java.util.List;
 import java.util.Set;
 
 import static cn.hutool.core.collection.ListUtil.toList;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.collection.SetUtils.asSet;
 import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEquals;
 import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomLongId;
 import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -105,6 +110,36 @@ public class PermissionServiceTest extends BaseDbUnitTest {
     }
 
     @Test
+    public void testHasAnyPermissions_managerWithOtherRole_shouldUseManagerOnly() {
+        try (MockedStatic<SpringUtil> springUtilMockedStatic = mockStatic(SpringUtil.class)) {
+            springUtilMockedStatic.when(() -> SpringUtil.getBean(eq(PermissionServiceImpl.class)))
+                    .thenReturn(permissionService);
+
+            // 准备参数
+            Long userId = 145L;
+            String permission = "system:user:query";
+            Long managerRoleId = 160L;
+            Long otherRoleId = 200L;
+            Long menuId = 1000L;
+            // mock 用户同时拥有 manager 和其它角色
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(userId).setRoleId(managerRoleId));
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(userId).setRoleId(otherRoleId));
+            RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
+                    .setCode(RoleCodeEnum.MANAGER.getCode()).setStatus(CommonStatusEnum.ENABLE.getStatus()));
+            RoleDO otherRole = randomPojo(RoleDO.class, o -> o.setId(otherRoleId)
+                    .setCode("other").setStatus(CommonStatusEnum.ENABLE.getStatus()));
+            when(roleService.getRoleListFromCache(eq(asSet(managerRoleId, otherRoleId))))
+                    .thenReturn(toList(managerRole, otherRole));
+            // mock 权限只授予其它角色
+            when(menuService.getMenuIdListByPermissionFromCache(eq(permission))).thenReturn(singletonList(menuId));
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(otherRoleId).setMenuId(menuId));
+
+            // 调用，并断言：拥有 manager 时，其它角色不能突破 manager 范围
+            assertFalse(permissionService.hasAnyPermissions(userId, permission));
+        }
+    }
+
+    @Test
     public void testHasAnyRoles() {
         try (MockedStatic<SpringUtil> springUtilMockedStatic = mockStatic(SpringUtil.class)) {
             springUtilMockedStatic.when(() -> SpringUtil.getBean(eq(PermissionServiceImpl.class)))
@@ -146,6 +181,35 @@ public class PermissionServiceTest extends BaseDbUnitTest {
         assertEquals(200L, roleMenuList.get(0).getMenuId());
         assertEquals(1L, roleMenuList.get(1).getRoleId());
         assertEquals(300L, roleMenuList.get(1).getMenuId());
+    }
+
+    @Test
+    public void testAssignRoleMenu_managerScope_preserveInvisibleMenus() {
+        try (MockedStatic<SecurityFrameworkUtils> securityFrameworkUtilsMock = mockStatic(SecurityFrameworkUtils.class)) {
+            // 准备参数
+            Long loginUserId = 145L;
+            Long managerRoleId = 160L;
+            Long targetRoleId = 200L;
+            Set<Long> menuIds = asSet(300L, 400L);
+            // mock 当前登录用户为 manager
+            securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(managerRoleId));
+            RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
+                    .setCode(RoleCodeEnum.MANAGER.getCode()));
+            when(roleService.getRoleListFromCache(eq(singleton(managerRoleId)))).thenReturn(toList(managerRole));
+            // mock manager 可见菜单范围为 200、300
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(200L));
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(300L));
+            // mock 目标角色已有 100（manager 不可见）和 200（manager 可见）
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(targetRoleId).setMenuId(100L));
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(targetRoleId).setMenuId(200L));
+
+            // 调用
+            permissionService.assignRoleMenu(targetRoleId, menuIds);
+            // 断言：不可见 100 保留；可见但未提交的 200 删除；越权提交的 400 被丢弃；300 新增
+            Set<Long> result = convertSet(roleMenuMapper.selectListByRoleId(targetRoleId), RoleMenuDO::getMenuId);
+            assertEquals(asSet(100L, 300L), result);
+        }
     }
 
     @Test
@@ -225,6 +289,53 @@ public class PermissionServiceTest extends BaseDbUnitTest {
     }
 
     @Test
+    public void testGetRoleMenuIds_managerWithOtherRole() {
+        // 准备参数
+        Long managerRoleId = 160L;
+        Long otherRoleId = 200L;
+        // mock 角色
+        RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
+                .setCode(RoleCodeEnum.MANAGER.getCode()));
+        RoleDO otherRole = randomPojo(RoleDO.class, o -> o.setId(otherRoleId).setCode("other"));
+        when(roleService.getRoleListFromCache(eq(asSet(managerRoleId, otherRoleId))))
+                .thenReturn(toList(managerRole, otherRole));
+        // mock 数据
+        roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(1L));
+        roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(otherRoleId).setMenuId(2L));
+
+        // 调用
+        Set<Long> menuIds = permissionService.getRoleMenuListByRoleId(asSet(managerRoleId, otherRoleId));
+        // 断言
+        assertEquals(singleton(1L), menuIds);
+    }
+
+    @Test
+    public void testGetRoleMenuListByRoleIdForCurrentUser_managerScope() {
+        try (MockedStatic<SecurityFrameworkUtils> securityFrameworkUtilsMock = mockStatic(SecurityFrameworkUtils.class)) {
+            // 准备参数
+            Long loginUserId = 145L;
+            Long managerRoleId = 160L;
+            Long targetRoleId = 200L;
+            // mock 当前登录用户为 manager
+            securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(managerRoleId));
+            RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
+                    .setCode(RoleCodeEnum.MANAGER.getCode()));
+            when(roleService.getRoleListFromCache(eq(singleton(managerRoleId)))).thenReturn(toList(managerRole));
+            // mock 菜单范围
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(2L));
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(3L));
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(targetRoleId).setMenuId(1L));
+            roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(targetRoleId).setMenuId(2L));
+
+            // 调用
+            Set<Long> menuIds = permissionService.getRoleMenuListByRoleIdForCurrentUser(targetRoleId);
+            // 断言
+            assertEquals(singleton(2L), menuIds);
+        }
+    }
+
+    @Test
     public void testGetMenuRoleIdListByMenuIdFromCache() {
         // 准备参数
         Long menuId = 1L;
@@ -262,6 +373,50 @@ public class PermissionServiceTest extends BaseDbUnitTest {
         assertEquals(200L, userRoleDOList.get(0).getRoleId());
         assertEquals(1L, userRoleDOList.get(1).getUserId());
         assertEquals(300L, userRoleDOList.get(1).getRoleId());
+    }
+
+    @Test
+    public void testAssignUserRole_nonSuperAdminCannotAssignSuperAdmin() {
+        try (MockedStatic<SecurityFrameworkUtils> securityFrameworkUtilsMock = mockStatic(SecurityFrameworkUtils.class)) {
+            // 准备参数
+            Long loginUserId = 145L;
+            Long targetUserId = 2L;
+            Set<Long> roleIds = asSet(1L, 160L);
+            // mock 当前登录用户不是 super_admin
+            securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(160L));
+            RoleDO superAdminRole = randomPojo(RoleDO.class, o -> o.setId(1L)
+                    .setCode(RoleCodeEnum.SUPER_ADMIN.getCode()));
+            RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(160L)
+                    .setCode(RoleCodeEnum.MANAGER.getCode()));
+            when(roleService.getRoleList(eq(roleIds))).thenReturn(toList(superAdminRole, managerRole));
+
+            // 调用，并断言
+            ServiceException exception = assertThrows(ServiceException.class,
+                    () -> permissionService.assignUserRole(targetUserId, roleIds));
+            assertEquals(ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN.getCode(), exception.getCode());
+            assertTrue(userRoleMapper.selectListByUserId(targetUserId).isEmpty());
+        }
+    }
+
+    @Test
+    public void testAssignUserRole_superAdminCanAssignSuperAdmin() {
+        try (MockedStatic<SecurityFrameworkUtils> securityFrameworkUtilsMock = mockStatic(SecurityFrameworkUtils.class)) {
+            // 准备参数
+            Long loginUserId = 1L;
+            Long targetUserId = 2L;
+            Set<Long> roleIds = singleton(1L);
+            // mock 当前登录用户是 super_admin
+            securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(1L));
+            when(roleService.hasAnySuperAdmin(eq(singleton(1L)))).thenReturn(true);
+
+            // 调用
+            permissionService.assignUserRole(targetUserId, roleIds);
+            // 断言
+            Set<Long> dbRoleIds = convertSet(userRoleMapper.selectListByUserId(targetUserId), UserRoleDO::getRoleId);
+            assertEquals(roleIds, dbRoleIds);
+        }
     }
 
     @Test

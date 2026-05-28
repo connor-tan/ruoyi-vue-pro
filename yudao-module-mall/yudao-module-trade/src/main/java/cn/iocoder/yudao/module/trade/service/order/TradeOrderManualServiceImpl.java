@@ -272,6 +272,7 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
                                              Map<Long, ProductSpuRespDTO> spuMap) {
         Map<TradeOrderSubscriptionPurchaseKey, Integer> purchaseCountMap = new HashMap<>();
         Map<Long, Integer> studentDeliveryTypeMap = new HashMap<>();
+        List<ManualPublicationOrderItemCandidate> publicationCandidates = new ArrayList<>();
         for (TradePriceCalculateReqBO.Item item : reqBO.getItems()) {
             ProductSkuRespDTO sku = skuMap.get(item.getSkuId());
             if (sku == null) {
@@ -313,19 +314,56 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
             TradeOrderSubscriptionPurchaseKey key = new TradeOrderSubscriptionPurchaseKey(
                     item.getSubscriptionStudentId(), item.getSubscriptionOfferSkuId());
             Integer accumulatedCount = purchaseCountMap.merge(key, item.getCount(), Integer::sum);
-            SubscriptionOrderEligibilityRespDTO eligibility = subscriptionOrderEligibilityApi.validateOrder(
-                    new SubscriptionOrderEligibilityReqDTO()
-                            .setAdmin(true)
-                            .setUserId(null)
-                            .setStudentId(item.getSubscriptionStudentId())
-                            .setOfferSkuId(item.getSubscriptionOfferSkuId())
-                            .setSkuId(item.getSkuId())
-                            .setCount(accumulatedCount));
-            if (Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType()) && eligibility.getWarehouseId() == null) {
+            publicationCandidates.add(new ManualPublicationOrderItemCandidate(item, item.getSubscriptionStudentId(),
+                    item.getSubscriptionOfferSkuId(), accumulatedCount, deliveryType));
+        }
+        fillManualPublicationFacts(publicationCandidates);
+    }
+
+    private void fillManualPublicationFacts(List<ManualPublicationOrderItemCandidate> publicationCandidates) {
+        if (CollUtil.isEmpty(publicationCandidates)) {
+            return;
+        }
+        List<SubscriptionOrderEligibilityReqDTO> reqList = convertList(publicationCandidates, candidate ->
+                new SubscriptionOrderEligibilityReqDTO()
+                        .setAdmin(true)
+                        .setUserId(null)
+                        .setStudentId(candidate.studentId)
+                        .setOfferSkuId(candidate.offerSkuId)
+                        .setSkuId(candidate.item.getSkuId())
+                        .setCount(candidate.accumulatedCount)
+                        .setLockAnchor(true));
+        List<SubscriptionOrderEligibilityRespDTO> eligibilities = reqList.size() > 1
+                ? subscriptionOrderEligibilityApi.validateOrderList(reqList)
+                : convertList(reqList, subscriptionOrderEligibilityApi::validateOrder);
+        for (int i = 0; i < publicationCandidates.size(); i++) {
+            ManualPublicationOrderItemCandidate candidate = publicationCandidates.get(i);
+            SubscriptionOrderEligibilityRespDTO eligibility = eligibilities.get(i);
+            if (Objects.equals(candidate.deliveryType, DeliveryTypeEnum.SCHOOL.getType())
+                    && eligibility.getWarehouseId() == null) {
                 throw exception(ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED);
             }
-            fillPublicationItemFacts(item, eligibility);
+            fillPublicationItemFacts(candidate.item, eligibility);
         }
+    }
+
+    private static final class ManualPublicationOrderItemCandidate {
+
+        private final TradePriceCalculateReqBO.Item item;
+        private final Long studentId;
+        private final Long offerSkuId;
+        private final Integer accumulatedCount;
+        private final Integer deliveryType;
+
+        private ManualPublicationOrderItemCandidate(TradePriceCalculateReqBO.Item item, Long studentId,
+                                                    Long offerSkuId, Integer accumulatedCount, Integer deliveryType) {
+            this.item = item;
+            this.studentId = studentId;
+            this.offerSkuId = offerSkuId;
+            this.accumulatedCount = accumulatedCount;
+            this.deliveryType = deliveryType;
+        }
+
     }
 
     private void fillPublicationItemFacts(TradePriceCalculateReqBO.Item item,

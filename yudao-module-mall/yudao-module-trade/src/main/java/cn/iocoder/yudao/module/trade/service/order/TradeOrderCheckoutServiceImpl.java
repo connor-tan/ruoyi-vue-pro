@@ -294,6 +294,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
         Map<String, TradeOrderDeliveryGroupDraft> groupMap = new LinkedHashMap<>();
         Map<Long, Integer> studentDeliveryTypeMap = new HashMap<>();
         Map<TradeOrderSubscriptionPurchaseKey, Integer> publicationPurchaseCountMap = new HashMap<>();
+        List<PublicationOrderItemCandidate> publicationCandidates = new ArrayList<>();
         boolean publicationPresent = false;
         for (int i = 0; i < baseReqBO.getItems().size(); i++) {
             TradePriceCalculateReqBO.Item item = baseReqBO.getItems().get(i);
@@ -328,37 +329,16 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                 }
                 Integer accumulatedCount = accumulatePublicationPurchaseCount(publicationPurchaseCountMap, studentId,
                         offerSkuId, item.getCount());
-                SubscriptionOrderEligibilityRespDTO eligibility = subscriptionOrderEligibilityApi.validateOrder(
-                        new SubscriptionOrderEligibilityReqDTO()
-                                .setUserId(context.isAdminOnline() ? null : context.getUserId())
-                                .setAdmin(context.isAdminOnline())
-                                .setStudentId(studentId)
-                                .setOfferSkuId(offerSkuId)
-                                .setSkuId(item.getSkuId())
-                                .setCount(accumulatedCount)
-                                .setLockAnchor(lockPublicationAnchor));
-                if (context.isAdminOnline() && eligibility.getParentUserId() == null) {
-                    throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
-                }
-                if (context.isAdminOnline() && !Objects.equals(context.getUserId(), eligibility.getParentUserId())) {
-                    throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
-                }
                 if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())
                         && !Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType())) {
                     throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
                 }
-                Integer existedDeliveryType = studentDeliveryTypeMap.putIfAbsent(eligibility.getStudentId(), deliveryType);
+                Integer existedDeliveryType = studentDeliveryTypeMap.putIfAbsent(studentId, deliveryType);
                 if (existedDeliveryType != null && !Objects.equals(existedDeliveryType, deliveryType)) {
                     throw exception(ORDER_PUBLICATION_MULTI_DELIVERY_FOR_STUDENT);
                 }
-                fillPublicationItemFacts(item, eligibility);
-                if (Objects.equals(deliveryType, DeliveryTypeEnum.SCHOOL.getType()) && eligibility.getWarehouseId() == null) {
-                    throw exception(ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED);
-                }
-                String groupKey = deliveryGroupSupport.buildPublicationGroupKey(eligibility.getStudentId(), deliveryType);
-                TradeOrderDeliveryGroupDraft group = groupMap.computeIfAbsent(groupKey,
-                        ignore -> TradeOrderDeliveryGroupDraft.forPublication(eligibility, deliveryType));
-                group.getItemIndexes().add(i);
+                publicationCandidates.add(new PublicationOrderItemCandidate(i, item, studentId, offerSkuId,
+                        accumulatedCount, deliveryType));
                 continue;
             }
 
@@ -369,12 +349,96 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                     && !Objects.equals(deliveryType, DeliveryTypeEnum.PICK_UP.getType())) {
                 throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
             }
-            String groupKey = deliveryGroupSupport.buildNormalGroupKey(deliveryType);
-            TradeOrderDeliveryGroupDraft group = groupMap.computeIfAbsent(groupKey,
-                    ignore -> TradeOrderDeliveryGroupDraft.forNormal(deliveryType));
-            group.getItemIndexes().add(i);
         }
+        fillDeliveryGroupsInItemOrder(context, baseReqBO.getItems(), publicationCandidates, lockPublicationAnchor,
+                groupMap);
         return new TradeOrderPreparedCalculateRequest(baseReqBO, new ArrayList<>(groupMap.values()), publicationPresent);
+    }
+
+    private void fillDeliveryGroupsInItemOrder(TradeOrderCheckoutContext context,
+                                               List<TradePriceCalculateReqBO.Item> items,
+                                               List<PublicationOrderItemCandidate> publicationCandidates,
+                                               boolean lockPublicationAnchor,
+                                               Map<String, TradeOrderDeliveryGroupDraft> groupMap) {
+        Map<Integer, PublicationOrderItemCandidate> candidateMap = new HashMap<>();
+        List<SubscriptionOrderEligibilityRespDTO> eligibilities = CollUtil.isEmpty(publicationCandidates)
+                ? Collections.emptyList()
+                : validatePublicationCandidates(context, publicationCandidates, lockPublicationAnchor);
+        for (int i = 0; i < publicationCandidates.size(); i++) {
+            PublicationOrderItemCandidate candidate = publicationCandidates.get(i);
+            candidate.eligibility = eligibilities.get(i);
+            candidateMap.put(candidate.itemIndex, candidate);
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            PublicationOrderItemCandidate candidate = candidateMap.get(i);
+            if (candidate == null) {
+                TradePriceCalculateReqBO.Item item = items.get(i);
+                Integer deliveryType = item.getDeliveryType();
+                String groupKey = deliveryGroupSupport.buildNormalGroupKey(deliveryType);
+                TradeOrderDeliveryGroupDraft group = groupMap.computeIfAbsent(groupKey,
+                        ignore -> TradeOrderDeliveryGroupDraft.forNormal(deliveryType));
+                group.getItemIndexes().add(i);
+                continue;
+            }
+            SubscriptionOrderEligibilityRespDTO eligibility = candidate.eligibility;
+            if (context.isAdminOnline() && eligibility.getParentUserId() == null) {
+                throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
+            }
+            if (context.isAdminOnline() && !Objects.equals(context.getUserId(), eligibility.getParentUserId())) {
+                throw exception(ORDER_ADMIN_ONLINE_PARENT_REQUIRED);
+            }
+            fillPublicationItemFacts(candidate.item, eligibility);
+            if (Objects.equals(candidate.deliveryType, DeliveryTypeEnum.SCHOOL.getType())
+                    && eligibility.getWarehouseId() == null) {
+                throw exception(ORDER_SCHOOL_WAREHOUSE_NOT_CONFIGURED);
+            }
+            String groupKey = deliveryGroupSupport.buildPublicationGroupKey(eligibility.getStudentId(),
+                    candidate.deliveryType);
+            TradeOrderDeliveryGroupDraft group = groupMap.computeIfAbsent(groupKey,
+                    ignore -> TradeOrderDeliveryGroupDraft.forPublication(eligibility, candidate.deliveryType));
+            group.getItemIndexes().add(candidate.itemIndex);
+        }
+    }
+
+    private List<SubscriptionOrderEligibilityRespDTO> validatePublicationCandidates(
+            TradeOrderCheckoutContext context, List<PublicationOrderItemCandidate> publicationCandidates,
+            boolean lockPublicationAnchor) {
+        List<SubscriptionOrderEligibilityReqDTO> reqList = convertList(publicationCandidates, candidate ->
+                new SubscriptionOrderEligibilityReqDTO()
+                        .setUserId(context.isAdminOnline() ? null : context.getUserId())
+                        .setAdmin(context.isAdminOnline())
+                        .setStudentId(candidate.studentId)
+                        .setOfferSkuId(candidate.offerSkuId)
+                        .setSkuId(candidate.item.getSkuId())
+                        .setCount(candidate.accumulatedCount)
+                        .setLockAnchor(lockPublicationAnchor));
+        if (lockPublicationAnchor && reqList.size() > 1) {
+            return subscriptionOrderEligibilityApi.validateOrderList(reqList);
+        }
+        return convertList(reqList, subscriptionOrderEligibilityApi::validateOrder);
+    }
+
+    private static final class PublicationOrderItemCandidate {
+
+        private final int itemIndex;
+        private final TradePriceCalculateReqBO.Item item;
+        private final Long studentId;
+        private final Long offerSkuId;
+        private final Integer accumulatedCount;
+        private final Integer deliveryType;
+        private SubscriptionOrderEligibilityRespDTO eligibility;
+
+        private PublicationOrderItemCandidate(int itemIndex, TradePriceCalculateReqBO.Item item, Long studentId,
+                                              Long offerSkuId, Integer accumulatedCount, Integer deliveryType) {
+            this.itemIndex = itemIndex;
+            this.item = item;
+            this.studentId = studentId;
+            this.offerSkuId = offerSkuId;
+            this.accumulatedCount = accumulatedCount;
+            this.deliveryType = deliveryType;
+        }
+
     }
 
     private void fillPublicationItemFacts(TradePriceCalculateReqBO.Item item, SubscriptionOrderEligibilityRespDTO eligibility) {

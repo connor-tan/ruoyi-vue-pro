@@ -5,6 +5,7 @@ import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.menu.MenuListReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.menu.MenuSaveVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
@@ -189,6 +190,7 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     @Cacheable(value = RedisKeyConstants.PERMISSION_MENU_ID_LIST, key = "#permission")
+    @DataPermission(enable = false)
     public List<Long> getMenuIdListByPermissionFromCache(String permission) {
         List<MenuDO> menus = menuMapper.selectListByPermission(permission);
         return convertList(menus, MenuDO::getId);

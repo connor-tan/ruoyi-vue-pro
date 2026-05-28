@@ -23,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -118,6 +119,35 @@ class SubscriptionOrderEligibilityServiceImplTest {
     }
 
     @Test
+    void validateOrderList_shouldLockAnchorsByOfferAndOfferSkuOrder() {
+        SubscriptionWindowOfferSkuDO highOfferSku = offerSku(51L, 41L, 61L);
+        SubscriptionWindowOfferSkuDO lowOfferSku = offerSku(50L, 40L, 60L);
+        SubscriptionOrderEligibilityReqDTO highReq = req(51L, 61L).setLockAnchor(true);
+        SubscriptionOrderEligibilityReqDTO lowReq = req(50L, 60L).setLockAnchor(true);
+        when(offerSkuService.validateOfferSkuExists(51L)).thenReturn(highOfferSku);
+        when(offerSkuService.validateOfferSkuExists(50L)).thenReturn(lowOfferSku);
+        when(offerService.validateOfferExistsForUpdate(41L)).thenReturn(offer(41L));
+        when(offerService.validateOfferExistsForUpdate(40L)).thenReturn(offer(40L));
+        when(offerSkuService.validateOfferSkuExistsForUpdate(51L)).thenReturn(highOfferSku);
+        when(offerSkuService.validateOfferSkuExistsForUpdate(50L)).thenReturn(lowOfferSku);
+        when(visibilityService.calculate(eq(USER_ID), eq(STUDENT_ID), eq(WINDOW_ID)))
+                .thenReturn(visibility(lowOfferSku, highOfferSku));
+        when(tradeSubscriptionOrderApi.getEffectiveSubscriptionOrderItemQuantity(STUDENT_ID, 51L))
+                .thenReturn(0);
+        when(tradeSubscriptionOrderApi.getEffectiveSubscriptionOrderItemQuantity(STUDENT_ID, 50L))
+                .thenReturn(0);
+
+        List<SubscriptionOrderEligibilityRespDTO> results = eligibilityService.validateOrderList(
+                List.of(highReq, lowReq));
+
+        assertEquals(51L, results.get(0).getOfferSkuId());
+        assertEquals(50L, results.get(1).getOfferSkuId());
+        InOrder offerLockOrder = inOrder(offerService);
+        offerLockOrder.verify(offerService).validateOfferExistsForUpdate(40L);
+        offerLockOrder.verify(offerService).validateOfferExistsForUpdate(41L);
+    }
+
+    @Test
     void validateOrder_shouldRejectWhenOfferSkuDisabled() {
         SubscriptionWindowOfferSkuDO offerSku = offerSku();
         offerSku.setStatus(CommonStatusEnum.DISABLE.getStatus());
@@ -132,48 +162,68 @@ class SubscriptionOrderEligibilityServiceImplTest {
     }
 
     private SubscriptionOrderEligibilityReqDTO req() {
+        return req(OFFER_SKU_ID, SKU_ID);
+    }
+
+    private SubscriptionOrderEligibilityReqDTO req(Long offerSkuId, Long skuId) {
         SubscriptionOrderEligibilityReqDTO reqDTO = new SubscriptionOrderEligibilityReqDTO();
         reqDTO.setUserId(USER_ID);
         reqDTO.setStudentId(STUDENT_ID);
-        reqDTO.setOfferSkuId(OFFER_SKU_ID);
-        reqDTO.setSkuId(SKU_ID);
+        reqDTO.setOfferSkuId(offerSkuId);
+        reqDTO.setSkuId(skuId);
         reqDTO.setCount(1);
         return reqDTO;
     }
 
     private SubscriptionWindowOfferSkuDO offerSku() {
+        return offerSku(OFFER_SKU_ID, OFFER_ID, SKU_ID);
+    }
+
+    private SubscriptionWindowOfferSkuDO offerSku(Long offerSkuId, Long offerId, Long skuId) {
         return SubscriptionWindowOfferSkuDO.builder()
-                .id(OFFER_SKU_ID)
-                .offerId(OFFER_ID)
-                .productSkuId(SKU_ID)
+                .id(offerSkuId)
+                .offerId(offerId)
+                .productSkuId(skuId)
                 .status(CommonStatusEnum.ENABLE.getStatus())
                 .maxQuantityPerStudent(1)
                 .build();
     }
 
     private SubscriptionWindowOfferDO offer() {
+        return offer(OFFER_ID);
+    }
+
+    private SubscriptionWindowOfferDO offer(Long offerId) {
         return SubscriptionWindowOfferDO.builder()
-                .id(OFFER_ID)
+                .id(offerId)
                 .windowId(WINDOW_ID)
                 .status(CommonStatusEnum.ENABLE.getStatus())
                 .build();
     }
 
     private SubscriptionVisibilityResultBO visibility() {
+        return visibility(offerSku());
+    }
+
+    private SubscriptionVisibilityResultBO visibility(SubscriptionWindowOfferSkuDO... offerSkus) {
         SubscriptionVisibilityResultBO visibility = new SubscriptionVisibilityResultBO();
         visibility.setStudent(student());
         visibility.setWindow(window());
 
-        SubscriptionVisibilityResultBO.VisibleOfferSku visibleSku = new SubscriptionVisibilityResultBO.VisibleOfferSku();
-        visibleSku.setOfferSku(offerSku());
-        visibleSku.setProductSku(productSku());
-        visibleSku.setReason("BASE_MATCH");
+        List<SubscriptionVisibilityResultBO.VisibleOffer> visibleOffers = new ArrayList<>();
+        for (SubscriptionWindowOfferSkuDO offerSku : offerSkus) {
+            SubscriptionVisibilityResultBO.VisibleOfferSku visibleSku = new SubscriptionVisibilityResultBO.VisibleOfferSku();
+            visibleSku.setOfferSku(offerSku);
+            visibleSku.setProductSku(productSku(offerSku.getProductSkuId()));
+            visibleSku.setReason("BASE_MATCH");
 
-        SubscriptionVisibilityResultBO.VisibleOffer visibleOffer = new SubscriptionVisibilityResultBO.VisibleOffer();
-        visibleOffer.setOffer(offer());
-        visibleOffer.setPublication(publication());
-        visibleOffer.setSkus(List.of(visibleSku));
-        visibility.setVisibleOffers(List.of(visibleOffer));
+            SubscriptionVisibilityResultBO.VisibleOffer visibleOffer = new SubscriptionVisibilityResultBO.VisibleOffer();
+            visibleOffer.setOffer(offer(offerSku.getOfferId()));
+            visibleOffer.setPublication(publication());
+            visibleOffer.setSkus(List.of(visibleSku));
+            visibleOffers.add(visibleOffer);
+        }
+        visibility.setVisibleOffers(visibleOffers);
         return visibility;
     }
 
@@ -209,8 +259,12 @@ class SubscriptionOrderEligibilityServiceImplTest {
     }
 
     private ProductPublicationRespDTO.PublicationSkuDTO productSku() {
+        return productSku(SKU_ID);
+    }
+
+    private ProductPublicationRespDTO.PublicationSkuDTO productSku(Long skuId) {
         ProductPublicationRespDTO.PublicationSkuDTO sku = new ProductPublicationRespDTO.PublicationSkuDTO();
-        sku.setId(SKU_ID);
+        sku.setId(skuId);
         return sku;
     }
 

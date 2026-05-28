@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.system.controller.admin.permission.vo.menu.MenuSa
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.menu.MenuSimpleRespVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.system.service.permission.MenuService;
+import cn.iocoder.yudao.module.system.service.permission.PermissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +23,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "管理后台 - 菜单")
 @RestController
@@ -31,6 +33,8 @@ public class MenuController {
 
     @Resource
     private MenuService menuService;
+    @Resource
+    private PermissionService permissionService;
 
     @PostMapping("/create")
     @Operation(summary = "创建菜单")
@@ -71,6 +75,9 @@ public class MenuController {
     @PreAuthorize("@ss.hasPermission('system:menu:query')")
     public CommonResult<List<MenuRespVO>> getMenuList(MenuListReqVO reqVO) {
         List<MenuDO> list = menuService.getMenuList(reqVO);
+        if (permissionService.getUserMenuScopeByUserId(getLoginUserId()) != null) {
+            list = menuService.filterDisableMenus(list);
+        }
         list.sort(Comparator.comparing(MenuDO::getSort));
         return success(BeanUtils.toBean(list, MenuRespVO.class));
     }

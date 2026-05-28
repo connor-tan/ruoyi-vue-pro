@@ -59,8 +59,11 @@ class TradeOrderCheckoutServiceImplTest {
     private static final long USER_ID = 1L;
     private static final long STUDENT_ID = 10L;
     private static final long OFFER_SKU_ID = 20L;
+    private static final long SECOND_OFFER_SKU_ID = 21L;
     private static final long PRODUCT_SKU_ID = 30L;
+    private static final long SECOND_PUBLICATION_SKU_ID = 32L;
     private static final long PRODUCT_SPU_ID = 40L;
+    private static final long SECOND_PUBLICATION_SPU_ID = 42L;
     private static final long NORMAL_SKU_ID = 31L;
     private static final long NORMAL_SPU_ID = 41L;
     private static final long PICK_UP_STORE_ID = 1000L;
@@ -246,6 +249,52 @@ class TradeOrderCheckoutServiceImplTest {
     }
 
     @Test
+    void createOrder_shouldUseBatchEligibilityWhenMultiplePublicationAnchorsNeedLock() {
+        mockNoDefaultAddress();
+        mockProducts(Map.of(
+                        PRODUCT_SKU_ID, productSku(PRODUCT_SKU_ID, PRODUCT_SPU_ID),
+                        SECOND_PUBLICATION_SKU_ID, productSku(SECOND_PUBLICATION_SKU_ID, SECOND_PUBLICATION_SPU_ID)),
+                Map.of(
+                        PRODUCT_SPU_ID, publicationSpu(List.of(DeliveryTypeEnum.SCHOOL.getType())),
+                        SECOND_PUBLICATION_SPU_ID, publicationSpu(SECOND_PUBLICATION_SPU_ID,
+                                List.of(DeliveryTypeEnum.SCHOOL.getType()))));
+        when(subscriptionOrderEligibilityApi.validateOrderList(any())).thenReturn(List.of(
+                eligibility(OFFER_SKU_ID, 100L),
+                eligibility(SECOND_OFFER_SKU_ID, 101L)));
+        mockCalculateOrderPrice();
+        when(tradeNoRedisDAO.generate(anyString())).thenReturn("NO202605230001");
+        when(tradeOrderMapper.insert(any(TradeOrderDO.class))).thenAnswer(invocation -> {
+            TradeOrderDO order = invocation.getArgument(0);
+            order.setId(1L);
+            return 1;
+        });
+        when(tradeOrderDeliveryMapper.insert(any(TradeOrderDeliveryDO.class))).thenAnswer(invocation -> {
+            TradeOrderDeliveryDO delivery = invocation.getArgument(0);
+            delivery.setId(100L);
+            return 1;
+        });
+        when(tradeOrderProperties.getPayAppKey()).thenReturn("mall");
+        when(tradeOrderProperties.getPayExpireTime()).thenReturn(Duration.ofMinutes(30));
+        when(payOrderApi.createOrder(any())).thenReturn(99L);
+
+        AppTradeOrderCreateReqVO reqVO = new AppTradeOrderCreateReqVO();
+        reqVO.setPointStatus(false);
+        reqVO.setItems(List.of(
+                publicationItem(PRODUCT_SKU_ID, OFFER_SKU_ID, DeliveryTypeEnum.SCHOOL.getType()),
+                publicationItem(SECOND_PUBLICATION_SKU_ID, SECOND_OFFER_SKU_ID, DeliveryTypeEnum.SCHOOL.getType())));
+        tradeOrderCheckoutService.createOrder(USER_ID, reqVO);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SubscriptionOrderEligibilityReqDTO>> captor =
+                ArgumentCaptor.forClass(List.class);
+        verify(subscriptionOrderEligibilityApi).validateOrderList(captor.capture());
+        verify(subscriptionOrderEligibilityApi, never()).validateOrder(any());
+        assertEquals(List.of(OFFER_SKU_ID, SECOND_OFFER_SKU_ID), captor.getValue().stream()
+                .map(SubscriptionOrderEligibilityReqDTO::getOfferSkuId).toList());
+        assertTrue(captor.getValue().stream().allMatch(req -> Boolean.TRUE.equals(req.getLockAnchor())));
+    }
+
+    @Test
     void settlementOrder_shouldRejectUnsupportedItemDeliveryType() {
         mockNoDefaultAddress();
         mockProducts(Map.of(PRODUCT_SKU_ID, productSku(PRODUCT_SKU_ID, PRODUCT_SPU_ID)),
@@ -295,11 +344,15 @@ class TradeOrderCheckoutServiceImplTest {
     }
 
     private AppTradeOrderSettlementReqVO.Item publicationItem(Integer deliveryType) {
+        return publicationItem(PRODUCT_SKU_ID, OFFER_SKU_ID, deliveryType);
+    }
+
+    private AppTradeOrderSettlementReqVO.Item publicationItem(Long skuId, Long offerSkuId, Integer deliveryType) {
         AppTradeOrderSettlementReqVO.Item item = new AppTradeOrderSettlementReqVO.Item();
-        item.setSkuId(PRODUCT_SKU_ID);
+        item.setSkuId(skuId);
         item.setCount(1);
         item.setStudentId(STUDENT_ID);
-        item.setOfferSkuId(OFFER_SKU_ID);
+        item.setOfferSkuId(offerSkuId);
         item.setDeliveryType(deliveryType);
         return item;
     }
@@ -325,6 +378,10 @@ class TradeOrderCheckoutServiceImplTest {
         return spu(PRODUCT_SPU_ID, BizSceneEnum.PUBLICATION.getCode(), deliveryTypes);
     }
 
+    private ProductSpuRespDTO publicationSpu(Long spuId, List<Integer> deliveryTypes) {
+        return spu(spuId, BizSceneEnum.PUBLICATION.getCode(), deliveryTypes);
+    }
+
     private ProductSpuRespDTO normalSpu(List<Integer> deliveryTypes) {
         return spu(NORMAL_SPU_ID, BizSceneEnum.NORMAL.getCode(), deliveryTypes);
     }
@@ -341,6 +398,10 @@ class TradeOrderCheckoutServiceImplTest {
     }
 
     private SubscriptionOrderEligibilityRespDTO eligibility() {
+        return eligibility(OFFER_SKU_ID, 100L);
+    }
+
+    private SubscriptionOrderEligibilityRespDTO eligibility(Long offerSkuId, Long offerId) {
         SubscriptionOrderEligibilityRespDTO respDTO = new SubscriptionOrderEligibilityRespDTO();
         respDTO.setStudentId(STUDENT_ID);
         respDTO.setStudentNameSnapshot("测试学生");
@@ -356,8 +417,8 @@ class TradeOrderCheckoutServiceImplTest {
         respDTO.setWarehouseAddressSnapshot("测试地址");
         respDTO.setContactName("张老师");
         respDTO.setContactMobile("13900000000");
-        respDTO.setOfferSkuId(OFFER_SKU_ID);
-        respDTO.setOfferId(100L);
+        respDTO.setOfferSkuId(offerSkuId);
+        respDTO.setOfferId(offerId);
         respDTO.setWindowId(200L);
         return respDTO;
     }
@@ -407,12 +468,14 @@ class TradeOrderCheckoutServiceImplTest {
     }
 
     private TradePriceCalculateRespBO.OrderItem buildCalculateItem(TradePriceCalculateReqBO.Item item) {
-        boolean publication = PRODUCT_SKU_ID == item.getSkuId();
+        boolean publication = PRODUCT_SKU_ID == item.getSkuId() || SECOND_PUBLICATION_SKU_ID == item.getSkuId();
+        Long spuId = SECOND_PUBLICATION_SKU_ID == item.getSkuId() ? SECOND_PUBLICATION_SPU_ID
+                : (publication ? PRODUCT_SPU_ID : NORMAL_SPU_ID);
         Integer deliveryPrice = DeliveryTypeEnum.EXPRESS.getType().equals(item.getDeliveryType())
                 ? EXPRESS_DELIVERY_PRICE : 0;
         return new TradePriceCalculateRespBO.OrderItem()
                 .setSkuId(item.getSkuId())
-                .setSpuId(publication ? PRODUCT_SPU_ID : NORMAL_SPU_ID)
+                .setSpuId(spuId)
                 .setCount(item.getCount())
                 .setCartId(item.getCartId())
                 .setSelected(Boolean.TRUE)

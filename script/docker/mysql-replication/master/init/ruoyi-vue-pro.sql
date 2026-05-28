@@ -5519,6 +5519,7 @@ CREATE TABLE `system_notify_template` (
   `content` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模版内容',
   `type` tinyint NOT NULL COMMENT '类型',
   `params` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '参数数组',
+  `receiver_user_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '[]' COMMENT '默认接收人用户编号数组',
   `status` tinyint NOT NULL COMMENT '状态',
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '创建者',
@@ -5536,6 +5537,8 @@ CREATE TABLE `system_notify_template` (
 
 LOCK TABLES `system_notify_template` WRITE;
 /*!40000 ALTER TABLE `system_notify_template` DISABLE KEYS */;
+INSERT INTO `system_notify_template` (`id`, `name`, `code`, `nickname`, `content`, `type`, `params`, `receiver_user_ids`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES (6, '用户提交订单通知', 'trade_order_created_admin', '校刊汇订单中心', '用户 {userId} 提交订单 {orderNo}，应付金额 {payPrice} 元，请及时关注。', 2, '[\"userId\",\"orderNo\",\"payPrice\"]', '[]', 0, 'app 用户提交订单成功后发送给模板默认接收人', 'system', '2026-05-21 00:00:00', 'system', '2026-05-21 00:00:00', _binary '\0');
+INSERT INTO `system_notify_template` (`id`, `name`, `code`, `nickname`, `content`, `type`, `params`, `receiver_user_ids`, `status`, `remark`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES (7, '用户退款成功通知', 'trade_after_sale_refunded_admin', '校刊汇订单中心', '用户 {userId} 的售后单 {afterSaleNo} 已退款成功，订单 {orderNo}，退款金额 {refundPrice} 元，请及时关注。', 2, '[\"userId\",\"afterSaleNo\",\"orderNo\",\"refundPrice\"]', '[]', 0, '售后退款成功后发送给模板默认接收人', 'system', '2026-05-21 00:00:00', 'system', '2026-05-21 00:00:00', _binary '\0');
 /*!40000 ALTER TABLE `system_notify_template` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -5,7 +5,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
-import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.framework.security.config.SecurityProperties;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
@@ -92,7 +91,6 @@ public class AuthController {
 
     @GetMapping("/get-permission-info")
     @Operation(summary = "获取登录用户的权限信息")
-    @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致无法查询用户。类似：https://t.zsxq.com/LHnrp
     public CommonResult<AuthPermissionInfoRespVO> getPermissionInfo() {
         // 1.1 获得用户信息
         AdminUserDO user = userService.getUser(getLoginUserId());
@@ -110,11 +108,11 @@ public class AuthController {
 
         // 1.3 获得菜单列表
         Set<Long> menuIds = permissionService.getRoleMenuListByRoleId(convertSet(roles, RoleDO::getId));
-        List<MenuDO> menuList = menuService.getMenuList(menuIds);
-        menuList = menuService.filterDisableMenus(menuList);
+        List<MenuDO> permissionMenuList = menuService.getMenuList(menuIds);
+        List<MenuDO> menuList = menuService.filterDisableMenus(permissionMenuList);
 
         // 2. 拼接结果返回
-        return success(AuthConvert.INSTANCE.convert(user, roles, menuList));
+        return success(AuthConvert.INSTANCE.convert(user, roles, menuList, permissionMenuList));
     }
 
     @PostMapping("/register")

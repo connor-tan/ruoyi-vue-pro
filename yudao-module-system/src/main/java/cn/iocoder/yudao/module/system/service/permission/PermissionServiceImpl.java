@@ -8,6 +8,7 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.framework.common.biz.system.permission.dto.DeptDataPermissionRespDTO;
+import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleMenuDO;
@@ -16,6 +17,7 @@ import cn.iocoder.yudao.module.system.dal.mysql.permission.RoleMenuMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.permission.UserRoleMapper;
 import cn.iocoder.yudao.module.system.dal.redis.RedisKeyConstants;
 import cn.iocoder.yudao.module.system.enums.permission.DataScopeEnum;
+import cn.iocoder.yudao.module.system.enums.permission.RoleCodeEnum;
 import cn.iocoder.yudao.module.system.service.dept.DeptService;
 import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import com.baomidou.dynamic.datasource.annotation.DSTransactional;
@@ -33,8 +35,10 @@ import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.function.Supplier;
 
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN;
 
 /**
  * 权限 Service 实现类
@@ -72,25 +76,28 @@ public class PermissionServiceImpl implements PermissionService {
             return false;
         }
 
-        // 情况一：遍历判断每个权限，如果有一满足，说明有权限
+        Set<Long> roleIds = convertSet(roles, RoleDO::getId);
+        // 情况一：如果是超管，说明有权限
+        if (roleService.hasAnySuperAdmin(roleIds)) {
+            return true;
+        }
+        // 情况二：遍历判断每个权限，如果有一满足，说明有权限
+        Set<Long> effectiveRoleIds = getEffectiveMenuRoleIds(roles);
         for (String permission : permissions) {
-            if (hasAnyPermission(roles, permission)) {
+            if (hasAnyPermission(effectiveRoleIds, permission)) {
                 return true;
             }
         }
-
-        // 情况二：如果是超管，也说明有权限
-        return roleService.hasAnySuperAdmin(convertSet(roles, RoleDO::getId));
+        return false;
     }
 
     /**
      * 判断指定角色，是否拥有该 permission 权限
      *
-     * @param roles 指定角色数组
      * @param permission 权限标识
      * @return 是否拥有
      */
-    private boolean hasAnyPermission(List<RoleDO> roles, String permission) {
+    private boolean hasAnyPermission(Set<Long> roleIds, String permission) {
         List<Long> menuIds = menuService.getMenuIdListByPermissionFromCache(permission);
         // 采用严格模式，如果权限找不到对应的 Menu 的话，也认为没有权限
         if (CollUtil.isEmpty(menuIds)) {
@@ -98,7 +105,6 @@ public class PermissionServiceImpl implements PermissionService {
         }
 
         // 判断是否有权限
-        Set<Long> roleIds = convertSet(roles, RoleDO::getId);
         for (Long menuId : menuIds) {
             // 获得拥有该菜单的角色编号集合
             Set<Long> menuRoleIds = getSelf().getMenuRoleIdListByMenuIdFromCache(menuId);
@@ -141,8 +147,16 @@ public class PermissionServiceImpl implements PermissionService {
     public void assignRoleMenu(Long roleId, Set<Long> menuIds) {
         // 获得角色拥有菜单编号
         Set<Long> dbMenuIds = convertSet(roleMenuMapper.selectListByRoleId(roleId), RoleMenuDO::getMenuId);
+        Set<Long> menuIdList = new HashSet<>(CollUtil.emptyIfNull(menuIds));
+        // manager 只能维护自身范围内的菜单，目标角色已有但不可见的菜单保持不变。
+        Set<Long> currentUserMenuScope = getUserMenuScopeByUserId(SecurityFrameworkUtils.getLoginUserId());
+        if (currentUserMenuScope != null) {
+            Set<Long> invisibleMenuIds = new HashSet<>(dbMenuIds);
+            invisibleMenuIds.removeAll(currentUserMenuScope);
+            menuIdList.removeIf(menuId -> !currentUserMenuScope.contains(menuId));
+            menuIdList.addAll(invisibleMenuIds);
+        }
         // 计算新增和删除的菜单编号
-        Set<Long> menuIdList = CollUtil.emptyIfNull(menuIds);
         Collection<Long> createMenuIds = CollUtil.subtract(menuIdList, dbMenuIds);
         Collection<Long> deleteMenuIds = CollUtil.subtract(dbMenuIds, menuIdList);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
@@ -190,8 +204,40 @@ public class PermissionServiceImpl implements PermissionService {
         if (roleService.hasAnySuperAdmin(roleIds)) {
             return convertSet(menuService.getMenuList(), MenuDO::getId);
         }
+        Set<Long> managerRoleIds = getManagerRoleIds(roleIds);
+        if (CollUtil.isNotEmpty(managerRoleIds)) {
+            return convertSet(roleMenuMapper.selectListByRoleId(managerRoleIds), RoleMenuDO::getMenuId);
+        }
         // 如果是非管理员的情况下，获得拥有的菜单编号
         return convertSet(roleMenuMapper.selectListByRoleId(roleIds), RoleMenuDO::getMenuId);
+    }
+
+    @Override
+    public Set<Long> getRoleMenuListByRoleIdForCurrentUser(Long roleId) {
+        Set<Long> menuIds = getRoleMenuListByRoleId(roleId);
+        Set<Long> currentUserMenuScope = getUserMenuScopeByUserId(SecurityFrameworkUtils.getLoginUserId());
+        if (currentUserMenuScope == null) {
+            return menuIds;
+        }
+        Set<Long> result = new HashSet<>(menuIds);
+        result.retainAll(currentUserMenuScope);
+        return result;
+    }
+
+    @Override
+    public Set<Long> getUserMenuScopeByUserId(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        Set<Long> roleIds = getUserRoleIdListByUserId(userId);
+        if (CollUtil.isEmpty(roleIds) || roleService.hasAnySuperAdmin(roleIds)) {
+            return null;
+        }
+        Set<Long> managerRoleIds = getManagerRoleIds(roleIds);
+        if (CollUtil.isEmpty(managerRoleIds)) {
+            return null;
+        }
+        return convertSet(roleMenuMapper.selectListByRoleId(managerRoleIds), RoleMenuDO::getMenuId);
     }
 
     @Override
@@ -206,6 +252,7 @@ public class PermissionServiceImpl implements PermissionService {
     @DSTransactional // 多数据源，使用 @DSTransactional 保证本地事务，以及数据源的切换
     @CacheEvict(value = RedisKeyConstants.USER_ROLE_ID_LIST, key = "#userId")
     public void assignUserRole(Long userId, Set<Long> roleIds) {
+        validateAssignUserRoleByCurrentUser(roleIds);
         // 获得角色拥有角色编号
         Set<Long> dbRoleIds = convertSet(userRoleMapper.selectListByUserId(userId),
                 UserRoleDO::getRoleId);
@@ -327,6 +374,33 @@ public class PermissionServiceImpl implements PermissionService {
             log.error("[getDeptDataPermission][LoginUser({}) role({}) 无法处理]", userId, toJsonString(result));
         }
         return result;
+    }
+
+    private Set<Long> getEffectiveMenuRoleIds(List<RoleDO> roles) {
+        Set<Long> managerRoleIds = convertSet(roles, RoleDO::getId,
+                role -> role != null && RoleCodeEnum.isManager(role.getCode()));
+        return CollUtil.isNotEmpty(managerRoleIds) ? managerRoleIds : convertSet(roles, RoleDO::getId);
+    }
+
+    private Set<Long> getManagerRoleIds(Collection<Long> roleIds) {
+        List<RoleDO> roles = roleService.getRoleListFromCache(roleIds);
+        return convertSet(roles, RoleDO::getId, role -> role != null && RoleCodeEnum.isManager(role.getCode()));
+    }
+
+    private void validateAssignUserRoleByCurrentUser(Set<Long> roleIds) {
+        Long loginUserId = SecurityFrameworkUtils.getLoginUserId();
+        if (loginUserId == null || CollUtil.isEmpty(roleIds)) {
+            return;
+        }
+        Set<Long> loginRoleIds = getUserRoleIdListByUserId(loginUserId);
+        if (roleService.hasAnySuperAdmin(loginRoleIds)) {
+            return;
+        }
+        List<RoleDO> roles = roleService.getRoleList(roleIds);
+        boolean hasSuperAdmin = roles.stream().anyMatch(role -> role != null && RoleCodeEnum.isSuperAdmin(role.getCode()));
+        if (hasSuperAdmin) {
+            throw exception(ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN);
+        }
     }
 
     /**

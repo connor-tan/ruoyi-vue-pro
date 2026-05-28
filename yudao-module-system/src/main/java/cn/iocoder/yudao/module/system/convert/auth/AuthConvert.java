@@ -30,11 +30,16 @@ public interface AuthConvert {
     AuthConvert INSTANCE = Mappers.getMapper(AuthConvert.class);
 
     default AuthPermissionInfoRespVO convert(AdminUserDO user, List<RoleDO> roleList, List<MenuDO> menuList) {
+        return convert(user, roleList, menuList, menuList);
+    }
+
+    default AuthPermissionInfoRespVO convert(AdminUserDO user, List<RoleDO> roleList, List<MenuDO> menuList,
+                                             List<MenuDO> permissionMenuList) {
         return AuthPermissionInfoRespVO.builder()
                 .user(BeanUtils.toBean(user, AuthPermissionInfoRespVO.UserVO.class))
                 .roles(convertSet(roleList, RoleDO::getCode))
                 // 权限标识信息
-                .permissions(convertSet(menuList, MenuDO::getPermission))
+                .permissions(convertSet(permissionMenuList, MenuDO::getPermission))
                 // 菜单树
                 .menus(buildMenuTree(menuList))
                 .build();

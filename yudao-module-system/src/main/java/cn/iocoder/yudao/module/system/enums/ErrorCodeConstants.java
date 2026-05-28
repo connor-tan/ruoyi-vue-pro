@@ -33,6 +33,7 @@ public interface ErrorCodeConstants {
     ErrorCode ROLE_CAN_NOT_UPDATE_SYSTEM_TYPE_ROLE = new ErrorCode(1_002_002_003, "不能操作类型为系统内置的角色");
     ErrorCode ROLE_IS_DISABLE = new ErrorCode(1_002_002_004, "名字为【{}】的角色已被禁用");
     ErrorCode ROLE_ADMIN_CODE_ERROR = new ErrorCode(1_002_002_005, "标识【{}】不能使用");
+    ErrorCode ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN = new ErrorCode(1_002_002_006, "不能分配超级管理员角色");
 
     // ========== 用户模块 1-002-003-000 ==========
     ErrorCode USER_USERNAME_EXISTS = new ErrorCode(1_002_003_000, "用户账号已经存在");

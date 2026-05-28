@@ -21,7 +21,12 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -82,6 +87,59 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
             throw exception(ORDER_MAX_QUANTITY_EXCEEDED);
         }
         return buildResp(visibility, offer, offerSku, visibleSku, maxQuantity, orderedQuantity);
+    }
+
+    @Override
+    public List<SubscriptionOrderEligibilityRespDTO> validateOrderList(List<SubscriptionOrderEligibilityReqDTO> reqList) {
+        if (CollUtil.isEmpty(reqList)) {
+            return Collections.emptyList();
+        }
+        List<SubscriptionOrderEligibilityRespDTO> results = new ArrayList<>(Collections.nCopies(reqList.size(), null));
+        for (Integer index : buildOrderValidationIndexes(reqList)) {
+            results.set(index, validateOrder(reqList.get(index)));
+        }
+        return results;
+    }
+
+    private List<Integer> buildOrderValidationIndexes(List<SubscriptionOrderEligibilityReqDTO> reqList) {
+        List<Integer> indexes = new ArrayList<>(reqList.size());
+        boolean lockAnchor = false;
+        for (int i = 0; i < reqList.size(); i++) {
+            indexes.add(i);
+            SubscriptionOrderEligibilityReqDTO reqDTO = reqList.get(i);
+            lockAnchor = lockAnchor || (reqDTO != null && Boolean.TRUE.equals(reqDTO.getLockAnchor()));
+        }
+        if (!lockAnchor) {
+            return indexes;
+        }
+
+        Map<Long, SubscriptionWindowOfferSkuDO> offerSkuMap = new HashMap<>();
+        for (SubscriptionOrderEligibilityReqDTO reqDTO : reqList) {
+            if (reqDTO == null || !Boolean.TRUE.equals(reqDTO.getLockAnchor()) || reqDTO.getOfferSkuId() == null) {
+                continue;
+            }
+            offerSkuMap.computeIfAbsent(reqDTO.getOfferSkuId(), offerSkuService::validateOfferSkuExists);
+        }
+        indexes.sort(Comparator
+                .comparing((Integer index) -> getOrderLockOfferId(reqList.get(index), offerSkuMap),
+                        Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(index -> getOrderLockOfferSkuId(reqList.get(index)),
+                        Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparingInt(Integer::intValue));
+        return indexes;
+    }
+
+    private Long getOrderLockOfferId(SubscriptionOrderEligibilityReqDTO reqDTO,
+                                     Map<Long, SubscriptionWindowOfferSkuDO> offerSkuMap) {
+        if (reqDTO == null || !Boolean.TRUE.equals(reqDTO.getLockAnchor()) || reqDTO.getOfferSkuId() == null) {
+            return null;
+        }
+        SubscriptionWindowOfferSkuDO offerSku = offerSkuMap.get(reqDTO.getOfferSkuId());
+        return offerSku == null ? null : offerSku.getOfferId();
+    }
+
+    private Long getOrderLockOfferSkuId(SubscriptionOrderEligibilityReqDTO reqDTO) {
+        return reqDTO == null ? null : reqDTO.getOfferSkuId();
     }
 
     private void validateOrderAnchorAvailable(SubscriptionWindowOfferDO offer,
