@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.system.service.permission;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.role.RolePageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.permission.vo.role.RoleSaveReqVO;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @Import(RoleServiceImpl.class)
 public class RoleServiceImplTest extends BaseDbUnitTest {
@@ -301,6 +303,40 @@ public class RoleServiceImplTest extends BaseDbUnitTest {
         assertEquals(1, pageResult.getTotal());
         assertEquals(1, pageResult.getList().size());
         assertPojoEquals(dbRole, pageResult.getList().get(0));
+    }
+
+    @Test
+    public void testGetRolePage_disabledSuperAdminWithManager_shouldExcludeSuperAdmin() {
+        try (MockedStatic<SecurityFrameworkUtils> securityFrameworkUtilsMock = mockStatic(SecurityFrameworkUtils.class);
+             MockedStatic<SpringUtil> springUtilMockedStatic = mockStatic(SpringUtil.class)) {
+            springUtilMockedStatic.when(() -> SpringUtil.getBean(eq(RoleServiceImpl.class)))
+                    .thenReturn(roleService);
+
+            // 准备参数
+            Long loginUserId = 145L;
+            Long superAdminRoleId = 1L;
+            Long managerRoleId = 160L;
+            RolePageReqVO reqVO = new RolePageReqVO();
+            // mock 当前登录用户残留禁用 super_admin，同时拥有启用 manager
+            securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
+            when(permissionService.getUserRoleIdListByUserId(eq(loginUserId)))
+                    .thenReturn(Set.of(superAdminRoleId, managerRoleId));
+
+            RoleDO superAdminRole = randomPojo(RoleDO.class, o -> o.setId(superAdminRoleId)
+                    .setName("超级管理员").setCode("super_admin")
+                    .setStatus(CommonStatusEnum.DISABLE.getStatus()));
+            RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
+                    .setName("管理员").setCode("manager")
+                    .setStatus(CommonStatusEnum.ENABLE.getStatus()));
+            roleMapper.insert(superAdminRole);
+            roleMapper.insert(managerRole);
+
+            // 调用
+            PageResult<RoleDO> pageResult = roleService.getRolePage(reqVO);
+            // 断言：禁用 super_admin 不应让当前用户看到 super_admin 角色
+            assertEquals(1, pageResult.getTotal());
+            assertEquals(managerRoleId, pageResult.getList().get(0).getId());
+        }
     }
 
     @Test

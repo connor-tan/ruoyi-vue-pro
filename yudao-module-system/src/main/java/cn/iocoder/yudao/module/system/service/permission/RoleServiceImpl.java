@@ -232,8 +232,7 @@ public class RoleServiceImpl implements RoleService {
         Long loginUserId = getLoginUserId();
         boolean excludeSuperAdmin = true;
         if (loginUserId != null) {
-            Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(loginUserId);
-            excludeSuperAdmin = !hasAnySuperAdmin(roleIds);
+            excludeSuperAdmin = !hasAnyEnabledSuperAdminByUserId(loginUserId);
         }
         return roleMapper.selectPage(reqVO, excludeSuperAdmin);
     }
@@ -248,6 +247,19 @@ public class RoleServiceImpl implements RoleService {
             RoleDO role = self.getRoleFromCache(id);
             return role != null && RoleCodeEnum.isSuperAdmin(role.getCode());
         });
+    }
+
+    private boolean hasAnyEnabledSuperAdminByUserId(Long userId) {
+        Set<Long> roleIds = permissionService.getUserRoleIdListByUserId(userId);
+        if (CollectionUtil.isEmpty(roleIds)) {
+            return false;
+        }
+        return getRoleListFromCache(roleIds).stream().anyMatch(this::isEnabledSuperAdmin);
+    }
+
+    private boolean isEnabledSuperAdmin(RoleDO role) {
+        return role != null && CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus())
+                && RoleCodeEnum.isSuperAdmin(role.getCode());
     }
 
     @Override

@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.system.framework.datapermission;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.datapermission.core.rule.DataPermissionRule;
 import cn.iocoder.yudao.framework.mybatis.core.util.MyBatisUtils;
@@ -19,6 +20,7 @@ import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Set;
 
 @Component
@@ -44,12 +46,12 @@ public class AdminUserDataPermissionRule implements DataPermissionRule {
             return null;
         }
         Set<Long> userRoleIds = permissionService.getUserRoleIdListByUserId(userId);
-        if (roleService.hasAnySuperAdmin(userRoleIds)) {
+        if (hasAnyEnabledSuperAdmin(roleService.getRoleListFromCache(userRoleIds))) {
             return null;
         }
 
         Set<Long> superAdminRoleIds = CollectionUtils.convertSet(roleService.getRoleList(), RoleDO::getId,
-                role -> role != null && RoleCodeEnum.isSuperAdmin(role.getCode()));
+                this::isEnabledSuperAdmin);
         if (CollUtil.isEmpty(superAdminRoleIds)) {
             return null;
         }
@@ -63,5 +65,14 @@ public class AdminUserDataPermissionRule implements DataPermissionRule {
                 new ParenthesedExpressionList<>(right));
         in.setNot(true);
         return in;
+    }
+
+    private boolean hasAnyEnabledSuperAdmin(List<RoleDO> roles) {
+        return CollUtil.isNotEmpty(roles) && roles.stream().anyMatch(this::isEnabledSuperAdmin);
+    }
+
+    private boolean isEnabledSuperAdmin(RoleDO role) {
+        return role != null && CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus())
+                && RoleCodeEnum.isSuperAdmin(role.getCode());
     }
 }

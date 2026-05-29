@@ -195,7 +195,7 @@ public class PermissionServiceTest extends BaseDbUnitTest {
             securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
             userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(managerRoleId));
             RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
-                    .setCode(RoleCodeEnum.MANAGER.getCode()));
+                    .setCode(RoleCodeEnum.MANAGER.getCode()).setStatus(CommonStatusEnum.ENABLE.getStatus()));
             when(roleService.getRoleListFromCache(eq(singleton(managerRoleId)))).thenReturn(toList(managerRole));
             // mock manager 可见菜单范围为 200、300
             roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(200L));
@@ -320,7 +320,7 @@ public class PermissionServiceTest extends BaseDbUnitTest {
             securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
             userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(managerRoleId));
             RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
-                    .setCode(RoleCodeEnum.MANAGER.getCode()));
+                    .setCode(RoleCodeEnum.MANAGER.getCode()).setStatus(CommonStatusEnum.ENABLE.getStatus()));
             when(roleService.getRoleListFromCache(eq(singleton(managerRoleId)))).thenReturn(toList(managerRole));
             // mock 菜单范围
             roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(2L));
@@ -333,6 +333,31 @@ public class PermissionServiceTest extends BaseDbUnitTest {
             // 断言
             assertEquals(singleton(2L), menuIds);
         }
+    }
+
+    @Test
+    public void testGetUserMenuScopeByUserId_disabledSuperAdminWithManager_shouldUseManagerScope() {
+        // 准备参数
+        Long userId = 145L;
+        Long superAdminRoleId = 1L;
+        Long managerRoleId = 160L;
+        // mock 当前用户残留禁用 super_admin，同时拥有启用 manager
+        userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(userId).setRoleId(superAdminRoleId));
+        userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(userId).setRoleId(managerRoleId));
+        RoleDO disabledSuperAdminRole = randomPojo(RoleDO.class, o -> o.setId(superAdminRoleId)
+                .setCode(RoleCodeEnum.SUPER_ADMIN.getCode()).setStatus(CommonStatusEnum.DISABLE.getStatus()));
+        RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
+                .setCode(RoleCodeEnum.MANAGER.getCode()).setStatus(CommonStatusEnum.ENABLE.getStatus()));
+        when(roleService.getRoleListFromCache(eq(asSet(superAdminRoleId, managerRoleId))))
+                .thenReturn(toList(disabledSuperAdminRole, managerRole));
+        // mock manager 可见菜单范围
+        roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(2L));
+        roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(managerRoleId).setMenuId(3L));
+
+        // 调用
+        Set<Long> menuScope = permissionService.getUserMenuScopeByUserId(userId);
+        // 断言：禁用 super_admin 不应绕过 manager 菜单范围
+        assertEquals(asSet(2L, 3L), menuScope);
     }
 
     @Test
@@ -388,10 +413,43 @@ public class PermissionServiceTest extends BaseDbUnitTest {
             RoleDO superAdminRole = randomPojo(RoleDO.class, o -> o.setId(1L)
                     .setCode(RoleCodeEnum.SUPER_ADMIN.getCode()));
             RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(160L)
-                    .setCode(RoleCodeEnum.MANAGER.getCode()));
+                    .setCode(RoleCodeEnum.MANAGER.getCode()).setStatus(CommonStatusEnum.ENABLE.getStatus()));
+            when(roleService.getRoleListFromCache(eq(singleton(160L)))).thenReturn(toList(managerRole));
             when(roleService.getRoleList(eq(roleIds))).thenReturn(toList(superAdminRole, managerRole));
 
             // 调用，并断言
+            ServiceException exception = assertThrows(ServiceException.class,
+                    () -> permissionService.assignUserRole(targetUserId, roleIds));
+            assertEquals(ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN.getCode(), exception.getCode());
+            assertTrue(userRoleMapper.selectListByUserId(targetUserId).isEmpty());
+        }
+    }
+
+    @Test
+    public void testAssignUserRole_disabledSuperAdminWithManagerCannotAssignSuperAdmin() {
+        try (MockedStatic<SecurityFrameworkUtils> securityFrameworkUtilsMock = mockStatic(SecurityFrameworkUtils.class)) {
+            // 准备参数
+            Long loginUserId = 145L;
+            Long targetUserId = 2L;
+            Long superAdminRoleId = 1L;
+            Long managerRoleId = 160L;
+            Set<Long> roleIds = singleton(superAdminRoleId);
+            // mock 当前登录用户残留禁用 super_admin，同时拥有启用 manager
+            securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(superAdminRoleId));
+            userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(managerRoleId));
+            RoleDO disabledSuperAdminRole = randomPojo(RoleDO.class, o -> o.setId(superAdminRoleId)
+                    .setCode(RoleCodeEnum.SUPER_ADMIN.getCode()).setStatus(CommonStatusEnum.DISABLE.getStatus()));
+            RoleDO managerRole = randomPojo(RoleDO.class, o -> o.setId(managerRoleId)
+                    .setCode(RoleCodeEnum.MANAGER.getCode()).setStatus(CommonStatusEnum.ENABLE.getStatus()));
+            when(roleService.getRoleListFromCache(eq(asSet(superAdminRoleId, managerRoleId))))
+                    .thenReturn(toList(disabledSuperAdminRole, managerRole));
+            when(roleService.hasAnySuperAdmin(eq(asSet(superAdminRoleId, managerRoleId)))).thenReturn(true);
+            RoleDO superAdminRole = randomPojo(RoleDO.class, o -> o.setId(superAdminRoleId)
+                    .setCode(RoleCodeEnum.SUPER_ADMIN.getCode()));
+            when(roleService.getRoleList(eq(roleIds))).thenReturn(toList(superAdminRole));
+
+            // 调用，并断言：禁用 super_admin 不应放行分配 super_admin
             ServiceException exception = assertThrows(ServiceException.class,
                     () -> permissionService.assignUserRole(targetUserId, roleIds));
             assertEquals(ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN.getCode(), exception.getCode());
@@ -409,7 +467,9 @@ public class PermissionServiceTest extends BaseDbUnitTest {
             // mock 当前登录用户是 super_admin
             securityFrameworkUtilsMock.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(loginUserId);
             userRoleMapper.insert(randomPojo(UserRoleDO.class).setUserId(loginUserId).setRoleId(1L));
-            when(roleService.hasAnySuperAdmin(eq(singleton(1L)))).thenReturn(true);
+            RoleDO superAdminRole = randomPojo(RoleDO.class, o -> o.setId(1L)
+                    .setCode(RoleCodeEnum.SUPER_ADMIN.getCode()).setStatus(CommonStatusEnum.ENABLE.getStatus()));
+            when(roleService.getRoleListFromCache(eq(singleton(1L)))).thenReturn(toList(superAdminRole));
 
             // 调用
             permissionService.assignUserRole(targetUserId, roleIds);

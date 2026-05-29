@@ -230,10 +230,11 @@ public class PermissionServiceImpl implements PermissionService {
             return null;
         }
         Set<Long> roleIds = getUserRoleIdListByUserId(userId);
-        if (CollUtil.isEmpty(roleIds) || roleService.hasAnySuperAdmin(roleIds)) {
+        List<RoleDO> roles = getEnabledRoleList(roleIds);
+        if (CollUtil.isEmpty(roles) || hasAnySuperAdminRole(roles)) {
             return null;
         }
-        Set<Long> managerRoleIds = getManagerRoleIds(roleIds);
+        Set<Long> managerRoleIds = getManagerRoleIds(roles);
         if (CollUtil.isEmpty(managerRoleIds)) {
             return null;
         }
@@ -307,9 +308,7 @@ public class PermissionServiceImpl implements PermissionService {
         // 获得用户拥有的角色编号
         Set<Long> roleIds = getSelf().getUserRoleIdListByUserIdFromCache(userId);
         // 获得角色数组，并移除被禁用的
-        List<RoleDO> roles = roleService.getRoleListFromCache(roleIds);
-        roles.removeIf(role -> !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
-        return roles;
+        return getEnabledRoleList(roleIds);
     }
 
     // ========== 用户-部门的相关方法  ==========
@@ -384,6 +383,10 @@ public class PermissionServiceImpl implements PermissionService {
 
     private Set<Long> getManagerRoleIds(Collection<Long> roleIds) {
         List<RoleDO> roles = roleService.getRoleListFromCache(roleIds);
+        return getManagerRoleIds(roles);
+    }
+
+    private Set<Long> getManagerRoleIds(List<RoleDO> roles) {
         return convertSet(roles, RoleDO::getId, role -> role != null && RoleCodeEnum.isManager(role.getCode()));
     }
 
@@ -393,7 +396,7 @@ public class PermissionServiceImpl implements PermissionService {
             return;
         }
         Set<Long> loginRoleIds = getUserRoleIdListByUserId(loginUserId);
-        if (roleService.hasAnySuperAdmin(loginRoleIds)) {
+        if (hasAnySuperAdminRole(getEnabledRoleList(loginRoleIds))) {
             return;
         }
         List<RoleDO> roles = roleService.getRoleList(roleIds);
@@ -401,6 +404,20 @@ public class PermissionServiceImpl implements PermissionService {
         if (hasSuperAdmin) {
             throw exception(ROLE_SUPER_ADMIN_ASSIGN_FORBIDDEN);
         }
+    }
+
+    private List<RoleDO> getEnabledRoleList(Collection<Long> roleIds) {
+        if (CollUtil.isEmpty(roleIds)) {
+            return Collections.emptyList();
+        }
+        List<RoleDO> roles = new ArrayList<>(CollUtil.emptyIfNull(roleService.getRoleListFromCache(roleIds)));
+        roles.removeIf(role -> role == null || !CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()));
+        return roles;
+    }
+
+    private boolean hasAnySuperAdminRole(Collection<RoleDO> roles) {
+        return CollUtil.isNotEmpty(roles)
+                && roles.stream().anyMatch(role -> role != null && RoleCodeEnum.isSuperAdmin(role.getCode()));
     }
 
     /**
