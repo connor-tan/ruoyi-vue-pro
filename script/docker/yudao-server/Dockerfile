@@ -19,7 +19,7 @@ WORKDIR /yudao-server
 COPY --from=builder /workspace/yudao-server/target/yudao-server.jar app.jar
 
 ENV TZ=Asia/Shanghai
-ENV JAVA_OPTS="-Xms512m -Xmx512m -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS="-Xms512m -Xmx512m -Djava.security.egd=file:/dev/./urandom -Duser.timezone=Asia/Shanghai"
 ENV ARGS=""
 
 EXPOSE 48080
