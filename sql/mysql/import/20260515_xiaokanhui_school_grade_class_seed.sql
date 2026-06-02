@@ -1,9 +1,9 @@
--- 校刊汇：导入学校年级与班级基础数据
+-- 校刊汇：导入学校学年与学校年级基础数据
 -- 口径：
 -- 1. 范围限定为当前学校导入目标：默认仓库为无锡仓(id=1)，且绑定到发行部、河埒站、清扬站、城中站、新吴站、新城站。
 -- 2. 学年覆盖 2025-2026、2026-2027，日期统一为 09-01 至次年 06-30。
--- 3. 班级数：幼儿园每年级 10 个班，小学每年级 25 个班，初中每年级 10 个班。
--- 4. 班级入学年份按学年开始年和年级序推算，例如 2026 学年二年级为 2025 级。
+-- 3. 不再按固定班号预铺班级；班级由后台维护、学生绑定或升班流程按需创建。
+-- 4. 学校年级容量按学段默认写入 max_class_no；本脚本不创建实体班级。
 
 SET NAMES utf8mb4;
 
@@ -138,13 +138,14 @@ BEGIN
         update_time = NOW();
 
     CREATE TEMPORARY TABLE tmp_xkh_school_grade_target AS
-    SELECT DISTINCT ts.school_id, gc.id AS grade_catalog_id
+    SELECT DISTINCT ts.school_id, gc.id AS grade_catalog_id, cc.class_count AS max_class_no
     FROM tmp_xkh_target_school ts
     JOIN edu_school_stage ss ON ss.school_id = ts.school_id
         AND ss.deleted = b'0'
     JOIN edu_grade_catalog gc ON gc.stage = ss.stage
         AND gc.deleted = b'0'
         AND gc.status = 0
+    JOIN tmp_xkh_stage_class_count cc ON cc.stage = gc.stage
     WHERE ss.stage IN ('kindergarten', 'primary', 'middle');
 
     SELECT COUNT(*) INTO v_school_grade_target_count FROM tmp_xkh_school_grade_target;
@@ -153,12 +154,13 @@ BEGIN
     END IF;
 
     INSERT INTO edu_school_grade (
-        school_id, grade_catalog_id, creator, create_time, updater, update_time, deleted
+        school_id, grade_catalog_id, max_class_no, creator, create_time, updater, update_time, deleted
     )
-    SELECT school_id, grade_catalog_id, 'system', NOW(), 'system', NOW(), b'0'
+    SELECT school_id, grade_catalog_id, max_class_no, 'system', NOW(), 'system', NOW(), b'0'
     FROM tmp_xkh_school_grade_target
     ON DUPLICATE KEY UPDATE
         deleted = b'0',
+        max_class_no = IF(max_class_no IS NULL OR max_class_no = 0, VALUES(max_class_no), max_class_no),
         updater = 'system',
         update_time = NOW();
 
@@ -196,11 +198,9 @@ BEGIN
         AND sg.grade_catalog_id = gc.id
     JOIN tmp_xkh_school_year_resolved sy ON sy.school_id = ts.school_id
     JOIN tmp_xkh_class_no n ON n.class_no <= cc.class_count;
+    DELETE FROM tmp_xkh_class_target;
 
     SELECT COUNT(*) INTO v_class_target_count FROM tmp_xkh_class_target;
-    IF v_class_target_count = 0 THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '没有可创建的班级，班级初始化中止';
-    END IF;
 
     SELECT COUNT(*) INTO v_existing_active_class_count
     FROM edu_school_class c

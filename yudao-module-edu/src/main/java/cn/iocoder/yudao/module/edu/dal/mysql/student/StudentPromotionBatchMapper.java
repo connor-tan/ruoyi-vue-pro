@@ -28,4 +28,16 @@ public interface StudentPromotionBatchMapper extends BaseMapperX<StudentPromotio
         return selectList(new LambdaQueryWrapperX<StudentPromotionBatchDO>()
                 .in(StudentPromotionBatchDO::getId, ids));
     }
+
+    default Long countBySchoolYearIdsAndStatuses(Long schoolId, Long fromSchoolYearId, Long toSchoolYearId,
+                                                  Collection<Integer> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return 0L;
+        }
+        return selectCount(new LambdaQueryWrapperX<StudentPromotionBatchDO>()
+                .eq(StudentPromotionBatchDO::getSchoolId, schoolId)
+                .eq(StudentPromotionBatchDO::getFromSchoolYearId, fromSchoolYearId)
+                .eq(StudentPromotionBatchDO::getToSchoolYearId, toSchoolYearId)
+                .in(StudentPromotionBatchDO::getStatus, statuses));
+    }
 }

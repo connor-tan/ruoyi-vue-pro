@@ -1,7 +1,11 @@
 package cn.iocoder.yudao.module.edu.dal.dataobject.student;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.module.edu.enums.DictTypeConstants;
+import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.KeySequence;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -44,6 +48,11 @@ public class StudentDO extends BaseDO {
      */
     private Long currentSchoolId;
     /**
+     * 当前班级冗余快照，由入学绑定、升班、转班、退学等学生流转流程统一维护
+     */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Long currentClassId;
+    /**
      * 入学年
      */
     private Integer entryYear;
@@ -53,6 +62,9 @@ public class StudentDO extends BaseDO {
     private Integer studentCode;
     /**
      * 状态：1-在读，2-毕业，3-休学，4-待升学，5-待入学
+     *
+     * 枚举 {@link StudentStatusEnum}
+     * 字典 {@link DictTypeConstants#EDU_STUDENT_STATUS}
      */
     private Integer status;
 

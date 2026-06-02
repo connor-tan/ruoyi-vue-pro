@@ -33,6 +33,9 @@ public class SchoolGradeRespVO {
     @Schema(description = "年级别名", example = "七年级")
     private String aliasName;
 
+    @Schema(description = "最大班号/班级容量，0 表示暂不开放 APP 选择或自动建班", example = "25")
+    private Integer maxClassNo;
+
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     @JsonFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND, timezone = TIME_ZONE_DEFAULT)
     private LocalDateTime createTime;

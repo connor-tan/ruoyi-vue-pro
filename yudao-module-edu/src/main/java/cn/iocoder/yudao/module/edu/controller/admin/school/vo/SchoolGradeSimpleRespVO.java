@@ -25,4 +25,7 @@ public class SchoolGradeSimpleRespVO {
     @Schema(description = "年级别名", example = "七年级")
     private String aliasName;
 
+    @Schema(description = "最大班号/班级容量，0 表示暂不开放 APP 选择或自动建班", example = "25")
+    private Integer maxClassNo;
+
 }

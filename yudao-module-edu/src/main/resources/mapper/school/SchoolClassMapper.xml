@@ -9,6 +9,15 @@
         文档可见：https://www.iocoder.cn/MyBatis/x-plugins/
      -->
 
+    <select id="selectMaxUsedClassNoBySchoolGradeId" resultType="java.lang.Integer">
+        SELECT MAX(c.class_no)
+        FROM edu_school_class c
+        INNER JOIN edu_student_class sc ON sc.class_id = c.id
+            AND sc.deleted = b'0'
+        WHERE c.deleted = b'0'
+          AND c.school_grade_id = #{schoolGradeId}
+    </select>
+
     <delete id="deletePhysicallyById">
         DELETE FROM edu_school_class
         WHERE id = #{id}

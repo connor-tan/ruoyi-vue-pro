@@ -27,10 +27,14 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
     }
 
     default List<StudentClassDO> selectCurrentListByClassIds(Collection<Long> classIds) {
+        return selectCurrentListByClassIds(classIds, LocalDate.now());
+    }
+
+    default List<StudentClassDO> selectCurrentListByClassIds(Collection<Long> classIds, LocalDate businessDate) {
         if (classIds == null || classIds.isEmpty()) {
             return Collections.emptyList();
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = normalizeBusinessDate(businessDate);
         return selectList(new LambdaQueryWrapperX<StudentClassDO>()
                 .in(StudentClassDO::getClassId, classIds)
                 .le(StudentClassDO::getStartDate, today)
@@ -42,10 +46,14 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
     }
 
     default List<StudentClassDO> selectCurrentListByStudentIds(Collection<Long> studentIds) {
+        return selectCurrentListByStudentIds(studentIds, LocalDate.now());
+    }
+
+    default List<StudentClassDO> selectCurrentListByStudentIds(Collection<Long> studentIds, LocalDate businessDate) {
         if (studentIds == null || studentIds.isEmpty()) {
             return Collections.emptyList();
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = normalizeBusinessDate(businessDate);
         return selectList(new LambdaQueryWrapperX<StudentClassDO>()
                 .in(StudentClassDO::getStudentId, studentIds)
                 .le(StudentClassDO::getStartDate, today)
@@ -58,10 +66,16 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
 
     default List<StudentClassDO> selectCurrentListByStudentIdRange(Long startExclusiveStudentId,
                                                                    Long endInclusiveStudentId) {
+        return selectCurrentListByStudentIdRange(startExclusiveStudentId, endInclusiveStudentId, LocalDate.now());
+    }
+
+    default List<StudentClassDO> selectCurrentListByStudentIdRange(Long startExclusiveStudentId,
+                                                                   Long endInclusiveStudentId,
+                                                                   LocalDate businessDate) {
         if (endInclusiveStudentId == null) {
             return Collections.emptyList();
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = normalizeBusinessDate(businessDate);
         return selectList(new LambdaQueryWrapperX<StudentClassDO>()
                 .gtIfPresent(StudentClassDO::getStudentId, startExclusiveStudentId)
                 .le(StudentClassDO::getStudentId, endInclusiveStudentId)
@@ -75,7 +89,11 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
     }
 
     default List<StudentClassDO> selectCurrentListByStudentId(Long studentId) {
-        LocalDate today = LocalDate.now();
+        return selectCurrentListByStudentId(studentId, LocalDate.now());
+    }
+
+    default List<StudentClassDO> selectCurrentListByStudentId(Long studentId, LocalDate businessDate) {
+        LocalDate today = normalizeBusinessDate(businessDate);
         return selectList(new LambdaQueryWrapperX<StudentClassDO>()
                 .eq(StudentClassDO::getStudentId, studentId)
                 .le(StudentClassDO::getStartDate, today)
@@ -152,7 +170,13 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
 
     default StudentClassDO selectCurrentByStudentIdAndClassIdAndStartDate(Long studentId, Long classId,
                                                                            java.time.LocalDate startDate) {
-        LocalDate today = LocalDate.now();
+        return selectCurrentByStudentIdAndClassIdAndStartDate(studentId, classId, startDate, LocalDate.now());
+    }
+
+    default StudentClassDO selectCurrentByStudentIdAndClassIdAndStartDate(Long studentId, Long classId,
+                                                                           java.time.LocalDate startDate,
+                                                                           LocalDate businessDate) {
+        LocalDate today = normalizeBusinessDate(businessDate);
         return selectOne(new LambdaQueryWrapperX<StudentClassDO>()
                 .eq(StudentClassDO::getStudentId, studentId)
                 .eq(StudentClassDO::getClassId, classId)
@@ -162,6 +186,10 @@ public interface StudentClassMapper extends BaseMapperX<StudentClassDO> {
                         .or()
                         .ge(StudentClassDO::getEndDate, today))
                 .last("LIMIT 1"));
+    }
+
+    private static LocalDate normalizeBusinessDate(LocalDate businessDate) {
+        return businessDate == null ? LocalDate.now() : businessDate;
     }
 
     default StudentClassDO selectLatestEndedByStudentIdAndClassIdAndEndDate(Long studentId, Long classId,

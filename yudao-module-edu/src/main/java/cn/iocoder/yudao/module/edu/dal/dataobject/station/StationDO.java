@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.edu.dal.dataobject.station;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.module.edu.enums.DictTypeConstants;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -40,6 +41,7 @@ public class StationDO extends BaseDO {
 
     /**
      * 枚举 {@link CommonStatusEnum}
+     * 字典 {@link DictTypeConstants#EDU_COMMON_STATUS}
      */
     private Integer status;
 

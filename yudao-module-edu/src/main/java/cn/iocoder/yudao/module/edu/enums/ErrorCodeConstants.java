@@ -39,6 +39,9 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_PUBLISHER_NAME_EXISTS = new ErrorCode(1_016_001_034, "出版社名称已存在");
     ErrorCode PUBLICATION_TYPE_NOT_EXISTS = new ErrorCode(1_016_001_035, "刊物类型不存在");
     ErrorCode PUBLICATION_TYPE_NAME_EXISTS = new ErrorCode(1_016_001_036, "刊物类型名称已存在");
+    ErrorCode SCHOOL_GRADE_CLASS_CAPACITY_NOT_CONFIGURED = new ErrorCode(1_016_001_037, "学校年级班级容量未配置，请先维护最大班号");
+    ErrorCode SCHOOL_CLASS_NO_EXCEEDS_CAPACITY = new ErrorCode(1_016_001_038, "班级号超过学校年级最大班号");
+    ErrorCode SCHOOL_GRADE_CLASS_CAPACITY_TOO_SMALL = new ErrorCode(1_016_001_039, "最大班号不能小于已有学生班级的最大班号");
 
     ErrorCode STUDENT_NOT_EXISTS = new ErrorCode(1_017_001_001, "学生不存在");
     ErrorCode STUDENT_PARENT_NOT_EXISTS = new ErrorCode(1_017_001_002, "家长会员不存在");
@@ -78,4 +81,6 @@ public interface ErrorCodeConstants {
     ErrorCode STUDENT_STATUS_WAITING_ENTRY_FUTURE_CLASS_MULTI = new ErrorCode(1_017_001_036, "待入学学生只能存在一条未来班级记录");
     ErrorCode STUDENT_STATUS_REQUIRED = new ErrorCode(1_017_001_037, "状态不能为空");
     ErrorCode STUDENT_CLASS_SCHOOL_YEAR_START_DATE_REQUIRED = new ErrorCode(1_017_001_038, "班级所属学年开学日期不能为空");
+    ErrorCode STUDENT_PROMOTION_DUPLICATE_EXECUTION = new ErrorCode(1_017_001_039, "该学校来源学年到目标学年的升班已成功执行，不能重复执行");
+    ErrorCode STUDENT_PROMOTION_TARGET_CLASS_CAPACITY_EXCEEDED = new ErrorCode(1_017_001_040, "目标年级班级容量不足，无法创建目标班级");
 }

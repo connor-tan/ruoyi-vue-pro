@@ -42,6 +42,14 @@ public class StudentRespVO {
     @ExcelProperty("学校名称")
     private String currentSchoolName;
 
+    @Schema(description = "当前班级", example = "1024")
+    @ExcelProperty("当前班级ID")
+    private Long currentClassId;
+
+    @Schema(description = "当前班级名称", example = "2026级一年级1班")
+    @ExcelProperty("当前班级名称")
+    private String currentClassName;
+
     @Schema(description = "入学年", requiredMode = Schema.RequiredMode.REQUIRED)
     @ExcelProperty("入学年")
     private Integer entryYear;

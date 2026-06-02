@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.edu.dal.dataobject.student;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.module.edu.enums.DictTypeConstants;
+import cn.iocoder.yudao.module.edu.enums.StudentPromotionBatchStatusEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -35,8 +37,14 @@ public class StudentPromotionBatchDO extends BaseDO {
 
     private Long toSchoolYearId;
 
+    /**
+     * MyBatis 明确映射为 Boolean，数据库现存 bit(1) 暂不迁移。
+     */
     private Boolean autoCreateClass;
 
+    /**
+     * MyBatis 明确映射为 Boolean，数据库现存 bit(1) 暂不迁移。
+     */
     private Boolean graduateTerminalStudent;
 
     private Integer totalCount;
@@ -49,6 +57,10 @@ public class StudentPromotionBatchDO extends BaseDO {
 
     private Integer skippedCount;
 
+    /**
+     * 枚举 {@link StudentPromotionBatchStatusEnum}
+     * 字典 {@link DictTypeConstants#EDU_STUDENT_PROMOTION_BATCH_STATUS}
+     */
     private Integer status;
 
     private String reason;

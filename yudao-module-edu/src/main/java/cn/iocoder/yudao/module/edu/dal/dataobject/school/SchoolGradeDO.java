@@ -37,5 +37,9 @@ public class SchoolGradeDO extends BaseDO {
      * 年级目录ID
      */
     private Long gradeCatalogId;
+    /**
+     * 最大班号/班级容量。0 表示暂不开放 APP 选择或自动建班。
+     */
+    private Integer maxClassNo;
 
 }

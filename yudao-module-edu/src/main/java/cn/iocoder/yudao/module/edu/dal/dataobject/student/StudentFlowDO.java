@@ -1,6 +1,9 @@
 package cn.iocoder.yudao.module.edu.dal.dataobject.student;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.module.edu.enums.DictTypeConstants;
+import cn.iocoder.yudao.module.edu.enums.StudentFlowStatusEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentFlowTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -37,12 +40,22 @@ public class StudentFlowDO extends BaseDO {
 
     private Long toClassId;
 
+    /**
+     * 枚举 {@link StudentFlowTypeEnum}
+     */
     private String changeType;
 
     private LocalDate effectiveDate;
 
+    /**
+     * 枚举 {@link StudentFlowStatusEnum}
+     * 字典 {@link DictTypeConstants#EDU_STUDENT_FLOW_STATUS}
+     */
     private Integer status;
 
+    /**
+     * MyBatis 明确映射为 Boolean，数据库现存 bit(1) 暂不迁移。
+     */
     private Boolean targetClassCreated;
 
     private String remark;

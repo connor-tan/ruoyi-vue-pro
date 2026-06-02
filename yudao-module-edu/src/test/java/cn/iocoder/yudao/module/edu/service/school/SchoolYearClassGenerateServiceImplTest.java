@@ -6,12 +6,14 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateReqBO;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateRespBO;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +46,7 @@ class SchoolYearClassGenerateServiceImplTest {
     private SchoolClassMapper schoolClassMapper;
     private SchoolGradeMapper schoolGradeMapper;
     private GradeCatalogMapper gradeCatalogMapper;
+    private StudentClassMapper studentClassMapper;
 
     @BeforeEach
     void setUp() {
@@ -54,12 +57,14 @@ class SchoolYearClassGenerateServiceImplTest {
         schoolClassMapper = mock(SchoolClassMapper.class);
         schoolGradeMapper = mock(SchoolGradeMapper.class);
         gradeCatalogMapper = mock(GradeCatalogMapper.class);
+        studentClassMapper = mock(StudentClassMapper.class);
         ReflectionTestUtils.setField(service, "schoolMapper", schoolMapper);
         ReflectionTestUtils.setField(service, "schoolYearMapper", schoolYearMapper);
         ReflectionTestUtils.setField(service, "yearCatalogMapper", yearCatalogMapper);
         ReflectionTestUtils.setField(service, "schoolClassMapper", schoolClassMapper);
         ReflectionTestUtils.setField(service, "schoolGradeMapper", schoolGradeMapper);
         ReflectionTestUtils.setField(service, "gradeCatalogMapper", gradeCatalogMapper);
+        ReflectionTestUtils.setField(service, "studentClassMapper", studentClassMapper);
     }
 
     @Test
@@ -173,6 +178,27 @@ class SchoolYearClassGenerateServiceImplTest {
     }
 
     @Test
+    void generateShouldNotCopyEmptyPreseededClass() {
+        SchoolYearDO sourceYear = schoolYear(11L, 1L, 2025);
+        SchoolYearDO targetYear = schoolYear(12L, 1L, 2026);
+        SchoolGradeDO gradeP1 = schoolGrade(101L, 1L, 4L);
+        SchoolGradeDO gradeP2 = schoolGrade(102L, 1L, 5L);
+        SchoolClassDO occupiedClass = schoolClass(1001L, 1L, 2025, 11L, 101L, 1);
+        SchoolClassDO emptyPreseededClass = schoolClass(1002L, 1L, 2025, 11L, 101L, 25);
+        mockBaseData(List.of(school(1L)), primaryGradeCatalogs(), List.of(sourceYear, targetYear),
+                List.of(gradeP1, gradeP2), List.of(occupiedClass, emptyPreseededClass),
+                Collections.emptyList(), List.of(occupiedClass.getId()));
+        when(schoolClassMapper.insertBatch(any(), eq(500))).thenReturn(true);
+
+        SchoolYearClassGenerateRespBO respBO = service.generate(req(2026, false));
+
+        assertEquals(2, respBO.getCreatedClassCount());
+        ArgumentCaptor<Collection<SchoolClassDO>> classCaptor = ArgumentCaptor.forClass(Collection.class);
+        verify(schoolClassMapper).insertBatch(classCaptor.capture(), eq(500));
+        assertTrue(classCaptor.getValue().stream().noneMatch(item -> item.getClassNo().equals(25)));
+    }
+
+    @Test
     void generateShouldOnlyPromoteTerminalGradeWhenSchoolHasNextGrade() {
         SchoolYearDO s1SourceYear = schoolYear(11L, 1L, 2025);
         SchoolYearDO s1TargetYear = schoolYear(12L, 1L, 2026);
@@ -205,6 +231,13 @@ class SchoolYearClassGenerateServiceImplTest {
     private void mockBaseData(List<SchoolDO> schools, List<GradeCatalogDO> gradeCatalogs, List<SchoolYearDO> schoolYears,
                               List<SchoolGradeDO> schoolGrades, List<SchoolClassDO> sourceClasses,
                               List<SchoolClassDO> targetClasses) {
+        mockBaseData(schools, gradeCatalogs, schoolYears, schoolGrades, sourceClasses, targetClasses,
+                sourceClasses.stream().map(SchoolClassDO::getId).toList());
+    }
+
+    private void mockBaseData(List<SchoolDO> schools, List<GradeCatalogDO> gradeCatalogs, List<SchoolYearDO> schoolYears,
+                              List<SchoolGradeDO> schoolGrades, List<SchoolClassDO> sourceClasses,
+                              List<SchoolClassDO> targetClasses, Collection<Long> occupiedSourceClassIds) {
         when(schoolMapper.selectList()).thenReturn(schools);
         when(yearCatalogMapper.selectByYearRange(2026, 2027)).thenReturn(yearCatalog(9001L, 2026, 2027));
         when(gradeCatalogMapper.selectListByStatus(0)).thenReturn(gradeCatalogs);
@@ -214,6 +247,13 @@ class SchoolYearClassGenerateServiceImplTest {
             Collection<Long> schoolYearIds = invocation.getArgument(0);
             boolean sourceQuery = sourceClasses.stream().anyMatch(item -> schoolYearIds.contains(item.getSchoolYearId()));
             return sourceQuery ? sourceClasses : targetClasses;
+        });
+        when(studentClassMapper.selectCurrentListByClassIds(any(), any(LocalDate.class))).thenAnswer(invocation -> {
+            Collection<Long> classIds = invocation.getArgument(0);
+            return classIds.stream()
+                    .filter(occupiedSourceClassIds::contains)
+                    .map(classId -> studentClass(classId, classId))
+                    .toList();
         });
     }
 
@@ -246,6 +286,7 @@ class SchoolYearClassGenerateServiceImplTest {
                 .id(id)
                 .schoolId(schoolId)
                 .gradeCatalogId(gradeCatalogId)
+                .maxClassNo(25)
                 .build();
     }
 
@@ -266,6 +307,13 @@ class SchoolYearClassGenerateServiceImplTest {
                 .schoolYearId(schoolYearId)
                 .schoolGradeId(schoolGradeId)
                 .classNo(classNo)
+                .build();
+    }
+
+    private StudentClassDO studentClass(Long studentId, Long classId) {
+        return StudentClassDO.builder()
+                .studentId(studentId)
+                .classId(classId)
                 .build();
     }
 

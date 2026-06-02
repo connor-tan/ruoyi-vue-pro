@@ -24,6 +24,7 @@ public interface StudentMapper extends BaseMapperX<StudentDO> {
                 .likeIfPresent(StudentDO::getStudentName, reqVO.getStudentName())
                 .eqIfPresent(StudentDO::getBelongTo, reqVO.getBelongTo())
                 .eqIfPresent(StudentDO::getCurrentSchoolId, reqVO.getCurrentSchoolId())
+                .eqIfPresent(StudentDO::getCurrentClassId, reqVO.getCurrentClassId())
                 .eqIfPresent(StudentDO::getEntryYear, reqVO.getEntryYear())
                 .eqIfPresent(StudentDO::getStudentCode, reqVO.getStudentCode())
                 .eqIfPresent(StudentDO::getStatus, reqVO.getStatus())

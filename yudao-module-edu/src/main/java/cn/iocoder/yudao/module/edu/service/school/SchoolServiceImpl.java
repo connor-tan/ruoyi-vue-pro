@@ -91,6 +91,8 @@ public class SchoolServiceImpl implements SchoolService {
     @Resource
     private SchoolGradeMapper schoolGradeMapper;
     @Resource
+    private SchoolClassEnsureService schoolClassEnsureService;
+    @Resource
     private SchoolYearMapper schoolYearMapper;
     @Resource
     private YearCatalogMapper yearCatalogMapper;
@@ -278,6 +280,7 @@ public class SchoolServiceImpl implements SchoolService {
         SchoolGradeDO oldSchoolGrade = validateSchoolGradeExists(schoolGrade.getId());
         validateSchoolGradeChangeable(oldSchoolGrade, schoolGrade.getGradeCatalogId());
         validateSchoolGradeUnique(schoolGrade.getId(), schoolGrade.getSchoolId(), schoolGrade.getGradeCatalogId());
+        validateSchoolGradeCapacityChangeable(oldSchoolGrade.getId(), schoolGrade.getMaxClassNo());
 
         SchoolGradeDO schoolGradeDO = BeanUtils.toBean(schoolGrade, SchoolGradeDO.class);
         schoolGradeDO.clean();
@@ -347,6 +350,13 @@ public class SchoolServiceImpl implements SchoolService {
         }
         if (schoolClassMapper.countBySchoolGradeId(schoolGrade.getId()) > 0) {
             throw exception(SCHOOL_GRADE_IN_USE_UPDATE);
+        }
+    }
+
+    private void validateSchoolGradeCapacityChangeable(Long schoolGradeId, Integer maxClassNo) {
+        Integer maxUsedClassNo = schoolClassMapper.selectMaxUsedClassNoBySchoolGradeId(schoolGradeId);
+        if (maxUsedClassNo != null && maxClassNo != null && maxClassNo < maxUsedClassNo) {
+            throw exception(SCHOOL_GRADE_CLASS_CAPACITY_TOO_SMALL);
         }
     }
 
@@ -492,6 +502,7 @@ public class SchoolServiceImpl implements SchoolService {
         SchoolGradeDO schoolGrade = validateSchoolGradeExists(schoolClass.getSchoolGradeId());
         validateSchoolGradeBelongsToSchool(schoolGrade, schoolClass.getSchoolId());
         GradeCatalogDO gradeCatalog = validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        schoolClassEnsureService.validateClassNoWithinCapacity(schoolGrade, schoolClass.getClassNo());
         validateSchoolClassUnique(null, schoolClass);
 
         SchoolClassDO schoolClassDO = BeanUtils.toBean(schoolClass, SchoolClassDO.class);
@@ -510,6 +521,7 @@ public class SchoolServiceImpl implements SchoolService {
         SchoolGradeDO schoolGrade = validateSchoolGradeExists(schoolClass.getSchoolGradeId());
         validateSchoolGradeBelongsToSchool(schoolGrade, schoolClass.getSchoolId());
         GradeCatalogDO gradeCatalog = validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
+        schoolClassEnsureService.validateClassNoWithinCapacity(schoolGrade, schoolClass.getClassNo());
         validateSchoolClassUnique(schoolClass.getId(), schoolClass);
 
         SchoolClassDO schoolClassDO = BeanUtils.toBean(schoolClass, SchoolClassDO.class);
@@ -561,11 +573,7 @@ public class SchoolServiceImpl implements SchoolService {
         if (currentSchoolYear == null) {
             return Collections.emptyList();
         }
-        return schoolClassMapper.selectListBySchoolIdAndSchoolYearIdAndSchoolGradeId(
-                        schoolId, currentSchoolYear.getId(), schoolGradeId)
-                .stream()
-                .map(this::buildAppSchoolClassSimpleResp)
-                .collect(Collectors.toList());
+        return schoolClassEnsureService.buildClassOptions(schoolId, currentSchoolYear.getId(), schoolGradeId);
     }
 
     @Override
@@ -576,11 +584,7 @@ public class SchoolServiceImpl implements SchoolService {
         validateSchoolYearBelongsToSchool(schoolYear, schoolId);
         SchoolGradeDO schoolGrade = validateSchoolGradeExists(schoolGradeId);
         validateSchoolGradeBelongsToSchool(schoolGrade, schoolId);
-        return schoolClassMapper.selectListBySchoolIdAndSchoolYearIdAndSchoolGradeId(
-                        schoolId, schoolYearId, schoolGradeId)
-                .stream()
-                .map(this::buildAppSchoolClassSimpleResp)
-                .collect(Collectors.toList());
+        return schoolClassEnsureService.buildClassOptions(schoolId, schoolYearId, schoolGradeId);
     }
 
     private SchoolClassDO validateSchoolClassExists(Long id) {
@@ -856,6 +860,7 @@ public class SchoolServiceImpl implements SchoolService {
         respVO.setId(schoolGrade.getId());
         respVO.setSchoolId(schoolGrade.getSchoolId());
         respVO.setGradeCatalogId(schoolGrade.getGradeCatalogId());
+        respVO.setMaxClassNo(schoolGrade.getMaxClassNo());
         respVO.setCreateTime(schoolGrade.getCreateTime());
         if (gradeCatalog != null) {
             respVO.setStage(gradeCatalog.getStage());
@@ -873,6 +878,7 @@ public class SchoolServiceImpl implements SchoolService {
             SchoolGradeSimpleRespVO respVO = new SchoolGradeSimpleRespVO();
             respVO.setId(schoolGrade.getId());
             respVO.setGradeCatalogId(schoolGrade.getGradeCatalogId());
+            respVO.setMaxClassNo(schoolGrade.getMaxClassNo());
             if (gradeCatalog != null) {
                 respVO.setStage(gradeCatalog.getStage());
                 respVO.setGradeNo(gradeCatalog.getGradeNo());
@@ -976,16 +982,6 @@ public class SchoolServiceImpl implements SchoolService {
             respVO.setSchoolYearStartDate(schoolClass.getSchoolYearStartDate());
             return respVO;
         }).collect(Collectors.toList());
-    }
-
-    private AppSchoolClassSimpleRespVO buildAppSchoolClassSimpleResp(SchoolClassDO schoolClass) {
-        AppSchoolClassSimpleRespVO respVO = new AppSchoolClassSimpleRespVO();
-        respVO.setId(schoolClass.getId());
-        respVO.setSchoolGradeId(schoolClass.getSchoolGradeId());
-        respVO.setSchoolYearId(schoolClass.getSchoolYearId());
-        respVO.setEntryYear(schoolClass.getEntryYear());
-        respVO.setClassName(schoolClass.getClassName());
-        return respVO;
     }
 
     private SchoolClassRespVO buildSchoolClassResp(SchoolClassDO schoolClass) {

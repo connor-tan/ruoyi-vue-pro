@@ -28,6 +28,9 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentFlowMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionBatchMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.enums.StudentFlowStatusEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentFlowTypeEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentPromotionBatchStatusEnum;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.edu.service.school.SchoolClassUtils;
 import cn.iocoder.yudao.module.edu.service.school.SchoolGradeSequenceUtils;
@@ -58,8 +61,10 @@ import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMO
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMOTION_ADJUST_TARGET_CLASS_INVALID;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMOTION_ADJUST_TARGET_CLASS_NOT_IN_TARGET_YEAR;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMOTION_ADJUST_TARGET_CLASS_REQUIRED;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMOTION_DUPLICATE_EXECUTION;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMOTION_NO_ELIGIBLE_STUDENTS;
 import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMOTION_TARGET_SCHOOL_YEAR_INVALID;
+import static cn.iocoder.yudao.module.edu.enums.ErrorCodeConstants.STUDENT_PROMOTION_TARGET_CLASS_CAPACITY_EXCEEDED;
 
 /**
  * 学生一键升班 Service 实现类
@@ -73,11 +78,11 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
     private static final Integer STUDENT_STATUS_READING = StudentStatusEnum.READING.getStatus();
     private static final Integer STUDENT_STATUS_PENDING_ADVANCE = StudentStatusEnum.PENDING_ADVANCE.getStatus();
 
-    private static final Integer BATCH_STATUS_SUCCESS = 1;
-    private static final Integer FLOW_STATUS_ACTIVE = 1;
-    private static final String FLOW_TYPE_PROMOTE = "PROMOTE";
-    private static final String FLOW_TYPE_REPEAT = "REPEAT";
-    private static final String FLOW_TYPE_PENDING_ADVANCE = "PENDING_ADVANCE";
+    private static final Integer BATCH_STATUS_SUCCESS = StudentPromotionBatchStatusEnum.SUCCESS.getStatus();
+    private static final Integer FLOW_STATUS_ACTIVE = StudentFlowStatusEnum.ACTIVE.getStatus();
+    private static final String FLOW_TYPE_PROMOTE = StudentFlowTypeEnum.PROMOTE.getType();
+    private static final String FLOW_TYPE_REPEAT = StudentFlowTypeEnum.REPEAT.getType();
+    private static final String FLOW_TYPE_PENDING_ADVANCE = StudentFlowTypeEnum.PENDING_ADVANCE.getType();
 
     private static final String ACTION_PROMOTE = "PROMOTE";
     private static final String ACTION_REPEAT = "REPEAT";
@@ -87,6 +92,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
     private static final String REASON_READY = "READY";
     private static final String REASON_TARGET_CLASS_AUTO_CREATE = "TARGET_CLASS_AUTO_CREATE";
     private static final String REASON_TARGET_CLASS_NOT_FOUND = "TARGET_CLASS_NOT_FOUND";
+    private static final String REASON_TARGET_CLASS_CAPACITY_EXCEEDED = "TARGET_CLASS_CAPACITY_EXCEEDED";
     private static final String REASON_TERMINAL_GRADE_PENDING_ADVANCE = "TERMINAL_GRADE_PENDING_ADVANCE";
     private static final String REASON_TERMINAL_GRADE_SKIP = "TERMINAL_GRADE_SKIP";
     private static final String REASON_GRADE_SEQUENCE_GAP = "GRADE_SEQUENCE_GAP";
@@ -142,6 +148,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
     @Master
     @Transactional(rollbackFor = Exception.class)
     public StudentPromotionExecuteRespVO executeStudentPromotion(StudentPromotionExecuteReqVO reqVO, Long taskId) {
+        validatePromotionNotExecuted(reqVO);
         PromotionPreviewResult previewResult = buildPreviewResult(reqVO);
         if (!previewResult.hasExecutableCandidates()) {
             throw exception(STUDENT_PROMOTION_NO_ELIGIBLE_STUDENTS);
@@ -221,6 +228,12 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                 .build();
         newStudentClass.clean();
         executionPlan.addNewStudentClass(newStudentClass);
+        executionPlan.addStudentStatusUpdate(StudentDO.builder()
+                .id(candidate.getStudent().getId())
+                .status(STUDENT_STATUS_READING)
+                .currentSchoolId(targetClass.getSchoolId())
+                .currentClassId(targetClass.getId())
+                .build());
 
         StudentFlowDO studentFlow = StudentFlowDO.builder()
                 .studentId(candidate.getStudent().getId())
@@ -256,6 +269,12 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
                 .build();
         newStudentClass.clean();
         executionPlan.addNewStudentClass(newStudentClass);
+        executionPlan.addStudentStatusUpdate(StudentDO.builder()
+                .id(candidate.getStudent().getId())
+                .status(STUDENT_STATUS_READING)
+                .currentSchoolId(targetClass.getSchoolId())
+                .currentClassId(targetClass.getId())
+                .build());
 
         StudentFlowDO studentFlow = StudentFlowDO.builder()
                 .studentId(candidate.getStudent().getId())
@@ -282,6 +301,7 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         executionPlan.addStudentStatusUpdate(StudentDO.builder()
                 .id(candidate.getStudent().getId())
                 .status(STUDENT_STATUS_PENDING_ADVANCE)
+                .currentClassId(null)
                 .build());
 
         StudentFlowDO studentFlow = StudentFlowDO.builder()
@@ -334,6 +354,15 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         List<PromotionCandidate> candidates = buildPromotionCandidates(reqVO, sourceClasses, toSchoolYear,
                 adjustmentMap, adjustmentTargetClassMap);
         return new PromotionPreviewResult(school.getId(), fromSchoolYear, toSchoolYear, candidates);
+    }
+
+    private void validatePromotionNotExecuted(StudentPromotionExecuteReqVO reqVO) {
+        Long existedSuccessCount = studentPromotionBatchMapper.countBySchoolYearIdsAndStatuses(
+                reqVO.getSchoolId(), reqVO.getFromSchoolYearId(), reqVO.getToSchoolYearId(),
+                List.of(BATCH_STATUS_SUCCESS));
+        if (existedSuccessCount != null && existedSuccessCount > 0) {
+            throw exception(STUDENT_PROMOTION_DUPLICATE_EXECUTION);
+        }
     }
 
     private List<PromotionCandidate> buildPromotionCandidates(StudentPromotionPreviewReqVO reqVO,
@@ -499,6 +528,11 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         candidate.setTargetClassMissing(true);
         candidate.setPredictedTargetClassName(SchoolClassUtils.buildClassName(subject.student.getEntryYear(),
                 candidate.getTargetGradeCatalog().getGradeName(), subject.currentClass.getClassNo()));
+        if (!isClassNoWithinCapacity(candidate.getTargetSchoolGrade(), subject.currentClass.getClassNo())) {
+            candidate.setAction(ACTION_SKIP);
+            candidate.setReason(REASON_TARGET_CLASS_CAPACITY_EXCEEDED);
+            return true;
+        }
         if (Boolean.TRUE.equals(context.reqVO.getAutoCreateClass())) {
             candidate.setAction(ACTION_PROMOTE);
             candidate.setReason(REASON_TARGET_CLASS_AUTO_CREATE);
@@ -653,6 +687,9 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         if (existedClass != null) {
             return new ResolvedTargetClass(existedClass, false);
         }
+        if (!isClassNoWithinCapacity(targetSchoolGrade, classNo)) {
+            throw exception(STUDENT_PROMOTION_TARGET_CLASS_CAPACITY_EXCEEDED);
+        }
         SchoolClassDO schoolClass = SchoolClassDO.builder()
                 .schoolId(schoolId)
                 .entryYear(entryYear)
@@ -664,6 +701,11 @@ public class StudentPromotionServiceImpl implements StudentPromotionService {
         schoolClass.clean();
         schoolClassMapper.insert(schoolClass);
         return new ResolvedTargetClass(schoolClass, true);
+    }
+
+    private boolean isClassNoWithinCapacity(SchoolGradeDO schoolGrade, Integer classNo) {
+        Integer maxClassNo = schoolGrade.getMaxClassNo() == null ? 0 : schoolGrade.getMaxClassNo();
+        return classNo != null && maxClassNo > 0 && classNo <= maxClassNo;
     }
 
     private String buildTargetClassKey(Integer entryYear, Long schoolGradeId, Integer classNo) {

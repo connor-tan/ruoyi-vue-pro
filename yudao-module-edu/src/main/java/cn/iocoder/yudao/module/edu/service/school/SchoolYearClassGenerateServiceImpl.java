@@ -8,12 +8,14 @@ import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolGradeDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.SchoolYearDO;
 import cn.iocoder.yudao.module.edu.dal.dataobject.school.YearCatalogDO;
+import cn.iocoder.yudao.module.edu.dal.dataobject.studentclass.StudentClassDO;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.GradeCatalogMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolClassMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolGradeMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.SchoolYearMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.school.YearCatalogMapper;
+import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateReqBO;
 import cn.iocoder.yudao.module.edu.service.school.bo.SchoolYearClassGenerateRespBO;
 import com.baomidou.dynamic.datasource.annotation.Master;
@@ -51,6 +53,7 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
     private static final String REASON_TARGET_GRADE_NOT_FOUND = "TARGET_GRADE_NOT_FOUND";
     private static final String REASON_GRADE_SEQUENCE_GAP = "GRADE_SEQUENCE_GAP";
     private static final String REASON_TARGET_CLASS_EXISTS = "TARGET_CLASS_EXISTS";
+    private static final String REASON_CLASS_CAPACITY_EXCEEDED = "CLASS_CAPACITY_EXCEEDED";
 
     @Resource
     private SchoolMapper schoolMapper;
@@ -64,6 +67,8 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
     private SchoolGradeMapper schoolGradeMapper;
     @Resource
     private GradeCatalogMapper gradeCatalogMapper;
+    @Resource
+    private StudentClassMapper studentClassMapper;
 
     @Override
     @Master
@@ -143,7 +148,9 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
                 .collect(Collectors.toCollection(HashSet::new));
 
         List<SchoolClassDO> classesToCreate = eligibleSchoolIds.stream()
-                .flatMap(schoolId -> buildTargetClasses(schoolId, sourceClassMap.getOrDefault(schoolId, Collections.emptyList()),
+                .flatMap(schoolId -> buildTargetClasses(schoolId,
+                        filterOccupiedSourceClasses(sourceClassMap.getOrDefault(schoolId, Collections.emptyList()),
+                                sourceYearMap.get(schoolId)),
                         schoolGradeListMap.getOrDefault(schoolId, Collections.emptyList()), schoolGradeMap,
                         gradeCatalogMap, nextGradeCatalogIdMap, firstGradeCatalogIds, targetYearMap.get(schoolId),
                         targetClassKeys, request, respBO).stream())
@@ -153,6 +160,22 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
             schoolClassMapper.insertBatch(classesToCreate, BATCH_WRITE_SIZE);
         }
         return respBO;
+    }
+
+    private List<SchoolClassDO> filterOccupiedSourceClasses(List<SchoolClassDO> sourceClasses, SchoolYearDO sourceYear) {
+        if (CollUtil.isEmpty(sourceClasses) || sourceYear == null || sourceYear.getEndDate() == null) {
+            return Collections.emptyList();
+        }
+        Set<Long> occupiedClassIds = studentClassMapper.selectCurrentListByClassIds(
+                        convertList(sourceClasses, SchoolClassDO::getId), sourceYear.getEndDate()).stream()
+                .map(StudentClassDO::getClassId)
+                .collect(Collectors.toSet());
+        if (occupiedClassIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return sourceClasses.stream()
+                .filter(sourceClass -> occupiedClassIds.contains(sourceClass.getId()))
+                .collect(Collectors.toList());
     }
 
     private List<SchoolClassDO> buildTargetClasses(Long schoolId, List<SchoolClassDO> sourceClasses,
@@ -243,10 +266,15 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
                                              Integer classNo, Set<String> targetClassKeys,
                                              SchoolYearClassGenerateRespBO respBO) {
         String classKey = buildClassKey(schoolId, entryYear, schoolYearId, schoolGrade.getId(), classNo);
-        if (!targetClassKeys.add(classKey)) {
+        if (targetClassKeys.contains(classKey)) {
             increaseSkippedClass(respBO, REASON_TARGET_CLASS_EXISTS);
             return null;
         }
+        if (!isClassNoWithinCapacity(schoolGrade, classNo)) {
+            increaseSkippedClass(respBO, REASON_CLASS_CAPACITY_EXCEEDED);
+            return null;
+        }
+        targetClassKeys.add(classKey);
         SchoolClassDO schoolClass = SchoolClassDO.builder()
                 .schoolId(schoolId)
                 .entryYear(entryYear)
@@ -257,6 +285,11 @@ public class SchoolYearClassGenerateServiceImpl implements SchoolYearClassGenera
                 .build();
         schoolClass.clean();
         return schoolClass;
+    }
+
+    private boolean isClassNoWithinCapacity(SchoolGradeDO schoolGrade, Integer classNo) {
+        Integer maxClassNo = schoolGrade.getMaxClassNo() == null ? 0 : schoolGrade.getMaxClassNo();
+        return classNo != null && maxClassNo > 0 && classNo <= maxClassNo;
     }
 
     private boolean isFirstGradeClass(SchoolClassDO schoolClass, Map<Long, SchoolGradeDO> schoolGradeMap,

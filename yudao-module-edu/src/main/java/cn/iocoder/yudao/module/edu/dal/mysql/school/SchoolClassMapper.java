@@ -87,6 +87,8 @@ public interface SchoolClassMapper extends BaseMapperX<SchoolClassDO> {
         return selectCount(SchoolClassDO::getSchoolYearId, schoolYearId);
     }
 
+    Integer selectMaxUsedClassNoBySchoolGradeId(@Param("schoolGradeId") Long schoolGradeId);
+
     int deletePhysicallyById(@Param("id") Long id);
 
     int deletePhysicallyByIds(@Param("ids") Collection<Long> ids);

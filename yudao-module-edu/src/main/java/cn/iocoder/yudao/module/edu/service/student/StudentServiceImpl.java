@@ -33,6 +33,8 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.enums.AppStudentBindModeEnum;
 import cn.iocoder.yudao.module.edu.service.station.StationService;
+import cn.iocoder.yudao.module.edu.service.school.SchoolClassEnsureService;
+import cn.iocoder.yudao.module.edu.service.school.SchoolClassUtils;
 import cn.iocoder.yudao.module.edu.service.school.SchoolGradeSequenceUtils;
 import cn.iocoder.yudao.module.edu.dal.dataobject.station.StationDO;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
@@ -127,6 +129,10 @@ public class StudentServiceImpl implements StudentService {
     @Resource
     private SchoolYearMapper schoolYearMapper;
     @Resource
+    private SchoolClassEnsureService schoolClassEnsureService;
+    @Resource
+    private StudentClassConsistencyService studentClassConsistencyService;
+    @Resource
     private MemberUserApi memberUserApi;
     @Resource
     private StationService stationService;
@@ -141,6 +147,7 @@ public class StudentServiceImpl implements StudentService {
         StudentDO student = BeanUtils.toBean(createReqVO, StudentDO.class);
         studentMapper.insert(student);
         createStudentClassList(student.getId(), createReqVO.getStudentClasses());
+        syncStudentCurrentSnapshot(student.getId(), LocalDate.now());
         return student.getId();
     }
 
@@ -153,6 +160,7 @@ public class StudentServiceImpl implements StudentService {
         StudentDO updateObj = BeanUtils.toBean(updateReqVO, StudentDO.class);
         studentMapper.updateById(updateObj);
         updateStudentClassList(updateReqVO.getId(), updateReqVO.getStudentClasses());
+        syncStudentCurrentSnapshot(updateReqVO.getId(), LocalDate.now());
     }
 
     @Override
@@ -244,10 +252,12 @@ public class StudentServiceImpl implements StudentService {
         List<StudentDO> matchedStudents = studentMapper.selectSimpleListByExactStudentNameAndSchoolId(
                 studentName, selectedContext.schoolId);
         if (CollUtil.isEmpty(matchedStudents)) {
+            selectedContext = ensureSelectedClass(selectedContext);
             StudentDO student = StudentDO.builder()
                     .studentName(studentName)
                     .belongTo(belongTo)
                     .currentSchoolId(selectedContext.schoolId)
+                    .currentClassId(selectedContext.isCurrentReading() ? selectedContext.classId : null)
                     .entryYear(selectedContext.entryYear)
                     .status(selectedContext.studentStatus)
                     .build();
@@ -274,8 +284,10 @@ public class StudentServiceImpl implements StudentService {
             return buildStudentBindConfirmResp(student, conflictType, currentContext, selectedContext);
         }
         if (conflictType != null) {
+            selectedContext = ensureSelectedClass(selectedContext);
             replaceStudentClass(student, currentStudentClasses, futureStudentClasses, selectedContext);
         }
+        selectedContext = ensureSelectedClass(selectedContext);
         bindStudentToParent(student, belongTo, selectedContext);
         return buildStudentBindSuccessResp(STUDENT_BIND_RESULT_BOUND, student);
     }
@@ -386,7 +398,12 @@ public class StudentServiceImpl implements StudentService {
                 result.addSkippedMultiCurrentClass();
                 continue;
             }
-            studentMapper.updateStatusById(student.getId(), STUDENT_STATUS_READING);
+            StudentClassDO currentStudentClass = currentStudentClasses.get(0);
+            studentMapper.updateById(StudentDO.builder()
+                    .id(student.getId())
+                    .status(STUDENT_STATUS_READING)
+                    .currentClassId(currentStudentClass.getClassId())
+                    .build());
             result.addActivated();
         }
     }
@@ -655,17 +672,38 @@ public class StudentServiceImpl implements StudentService {
             throw exception(SCHOOL_GRADE_NOT_BELONG_TO_SCHOOL);
         }
         GradeCatalogDO gradeCatalog = validateGradeCatalogEnabled(schoolGrade.getGradeCatalogId());
-        SchoolClassDO schoolClass = schoolClassMapper.selectById(reqVO.getClassId());
-        if (schoolClass == null) {
-            throw exception(SCHOOL_CLASS_NOT_EXISTS);
+        schoolClassEnsureService.validateClassNoWithinCapacity(schoolGrade, reqVO.getClassNo());
+        Integer entryYear = schoolClassEnsureService.resolveEntryYear(selectedSchoolYear, gradeCatalog);
+        SchoolClassDO schoolClass = resolveSelectedSchoolClass(reqVO, school, selectedSchoolYear, schoolGrade, entryYear);
+        if (schoolClass != null) {
+            return new StudentBindClassContext(school, schoolGrade, gradeCatalog, schoolClass, selectedSchoolYear,
+                    reqVO.getBindMode());
         }
+        return new StudentBindClassContext(school, schoolGrade, gradeCatalog, selectedSchoolYear,
+                reqVO.getBindMode(), reqVO.getClassNo(), entryYear,
+                SchoolClassUtils.buildClassName(entryYear, gradeCatalog.getGradeName(), reqVO.getClassNo()));
+    }
+
+    private SchoolClassDO resolveSelectedSchoolClass(AppStudentBindReqVO reqVO, SchoolDO school,
+                                                     SchoolYearDO selectedSchoolYear, SchoolGradeDO schoolGrade,
+                                                     Integer entryYear) {
+        SchoolClassDO schoolClass = reqVO.getClassId() == null ? schoolClassMapper.selectByUniqueKey(
+                school.getId(), entryYear, selectedSchoolYear.getId(), schoolGrade.getId(), reqVO.getClassNo())
+                : schoolClassMapper.selectById(reqVO.getClassId());
+        if (schoolClass == null) {
+            if (reqVO.getClassId() != null) {
+                throw exception(SCHOOL_CLASS_NOT_EXISTS);
+            }
+            return null;
+        }
+        studentClassConsistencyService.validateClassChain(schoolClass, selectedSchoolYear, schoolGrade);
         if (!Objects.equals(schoolClass.getSchoolId(), school.getId())
                 || !Objects.equals(schoolClass.getSchoolGradeId(), schoolGrade.getId())
-                || !Objects.equals(schoolClass.getSchoolYearId(), selectedSchoolYear.getId())) {
+                || !Objects.equals(schoolClass.getSchoolYearId(), selectedSchoolYear.getId())
+                || !Objects.equals(schoolClass.getClassNo(), reqVO.getClassNo())) {
             throw exception(STUDENT_BIND_CLASS_NOT_SELECTED_YEAR);
         }
-        return new StudentBindClassContext(school, schoolGrade, gradeCatalog, schoolClass, selectedSchoolYear,
-                reqVO.getBindMode());
+        return schoolClass;
     }
 
     private void validateAppBindSchoolYear(String bindMode, Long schoolId, SchoolYearDO selectedSchoolYear,
@@ -703,6 +741,7 @@ public class StudentServiceImpl implements StudentService {
         if (schoolYear == null) {
             throw exception(SCHOOL_YEAR_NOT_EXISTS);
         }
+        studentClassConsistencyService.validateClassChain(schoolClass, schoolYear, schoolGrade);
         return new StudentBindClassContext(school, schoolGrade, gradeCatalog, schoolClass, schoolYear, null);
     }
 
@@ -759,7 +798,7 @@ public class StudentServiceImpl implements StudentService {
         if (!Objects.equals(currentContext.gradeCatalogId, selectedContext.gradeCatalogId)) {
             return STUDENT_BIND_CONFLICT_GRADE_MISMATCH;
         }
-        if (!Objects.equals(currentContext.classId, selectedContext.classId)) {
+        if (!Objects.equals(currentContext.classNo, selectedContext.classNo)) {
             return STUDENT_BIND_CONFLICT_CLASS_MISMATCH;
         }
         return null;
@@ -859,6 +898,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private void createSelectedStudentClass(Long studentId, StudentBindClassContext selectedContext) {
+        selectedContext = ensureSelectedClass(selectedContext);
         StudentClassDO studentClass = StudentClassDO.builder()
                 .studentId(studentId)
                 .classId(selectedContext.classId)
@@ -870,18 +910,30 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private void bindStudentToParent(StudentDO student, Long belongTo, StudentBindClassContext selectedContext) {
+        selectedContext = ensureSelectedClass(selectedContext);
         StudentDO updateObj = StudentDO.builder()
                 .id(student.getId())
                 .belongTo(belongTo)
                 .currentSchoolId(selectedContext.schoolId)
+                .currentClassId(selectedContext.isCurrentReading() ? selectedContext.classId : null)
                 .entryYear(selectedContext.entryYear)
                 .status(selectedContext.studentStatus)
                 .build();
         studentMapper.updateById(updateObj);
         student.setBelongTo(belongTo);
         student.setCurrentSchoolId(selectedContext.schoolId);
+        student.setCurrentClassId(selectedContext.isCurrentReading() ? selectedContext.classId : null);
         student.setEntryYear(selectedContext.entryYear);
         student.setStatus(selectedContext.studentStatus);
+    }
+
+    private StudentBindClassContext ensureSelectedClass(StudentBindClassContext selectedContext) {
+        if (selectedContext.classId != null) {
+            return selectedContext;
+        }
+        SchoolClassDO schoolClass = schoolClassEnsureService.ensureSchoolClass(selectedContext.schoolId,
+                selectedContext.schoolYearId, selectedContext.schoolGradeId, selectedContext.classNo);
+        return selectedContext.withSchoolClass(schoolClass);
     }
 
     private AppStudentBindRespVO buildStudentBindSuccessResp(String result, StudentDO student) {
@@ -890,6 +942,19 @@ public class StudentServiceImpl implements StudentService {
         respVO.setStudentId(student.getId());
         respVO.setStudentName(student.getStudentName());
         return respVO;
+    }
+
+    private void syncStudentCurrentSnapshot(Long studentId, LocalDate businessDate) {
+        StudentClassConsistencyService.StudentClassSnapshot snapshot =
+                studentClassConsistencyService.resolveCurrentClassSnapshot(studentId, businessDate);
+        StudentDO updateObj = StudentDO.builder()
+                .id(studentId)
+                .currentClassId(snapshot.getCurrentClassId())
+                .build();
+        if (snapshot.getCurrentSchoolId() != null) {
+            updateObj.setCurrentSchoolId(snapshot.getCurrentSchoolId());
+        }
+        studentMapper.updateById(updateObj);
     }
 
     private void validateStudentUnused(Long studentId) {
@@ -919,6 +984,10 @@ public class StudentServiceImpl implements StudentService {
         }
         Map<Long, SchoolYearDO> schoolYearMap = getSchoolYearMap(convertSet(schoolClassMap.values(),
                 SchoolClassDO::getSchoolYearId));
+        Map<Long, SchoolGradeDO> schoolGradeMap = schoolGradeMapper.selectList(SchoolGradeDO::getId,
+                        convertSet(schoolClassMap.values(), SchoolClassDO::getSchoolGradeId)).stream()
+                .collect(Collectors.toMap(SchoolGradeDO::getId,
+                        Function.identity(), (item1, item2) -> item1));
         for (StudentClassSaveReqVO studentClass : studentClasses) {
             SchoolClassDO schoolClass = schoolClassMap.get(studentClass.getClassId());
             if (!Objects.equals(schoolClass.getSchoolId(), schoolId)) {
@@ -935,6 +1004,11 @@ public class StudentServiceImpl implements StudentService {
             if (!Objects.equals(schoolYear.getSchoolId(), schoolId)) {
                 throw exception(SCHOOL_YEAR_NOT_BELONG_TO_SCHOOL);
             }
+            SchoolGradeDO schoolGrade = schoolGradeMap.get(schoolClass.getSchoolGradeId());
+            if (schoolGrade == null) {
+                throw exception(SCHOOL_GRADE_NOT_EXISTS);
+            }
+            studentClassConsistencyService.validateClassChain(schoolClass, schoolYear, schoolGrade);
             if (schoolYear.getStartDate() == null) {
                 throw exception(STUDENT_CLASS_SCHOOL_YEAR_START_DATE_REQUIRED);
             }
@@ -1028,18 +1102,23 @@ public class StudentServiceImpl implements StudentService {
         Map<Long, SchoolDO> schoolMap = schoolMapper.selectList(SchoolDO::getId, convertSet(students, StudentDO::getCurrentSchoolId))
                 .stream()
                 .collect(Collectors.toMap(SchoolDO::getId, Function.identity(), (item1, item2) -> item1));
+        Map<Long, SchoolClassDO> currentClassMap = getSchoolClassMap(convertSet(students, StudentDO::getCurrentClassId));
         return students.stream()
-                .map(student -> buildStudentResp(student, parentMap.get(student.getBelongTo()), schoolMap.get(student.getCurrentSchoolId())))
+                .map(student -> buildStudentResp(student, parentMap.get(student.getBelongTo()),
+                        schoolMap.get(student.getCurrentSchoolId()), currentClassMap.get(student.getCurrentClassId())))
                 .collect(Collectors.toList());
     }
 
     private StudentRespVO buildStudentResp(StudentDO student) {
         MemberUserRespDTO parent = memberUserApi.getUser(student.getBelongTo());
         SchoolDO school = schoolMapper.selectById(student.getCurrentSchoolId());
-        return buildStudentResp(student, parent, school);
+        SchoolClassDO currentClass = student.getCurrentClassId() == null ? null
+                : schoolClassMapper.selectById(student.getCurrentClassId());
+        return buildStudentResp(student, parent, school, currentClass);
     }
 
-    private StudentRespVO buildStudentResp(StudentDO student, MemberUserRespDTO parent, SchoolDO school) {
+    private StudentRespVO buildStudentResp(StudentDO student, MemberUserRespDTO parent, SchoolDO school,
+                                           SchoolClassDO currentClass) {
         StudentRespVO respVO = BeanUtils.toBean(student, StudentRespVO.class);
         if (parent != null) {
             respVO.setParentNickname(parent.getNickname());
@@ -1047,6 +1126,9 @@ public class StudentServiceImpl implements StudentService {
         }
         if (school != null) {
             respVO.setCurrentSchoolName(school.getSchoolName());
+        }
+        if (currentClass != null) {
+            respVO.setCurrentClassName(currentClass.getClassName());
         }
         return respVO;
     }
@@ -1237,7 +1319,9 @@ public class StudentServiceImpl implements StudentService {
         private final Long schoolId;
         private final Long schoolGradeId;
         private final Long gradeCatalogId;
+        private final Long schoolYearId;
         private final Long classId;
+        private final Integer classNo;
         private final Integer entryYear;
         private final LocalDate startDate;
         private final String bindMode;
@@ -1251,7 +1335,9 @@ public class StudentServiceImpl implements StudentService {
             this.schoolId = school.getId();
             this.schoolGradeId = schoolGrade.getId();
             this.gradeCatalogId = gradeCatalog.getId();
+            this.schoolYearId = schoolYear.getId();
             this.classId = schoolClass.getId();
+            this.classNo = schoolClass.getClassNo();
             this.entryYear = schoolClass.getEntryYear();
             this.startDate = schoolYear.getStartDate();
             this.bindMode = bindMode;
@@ -1259,6 +1345,47 @@ public class StudentServiceImpl implements StudentService {
                     ? STUDENT_STATUS_WAITING_ENTRY : STUDENT_STATUS_READING;
             this.gradeName = gradeCatalog.getGradeName();
             this.className = schoolClass.getClassName();
+        }
+
+        private StudentBindClassContext(SchoolDO school, SchoolGradeDO schoolGrade,
+                                        GradeCatalogDO gradeCatalog, SchoolYearDO schoolYear, String bindMode,
+                                        Integer classNo, Integer entryYear, String className) {
+            this.schoolId = school.getId();
+            this.schoolGradeId = schoolGrade.getId();
+            this.gradeCatalogId = gradeCatalog.getId();
+            this.schoolYearId = schoolYear.getId();
+            this.classId = null;
+            this.classNo = classNo;
+            this.entryYear = entryYear;
+            this.startDate = schoolYear.getStartDate();
+            this.bindMode = bindMode;
+            this.studentStatus = Objects.equals(bindMode, AppStudentBindModeEnum.FUTURE_ENTRY.getMode())
+                    ? STUDENT_STATUS_WAITING_ENTRY : STUDENT_STATUS_READING;
+            this.gradeName = gradeCatalog.getGradeName();
+            this.className = className;
+        }
+
+        private StudentBindClassContext(Long schoolId, Long schoolGradeId, Long gradeCatalogId, Long schoolYearId,
+                                        Long classId, Integer classNo, Integer entryYear, LocalDate startDate,
+                                        String bindMode, Integer studentStatus, String gradeName, String className) {
+            this.schoolId = schoolId;
+            this.schoolGradeId = schoolGradeId;
+            this.gradeCatalogId = gradeCatalogId;
+            this.schoolYearId = schoolYearId;
+            this.classId = classId;
+            this.classNo = classNo;
+            this.entryYear = entryYear;
+            this.startDate = startDate;
+            this.bindMode = bindMode;
+            this.studentStatus = studentStatus;
+            this.gradeName = gradeName;
+            this.className = className;
+        }
+
+        private StudentBindClassContext withSchoolClass(SchoolClassDO schoolClass) {
+            return new StudentBindClassContext(schoolId, schoolGradeId, gradeCatalogId, schoolYearId,
+                    schoolClass.getId(), schoolClass.getClassNo(), schoolClass.getEntryYear(), startDate,
+                    bindMode, studentStatus, gradeName, schoolClass.getClassName());
         }
 
         private boolean isCurrentReading() {

@@ -24,6 +24,9 @@ public class StudentPageReqVO extends PageParam {
     @Schema(description = "学校", example = "26463")
     private Long currentSchoolId;
 
+    @Schema(description = "当前班级", example = "1024")
+    private Long currentClassId;
+
     @Schema(description = "入学年")
     private Integer entryYear;
 

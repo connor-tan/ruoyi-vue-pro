@@ -47,6 +47,11 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionTaskMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentPromotionBatchMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
+import cn.iocoder.yudao.module.edu.enums.StudentFlowStatusEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentFlowTypeEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentGlobalPromotionSchoolStatusEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentPromotionBatchStatusEnum;
+import cn.iocoder.yudao.module.edu.enums.StudentPromotionTaskStatusEnum;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
 import cn.iocoder.yudao.module.system.api.ip.AreaApi;
 import jakarta.annotation.Resource;
@@ -88,37 +93,37 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
     private static final String SCOPE_TYPE_SCHOOL = "SCHOOL";
     private static final String SCOPE_TYPE_AREA = "AREA";
 
-    private static final String SCHOOL_STATUS_READY = "READY";
-    private static final String SCHOOL_STATUS_SKIP = "SKIP";
-    private static final String SCHOOL_STATUS_SUCCESS = "SUCCESS";
-    private static final String SCHOOL_STATUS_FAILED = "FAILED";
+    private static final String SCHOOL_STATUS_READY = StudentGlobalPromotionSchoolStatusEnum.READY.getStatus();
+    private static final String SCHOOL_STATUS_SKIP = StudentGlobalPromotionSchoolStatusEnum.SKIP.getStatus();
+    private static final String SCHOOL_STATUS_SUCCESS = StudentGlobalPromotionSchoolStatusEnum.SUCCESS.getStatus();
+    private static final String SCHOOL_STATUS_FAILED = StudentGlobalPromotionSchoolStatusEnum.FAILED.getStatus();
 
     private static final String SCHOOL_REASON_SOURCE_YEAR_NOT_FOUND = "SOURCE_SCHOOL_YEAR_NOT_FOUND";
     private static final String SCHOOL_REASON_TARGET_YEAR_NOT_FOUND = "TARGET_SCHOOL_YEAR_NOT_FOUND";
     private static final String SCHOOL_REASON_NO_ELIGIBLE_STUDENTS = "NO_ELIGIBLE_STUDENTS";
 
-    private static final Integer TASK_STATUS_RUNNING = 0;
-    private static final Integer TASK_STATUS_SUCCESS = 1;
-    private static final Integer TASK_STATUS_PARTIAL = 2;
-    private static final Integer TASK_STATUS_FAILED = 3;
-    private static final Integer TASK_STATUS_ROLLED_BACK = 4;
+    private static final Integer TASK_STATUS_RUNNING = StudentPromotionTaskStatusEnum.RUNNING.getStatus();
+    private static final Integer TASK_STATUS_SUCCESS = StudentPromotionTaskStatusEnum.SUCCESS.getStatus();
+    private static final Integer TASK_STATUS_PARTIAL = StudentPromotionTaskStatusEnum.PARTIAL.getStatus();
+    private static final Integer TASK_STATUS_FAILED = StudentPromotionTaskStatusEnum.FAILED.getStatus();
+    private static final Integer TASK_STATUS_ROLLED_BACK = StudentPromotionTaskStatusEnum.ROLLED_BACK.getStatus();
 
-    private static final Integer BATCH_STATUS_SUCCESS = 1;
-    private static final Integer BATCH_STATUS_SKIPPED = 2;
-    private static final Integer BATCH_STATUS_FAILED = 3;
-    private static final Integer BATCH_STATUS_ROLLED_BACK = 4;
+    private static final Integer BATCH_STATUS_SUCCESS = StudentPromotionBatchStatusEnum.SUCCESS.getStatus();
+    private static final Integer BATCH_STATUS_SKIPPED = StudentPromotionBatchStatusEnum.SKIPPED.getStatus();
+    private static final Integer BATCH_STATUS_FAILED = StudentPromotionBatchStatusEnum.FAILED.getStatus();
+    private static final Integer BATCH_STATUS_ROLLED_BACK = StudentPromotionBatchStatusEnum.ROLLED_BACK.getStatus();
 
     private static final Integer STUDENT_STATUS_READING = StudentStatusEnum.READING.getStatus();
     private static final Integer STUDENT_STATUS_GRADUATED = StudentStatusEnum.GRADUATED.getStatus();
     private static final Integer STUDENT_STATUS_PENDING_ADVANCE = StudentStatusEnum.PENDING_ADVANCE.getStatus();
 
-    private static final Integer FLOW_STATUS_ROLLED_BACK = 2;
+    private static final Integer FLOW_STATUS_ROLLED_BACK = StudentFlowStatusEnum.ROLLED_BACK.getStatus();
     private static final Integer BATCH_REASON_MAX_LENGTH = 255;
 
-    private static final String FLOW_TYPE_PROMOTE = "PROMOTE";
-    private static final String FLOW_TYPE_REPEAT = "REPEAT";
-    private static final String FLOW_TYPE_GRADUATE_LEGACY = "GRADUATE";
-    private static final String FLOW_TYPE_PENDING_ADVANCE = "PENDING_ADVANCE";
+    private static final String FLOW_TYPE_PROMOTE = StudentFlowTypeEnum.PROMOTE.getType();
+    private static final String FLOW_TYPE_REPEAT = StudentFlowTypeEnum.REPEAT.getType();
+    private static final String FLOW_TYPE_GRADUATE_LEGACY = StudentFlowTypeEnum.GRADUATE.getType();
+    private static final String FLOW_TYPE_PENDING_ADVANCE = StudentFlowTypeEnum.PENDING_ADVANCE.getType();
 
     @Resource
     private StudentPromotionService studentPromotionService;
@@ -730,15 +735,29 @@ public class StudentPromotionTaskServiceImpl implements StudentPromotionTaskServ
                     flow.getStudentId(), flow.getToClassId(), flow.getEffectiveDate());
             studentClassMapper.deletePhysicallyById(targetStudentClass.getId());
             studentClassMapper.restoreEndDateById(sourceStudentClass.getId());
+            restoreStudentSnapshotAfterRollback(flow);
             return;
         }
         if (Objects.equals(flow.getChangeType(), FLOW_TYPE_PENDING_ADVANCE)
                 || Objects.equals(flow.getChangeType(), FLOW_TYPE_GRADUATE_LEGACY)) {
-            studentMapper.updateStatusById(flow.getStudentId(), STUDENT_STATUS_READING);
             studentClassMapper.restoreEndDateById(sourceStudentClass.getId());
+            restoreStudentSnapshotAfterRollback(flow);
             return;
         }
         throw exception(STUDENT_PROMOTION_TASK_NOT_ROLLBACKABLE);
+    }
+
+    private void restoreStudentSnapshotAfterRollback(StudentFlowDO flow) {
+        SchoolClassDO sourceClass = schoolClassMapper.selectById(flow.getFromClassId());
+        if (sourceClass == null) {
+            throw exception(STUDENT_PROMOTION_TASK_ROLLBACK_STATE_INVALID);
+        }
+        studentMapper.updateById(StudentDO.builder()
+                .id(flow.getStudentId())
+                .status(STUDENT_STATUS_READING)
+                .currentSchoolId(sourceClass.getSchoolId())
+                .currentClassId(sourceClass.getId())
+                .build());
     }
 
     private void deleteAutoCreatedClassIfUnused(Long classId) {

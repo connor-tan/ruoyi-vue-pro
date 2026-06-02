@@ -59,4 +59,19 @@ public final class SchoolGradeSequenceUtils {
                 .collect(Collectors.toSet());
     }
 
+    public static int resolveGradeOffset(GradeCatalogDO gradeCatalog, List<GradeCatalogDO> enabledGradeCatalogs) {
+        List<GradeCatalogDO> sortedStageGrades = enabledGradeCatalogs.stream()
+                .filter(item -> item.getStage().equals(gradeCatalog.getStage()))
+                .sorted(Comparator
+                        .comparing(GradeCatalogDO::getSort)
+                        .thenComparing(GradeCatalogDO::getId))
+                .collect(Collectors.toList());
+        for (int i = 0; i < sortedStageGrades.size(); i++) {
+            if (sortedStageGrades.get(i).getId().equals(gradeCatalog.getId())) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
 }

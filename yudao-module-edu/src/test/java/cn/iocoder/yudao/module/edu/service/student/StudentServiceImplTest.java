@@ -24,6 +24,7 @@ import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentFlowMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.student.StudentMapper;
 import cn.iocoder.yudao.module.edu.dal.mysql.studentclass.StudentClassMapper;
 import cn.iocoder.yudao.module.edu.enums.StudentStatusEnum;
+import cn.iocoder.yudao.module.edu.service.school.SchoolClassEnsureService;
 import cn.iocoder.yudao.module.edu.service.station.StationService;
 import cn.iocoder.yudao.module.edu.service.student.bo.StudentWaitingEntryActivateRespBO;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
@@ -63,6 +64,8 @@ class StudentServiceImplTest {
     private GradeCatalogMapper gradeCatalogMapper;
     private SchoolYearMapper schoolYearMapper;
     private StationService stationService;
+    private StudentClassConsistencyService studentClassConsistencyService;
+    private SchoolClassEnsureService schoolClassEnsureService;
     private MemberUserApi memberUserApi;
 
     @BeforeEach
@@ -77,6 +80,8 @@ class StudentServiceImplTest {
         gradeCatalogMapper = mock(GradeCatalogMapper.class);
         schoolYearMapper = mock(SchoolYearMapper.class);
         stationService = mock(StationService.class);
+        studentClassConsistencyService = mock(StudentClassConsistencyService.class);
+        schoolClassEnsureService = mock(SchoolClassEnsureService.class);
         memberUserApi = mock(MemberUserApi.class);
         ReflectionTestUtils.setField(service, "studentMapper", studentMapper);
         ReflectionTestUtils.setField(service, "studentClassMapper", studentClassMapper);
@@ -87,7 +92,11 @@ class StudentServiceImplTest {
         ReflectionTestUtils.setField(service, "gradeCatalogMapper", gradeCatalogMapper);
         ReflectionTestUtils.setField(service, "schoolYearMapper", schoolYearMapper);
         ReflectionTestUtils.setField(service, "stationService", stationService);
+        ReflectionTestUtils.setField(service, "studentClassConsistencyService", studentClassConsistencyService);
+        ReflectionTestUtils.setField(service, "schoolClassEnsureService", schoolClassEnsureService);
         ReflectionTestUtils.setField(service, "memberUserApi", memberUserApi);
+        when(studentClassConsistencyService.resolveCurrentClassSnapshot(any(Long.class), any(LocalDate.class)))
+                .thenReturn(StudentClassConsistencyService.StudentClassSnapshot.empty());
     }
 
     @Test
@@ -114,6 +123,8 @@ class StudentServiceImplTest {
                 .thenReturn(List.of(schoolClass(21L, 11L, 102L, 31L, 2027, "2027级一年级1班")));
         when(schoolYearMapper.selectList(any(SFunction.class), any(Collection.class)))
                 .thenReturn(List.of(schoolYear(102L, 11L, 101L, 2027, 2028, schoolYearStartDate)));
+        when(schoolGradeMapper.selectList(any(SFunction.class), any(Collection.class)))
+                .thenReturn(List.of(schoolGrade(31L, 11L, 41L)));
         doAnswer(invocation -> {
             StudentDO student = invocation.getArgument(0);
             student.setId(100L);
@@ -499,7 +510,11 @@ class StudentServiceImplTest {
 
         assertEquals(1, result.getScannedCount());
         assertEquals(1, result.getActivatedCount());
-        verify(studentMapper).updateStatusById(1L, StudentStatusEnum.READING.getStatus());
+        ArgumentCaptor<StudentDO> studentCaptor = ArgumentCaptor.forClass(StudentDO.class);
+        verify(studentMapper).updateById(studentCaptor.capture());
+        assertEquals(1L, studentCaptor.getValue().getId());
+        assertEquals(StudentStatusEnum.READING.getStatus(), studentCaptor.getValue().getStatus());
+        assertEquals(21L, studentCaptor.getValue().getCurrentClassId());
     }
 
     private StudentDO student(Long id, String studentName, Long currentSchoolId, Integer status) {
@@ -523,6 +538,7 @@ class StudentServiceImplTest {
         reqVO.setSchoolYearId(101L);
         reqVO.setSchoolGradeId(31L);
         reqVO.setClassId(21L);
+        reqVO.setClassNo(1);
         reqVO.setStudentName(" 小明 ");
         reqVO.setForceUpdate(forceUpdate);
         return reqVO;
@@ -625,6 +641,7 @@ class StudentServiceImplTest {
                 .schoolYearId(schoolYearId)
                 .schoolGradeId(schoolGradeId)
                 .entryYear(entryYear)
+                .classNo(className != null && className.contains("2班") ? 2 : 1)
                 .className(className)
                 .build();
     }
@@ -638,6 +655,7 @@ class StudentServiceImplTest {
                 .id(id)
                 .schoolId(schoolId)
                 .gradeCatalogId(gradeCatalogId)
+                .maxClassNo(25)
                 .build();
     }
 

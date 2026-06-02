@@ -29,9 +29,12 @@ public class AppStudentBindReqVO {
     @NotNull(message = "年级不能为空")
     private Long schoolGradeId;
 
-    @Schema(description = "班级编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "班级不能为空")
+    @Schema(description = "班级编号；选择已存在班级时传入，待创建班级可为空", example = "1")
     private Long classId;
+
+    @Schema(description = "班级号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "班级号不能为空")
+    private Integer classNo;
 
     @Schema(description = "学生姓名", requiredMode = Schema.RequiredMode.REQUIRED, example = "张三")
     @NotBlank(message = "学生姓名不能为空")

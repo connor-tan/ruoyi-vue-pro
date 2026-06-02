@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.edu.dal.dataobject.school;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.module.edu.enums.DictTypeConstants;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -51,6 +53,9 @@ public class GradeCatalogDO extends BaseDO {
     private Integer sort;
     /**
      * 状态
+     *
+     * 枚举 {@link CommonStatusEnum}
+     * 字典 {@link DictTypeConstants#EDU_COMMON_STATUS}
      */
     private Integer status;
 
