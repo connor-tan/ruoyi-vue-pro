@@ -21,6 +21,8 @@ import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PR
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PRODUCT_DELIVERY_REQUIRED;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PRODUCT_DELIVERY_TEMPLATE_REQUIRED;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.NORMAL_PRODUCT_DELIVERY_TYPE_INVALID;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_STOCK_INVALID;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_STOCK_REQUIRED;
 
 @Component
 public class NormalProductSceneHandler implements ProductSceneHandler {
@@ -59,7 +61,19 @@ public class NormalProductSceneHandler implements ProductSceneHandler {
         brandService.validateProductBrand(reqVO.getBrandId());
         List<ProductSkuSaveReqVO> skuSaveReqList = reqVO.getSkus();
         productSkuService.validateSkuList(skuSaveReqList, reqVO.getSpecType());
+        validateNormalSkuStock(skuSaveReqList);
         reqVO.setPublicationExt(null);
+    }
+
+    private void validateNormalSkuStock(List<ProductSkuSaveReqVO> skus) {
+        for (ProductSkuSaveReqVO sku : skus) {
+            if (sku.getStock() == null) {
+                throw exception(SKU_STOCK_REQUIRED);
+            }
+            if (sku.getStock() < 0) {
+                throw exception(SKU_STOCK_INVALID);
+            }
+        }
     }
 
     @Override

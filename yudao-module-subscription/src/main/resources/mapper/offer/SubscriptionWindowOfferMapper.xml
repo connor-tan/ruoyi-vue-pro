@@ -25,7 +25,6 @@
         GROUP_CONCAT(DISTINCT category.name ORDER BY category_rel.sort, category.name) AS categoryNameText,
         spu.pic_url AS picUrl,
         spu.price AS price,
-        spu.stock AS stock,
         ext.publisher_id AS publisherId,
         publisher.name AS publisherName,
         ext.publication_type_id AS publicationTypeId,
@@ -118,7 +117,7 @@
     </sql>
 
     <sql id="AvailableCandidateGroupHaving">
-        GROUP BY spu.id, spu.name, spu.pic_url, spu.price, spu.stock,
+        GROUP BY spu.id, spu.name, spu.pic_url, spu.price,
                  ext.publisher_id, publisher.name, ext.publication_type_id, publication_type.name,
                  ext.issue_cycle, offer.id, spu.status
         <choose>

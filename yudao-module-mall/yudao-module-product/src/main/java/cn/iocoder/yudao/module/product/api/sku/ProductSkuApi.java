@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.product.api.sku;
 
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateSalesCountReqDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
 
 import java.util.Collection;
@@ -57,5 +58,12 @@ public interface ProductSkuApi {
      * @param updateStockReqDTO 更新请求
      */
     void updateSkuStock(ProductSkuUpdateStockReqDTO updateStockReqDTO);
+
+    /**
+     * 更新 SKU 销量（增加 or 减少），不修改库存
+     *
+     * @param updateSalesCountReqDTO 更新请求
+     */
+    void updateSkuSalesCount(ProductSkuUpdateSalesCountReqDTO updateSalesCountReqDTO);
 
 }

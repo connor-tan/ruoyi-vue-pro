@@ -64,4 +64,20 @@ public interface ProductSkuMapper extends BaseMapperX<ProductSkuDO> {
         return update(null, updateWrapper);
     }
 
+    /**
+     * 更新 SKU 销量，不修改库存
+     *
+     * @param id        编号
+     * @param incrCount 销量变化数量，正数增加，负数减少
+     */
+    default int updateSalesCount(Long id, Integer incrCount) {
+        if (incrCount == 0) {
+            return 0;
+        }
+        LambdaUpdateWrapper<ProductSkuDO> updateWrapper = new LambdaUpdateWrapper<ProductSkuDO>()
+                .setSql(" sales_count = GREATEST(sales_count + " + incrCount + ", 0)")
+                .eq(ProductSkuDO::getId, id);
+        return update(null, updateWrapper);
+    }
+
 }

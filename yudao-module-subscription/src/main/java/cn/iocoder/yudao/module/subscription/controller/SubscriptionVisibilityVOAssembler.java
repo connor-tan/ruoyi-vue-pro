@@ -182,7 +182,6 @@ public final class SubscriptionVisibilityVOAssembler {
                 vo.setProductSkuId(productSku.getId());
                 vo.setProductSkuName(productSku.getName());
                 vo.setPrice(productSku.getPrice());
-                vo.setStock(productSku.getStock());
                 vo.setApplicableGradeCatalogIds(productSku.getApplicableGradeCatalogIds());
                 vo.setApplicableGradeNames(productSku.getApplicableGradeNames());
                 ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();
@@ -234,7 +233,6 @@ public final class SubscriptionVisibilityVOAssembler {
                 vo.setProductSkuId(productSku.getId());
                 vo.setProductSkuName(productSku.getName());
                 vo.setPrice(productSku.getPrice());
-                vo.setStock(productSku.getStock());
                 vo.setApplicableGradeCatalogIds(productSku.getApplicableGradeCatalogIds());
                 vo.setApplicableGradeNames(productSku.getApplicableGradeNames());
                 ProductPublicationRespDTO.PublicationSkuExtDTO ext = productSku.getPublicationExt();

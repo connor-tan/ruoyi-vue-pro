@@ -226,7 +226,6 @@ public class SubscriptionOfferSkuServiceImpl implements SubscriptionOfferSkuServ
         }
         respVO.setProductSkuName(productSku.getName());
         respVO.setPrice(productSku.getPrice());
-        respVO.setStock(productSku.getStock());
         ProductPublicationRespDTO.PublicationSpuExtDTO spuExt = publication == null ? null : publication.getPublicationExt();
         respVO.setIssueMode(spuExt == null ? null : spuExt.getIssueMode());
         respVO.setIssueCount(offerSkuIssueMapper.selectEnabledListByOfferSkuId(offerSku.getId(),

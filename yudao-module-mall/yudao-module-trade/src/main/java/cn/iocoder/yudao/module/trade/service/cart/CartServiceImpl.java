@@ -58,8 +58,9 @@ public class CartServiceImpl implements CartService {
     public Long addCart(Long userId, AppCartAddReqVO addReqVO) {
         // 校验 SKU
         Integer count = addReqVO.getCount();
-        ProductSkuRespDTO sku = checkProductSku(addReqVO.getSkuId(), count);
+        ProductSkuRespDTO sku = checkProductSku(addReqVO.getSkuId());
         ProductSpuRespDTO spu = productSpuApi.getSpu(sku.getSpuId());
+        checkProductSkuStock(sku, spu, count);
         Long offerSkuId = addReqVO.getOfferSkuId();
         CartDO cart = cartMapper.selectByUserIdAndSkuIdAndStudentIdAndOfferSkuId(userId, addReqVO.getSkuId(),
                 addReqVO.getStudentId(), offerSkuId);
@@ -91,9 +92,11 @@ public class CartServiceImpl implements CartService {
             throw exception(CARD_ITEM_NOT_FOUND);
         }
         // 校验商品 SKU
-        ProductSkuRespDTO sku = checkProductSku(cart.getSkuId(), updateReqVO.getCount());
+        ProductSkuRespDTO sku = checkProductSku(cart.getSkuId());
+        ProductSpuRespDTO spu = productSpuApi.getSpu(sku.getSpuId());
+        checkProductSkuStock(sku, spu, updateReqVO.getCount());
         validateCartContext(userId, cart.getSubscriptionStudentId(), cart.getSubscriptionOfferSkuId(),
-                cart.getSkuId(), updateReqVO.getCount(), productSpuApi.getSpu(sku.getSpuId()));
+                cart.getSkuId(), updateReqVO.getCount(), spu);
 
         // 更新数量
         cartMapper.updateById(new CartDO().setId(cart.getId())
@@ -227,21 +230,27 @@ public class CartServiceImpl implements CartService {
      * 校验商品 SKU 是否合法
      * 1. 是否存在
      * 2. 是否下架
-     * 3. 库存不足
+     * 3. 普通商品库存不足
      *
      * @param skuId 商品 SKU 编号
      * @param count 商品数量
      * @return 商品 SKU
      */
-    private ProductSkuRespDTO checkProductSku(Long skuId, Integer count) {
+    private ProductSkuRespDTO checkProductSku(Long skuId) {
         ProductSkuRespDTO sku = productSkuApi.getSku(skuId);
         if (sku == null) {
             throw exception(SKU_NOT_EXISTS);
         }
+        return sku;
+    }
+
+    private void checkProductSkuStock(ProductSkuRespDTO sku, ProductSpuRespDTO spu, Integer count) {
+        if (spu != null && BizSceneEnum.isPublication(spu.getBizScene())) {
+            return;
+        }
         if (count > sku.getStock()) {
             throw exception(SKU_STOCK_NOT_ENOUGH);
         }
-        return sku;
     }
 
 }

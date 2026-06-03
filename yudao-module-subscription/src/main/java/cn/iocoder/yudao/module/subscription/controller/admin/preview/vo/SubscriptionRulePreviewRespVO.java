@@ -67,7 +67,6 @@ public class SubscriptionRulePreviewRespVO {
         private String decisionStatus;
         private String decisionStatusName;
         private Integer price;
-        private Integer stock;
         private String isbn;
         private List<Long> applicableGradeCatalogIds;
         private List<String> applicableGradeNames;

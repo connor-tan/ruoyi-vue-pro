@@ -43,10 +43,11 @@ public interface TradeCartConvert {
             ProductSkuRespDTO sku = skuMap.get(cart.getSkuId());
             cartVO.setSpu(BeanUtils.toBean(spu, AppProductSpuBaseRespVO.class))
                     .setSku(BeanUtils.toBean(sku, AppProductSkuBaseRespVO.class));
-            // 如果 SPU 不存在，或者下架，或者库存不足，说明是无效的
+            boolean publication = spu != null && BizSceneEnum.isPublication(spu.getBizScene());
+            // 如果 SPU 不存在，或者下架，或者普通商品库存不足，说明是无效的
             if (spu == null
                 || !ProductSpuStatusEnum.isEnable(spu.getStatus())
-                || spu.getStock() <= 0) {
+                || (!publication && spu.getStock() <= 0)) {
                 invalidList.add(cartVO);
             } else {
                 validList.add(cartVO);

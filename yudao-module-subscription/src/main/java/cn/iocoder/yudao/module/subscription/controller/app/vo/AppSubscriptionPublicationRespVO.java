@@ -39,7 +39,6 @@ public class AppSubscriptionPublicationRespVO {
         private Long productSkuId;
         private String productSkuName;
         private Integer price;
-        private Integer stock;
         private Boolean purchasable;
         private Integer maxQuantityPerStudent;
         private Integer orderedQuantity;

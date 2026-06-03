@@ -20,8 +20,6 @@ public class SubscriptionOfferAvailableRespVO {
 
     private Integer price;
 
-    private Integer stock;
-
     private Long publisherId;
 
     private String publisherName;

@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.product.api.sku;
 
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateSalesCountReqDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
@@ -46,6 +47,11 @@ public class ProductSkuApiImpl implements ProductSkuApi {
     @Override
     public void updateSkuStock(ProductSkuUpdateStockReqDTO updateStockReqDTO) {
         productSkuService.updateSkuStock(updateStockReqDTO);
+    }
+
+    @Override
+    public void updateSkuSalesCount(ProductSkuUpdateSalesCountReqDTO updateSalesCountReqDTO) {
+        productSkuService.updateSkuSalesCount(updateSalesCountReqDTO);
     }
 
 }

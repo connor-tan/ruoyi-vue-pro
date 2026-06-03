@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateSalesCountReqDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.convert.sku.ProductSkuConvert;
@@ -273,6 +274,26 @@ public class ProductSkuServiceImpl implements ProductSkuService {
         Map<Long, Integer> spuStockIncrCounts = ProductSkuConvert.INSTANCE.convertSpuStockMap(
                 updateStockReqDTO.getItems(), skus);
         productSpuService.updateSpuStock(spuStockIncrCounts);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSkuSalesCount(ProductSkuUpdateSalesCountReqDTO updateSalesCountReqDTO) {
+        updateSalesCountReqDTO.getItems().forEach(item ->
+                productSkuMapper.updateSalesCount(item.getId(), item.getIncrCount()));
+
+        List<ProductSkuDO> skus = productSkuMapper.selectByIds(
+                convertSet(updateSalesCountReqDTO.getItems(), ProductSkuUpdateSalesCountReqDTO.Item::getId));
+        Map<Long, ProductSkuDO> skuMap = convertMap(skus, ProductSkuDO::getId);
+        Map<Long, Integer> spuSalesCountIncrCounts = new HashMap<>();
+        for (ProductSkuUpdateSalesCountReqDTO.Item item : updateSalesCountReqDTO.getItems()) {
+            ProductSkuDO sku = skuMap.get(item.getId());
+            if (sku == null || item.getIncrCount() == 0) {
+                continue;
+            }
+            spuSalesCountIncrCounts.merge(sku.getSpuId(), item.getIncrCount(), Integer::sum);
+        }
+        productSpuService.updateSpuSalesCount(spuSalesCountIncrCounts);
     }
 
 }

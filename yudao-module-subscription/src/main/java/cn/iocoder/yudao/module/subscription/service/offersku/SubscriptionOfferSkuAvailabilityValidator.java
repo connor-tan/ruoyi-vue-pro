@@ -51,8 +51,7 @@ public class SubscriptionOfferSkuAvailabilityValidator {
                 .filter(offerSku -> CommonStatusEnum.isEnable(offerSku.getStatus()))
                 .map(offerSku -> productSkuMap.get(offerSku.getProductSkuId()))
                 .filter(Objects::nonNull)
-                .anyMatch(productSku -> CommonStatusEnum.isEnable(productSku.getStatus())
-                        && productSku.getStock() != null && productSku.getStock() > 0);
+                .anyMatch(productSku -> CommonStatusEnum.isEnable(productSku.getStatus()));
         if (!hasEffectiveSku) {
             throw exception(OFFER_SKU_EFFECTIVE_REQUIRED);
         }

@@ -22,7 +22,7 @@ public interface ErrorCodeConstants {
     ErrorCode OFFER_SKU_PRODUCT_MISMATCH = new ErrorCode(1_028_002_002, "SKU 不属于当前窗口刊物");
     ErrorCode OFFER_SKU_DUPLICATE = new ErrorCode(1_028_002_003, "窗口刊物中已存在该 SKU");
     ErrorCode OFFER_SKU_BELONG_ERROR = new ErrorCode(1_028_002_004, "窗口 SKU 不属于当前窗口刊物");
-    ErrorCode OFFER_SKU_EFFECTIVE_REQUIRED = new ErrorCode(1_028_002_005, "启用窗口刊物必须至少保留一个启用且有库存的窗口 SKU");
+    ErrorCode OFFER_SKU_EFFECTIVE_REQUIRED = new ErrorCode(1_028_002_005, "启用窗口刊物必须至少保留一个启用且产品 SKU 可用的窗口 SKU");
     ErrorCode OFFER_SKU_ISSUE_NOT_EXISTS = new ErrorCode(1_028_002_006, "窗口 SKU 期次不存在");
     ErrorCode OFFER_SKU_ISSUE_DUPLICATE = new ErrorCode(1_028_002_007, "窗口 SKU 期号已存在");
     ErrorCode OFFER_SKU_ISSUE_PERIODICAL_REQUIRED = new ErrorCode(1_028_002_008, "只有期刊窗口 SKU 才能维护期次计划");

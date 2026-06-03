@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.product.service.sku;
 
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateSalesCountReqDTO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 
@@ -77,6 +78,13 @@ public interface ProductSkuService {
      * @param updateStockReqDTO 更行请求
      */
     void updateSkuStock(ProductSkuUpdateStockReqDTO updateStockReqDTO);
+
+    /**
+     * 更新 SKU 销量（增量），不修改库存
+     *
+     * @param updateSalesCountReqDTO 更新请求
+     */
+    void updateSkuSalesCount(ProductSkuUpdateSalesCountReqDTO updateSalesCountReqDTO);
 
     /**
      * 获得商品 SKU 集合

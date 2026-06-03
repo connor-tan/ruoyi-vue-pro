@@ -24,6 +24,7 @@ import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.product.service.publication.ProductPublicationService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import cn.iocoder.yudao.module.product.service.spu.scene.ProductSceneHandler;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import com.google.common.collect.Maps;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
@@ -287,6 +288,12 @@ public class ProductSpuServiceImpl implements ProductSpuService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void updateSpuSalesCount(Map<Long, Integer> salesCountIncrCounts) {
+        salesCountIncrCounts.forEach((id, incCount) -> productSpuMapper.updateSalesCount(id, incCount));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateSpuStatus(ProductSpuUpdateStatusReqVO updateReqVO) {
         // 校验存在
         validateSpuExists(updateReqVO.getId());
@@ -309,11 +316,12 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         // 查询仓库中的商品数量
         counts.put(ProductSpuPageReqVO.IN_WAREHOUSE,
                 productSpuMapper.selectCountByTab(ProductSpuPageReqVO.IN_WAREHOUSE, bizScene));
+        boolean publication = BizSceneEnum.isPublication(bizScene);
         // 查询售空的商品数量
-        counts.put(ProductSpuPageReqVO.SOLD_OUT,
+        counts.put(ProductSpuPageReqVO.SOLD_OUT, publication ? 0L :
                 productSpuMapper.selectCountByTab(ProductSpuPageReqVO.SOLD_OUT, bizScene));
         // 查询触发警戒库存的商品数量
-        counts.put(ProductSpuPageReqVO.ALERT_STOCK,
+        counts.put(ProductSpuPageReqVO.ALERT_STOCK, publication ? 0L :
                 productSpuMapper.selectCountByTab(ProductSpuPageReqVO.ALERT_STOCK, bizScene));
         // 查询回收站中的商品数量
         counts.put(ProductSpuPageReqVO.RECYCLE_BIN,

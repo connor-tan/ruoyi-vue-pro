@@ -120,6 +120,13 @@ public interface ProductSpuService {
     void updateSpuStock(Map<Long, Integer> stockIncrCounts);
 
     /**
+     * 更新商品 SPU 销量（增量）
+     *
+     * @param salesCountIncrCounts SPU 编号与销量变化（增量）的映射
+     */
+    void updateSpuSalesCount(Map<Long, Integer> salesCountIncrCounts);
+
+    /**
      * 更新 SPU 状态
      *
      * @param updateReqVO 更新请求

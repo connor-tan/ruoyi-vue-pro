@@ -12,6 +12,7 @@ import cn.iocoder.yudao.module.promotion.api.discount.dto.DiscountProductRespDTO
 import cn.iocoder.yudao.module.promotion.api.reward.RewardActivityApi;
 import cn.iocoder.yudao.module.promotion.api.reward.dto.RewardActivityMatchRespDTO;
 import cn.iocoder.yudao.module.promotion.enums.common.PromotionTypeEnum;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeProductSettlementRespVO;
 import cn.iocoder.yudao.module.trade.service.price.bo.TradePriceCalculateReqBO;
 import cn.iocoder.yudao.module.trade.service.price.bo.TradePriceCalculateRespBO;
@@ -63,6 +64,8 @@ public class TradePriceServiceImpl implements TradePriceService {
         List<ProductSkuRespDTO> skuList = checkSkuList(calculateReqBO);
         // 1.2 获得商品 SPU 数组
         List<ProductSpuRespDTO> spuList = checkSpuList(skuList);
+        // 1.3 校验普通商品库存，刊物商品不使用库存
+        checkSkuStock(calculateReqBO, skuList, spuList);
 
         // 2.1 计算价格
         TradePriceCalculateRespBO calculateRespBO = TradePriceCalculatorHelper
@@ -90,15 +93,29 @@ public class TradePriceServiceImpl implements TradePriceService {
             if (count == null) {
                 throw exception(SKU_NOT_EXISTS);
             }
-            if (count > sku.getStock()) {
-                throw exception(SKU_STOCK_NOT_ENOUGH);
-            }
         });
         return skus;
     }
 
     private List<ProductSpuRespDTO> checkSpuList(List<ProductSkuRespDTO> skuList) {
         return productSpuApi.validateSpuList(convertSet(skuList, ProductSkuRespDTO::getSpuId));
+    }
+
+    private void checkSkuStock(TradePriceCalculateReqBO reqBO, List<ProductSkuRespDTO> skuList,
+                               List<ProductSpuRespDTO> spuList) {
+        Map<Long, Integer> skuIdCountMap = convertMap(reqBO.getItems(),
+                TradePriceCalculateReqBO.Item::getSkuId, TradePriceCalculateReqBO.Item::getCount);
+        Map<Long, ProductSpuRespDTO> spuMap = convertMap(spuList, ProductSpuRespDTO::getId);
+        for (ProductSkuRespDTO sku : skuList) {
+            ProductSpuRespDTO spu = spuMap.get(sku.getSpuId());
+            if (spu != null && BizSceneEnum.isPublication(spu.getBizScene())) {
+                continue;
+            }
+            Integer count = skuIdCountMap.get(sku.getId());
+            if (count != null && count > sku.getStock()) {
+                throw exception(SKU_STOCK_NOT_ENOUGH);
+            }
+        }
     }
 
     @Override

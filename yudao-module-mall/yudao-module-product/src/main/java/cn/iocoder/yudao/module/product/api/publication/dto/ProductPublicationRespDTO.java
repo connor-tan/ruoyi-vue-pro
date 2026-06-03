@@ -29,8 +29,6 @@ public class ProductPublicationRespDTO {
 
     private Integer costPrice;
 
-    private Integer stock;
-
     private PublicationSpuExtDTO publicationExt;
 
     private List<PublicationSkuDTO> skus;
@@ -89,8 +87,6 @@ public class ProductPublicationRespDTO {
         private String barCode;
 
         private String picUrl;
-
-        private Integer stock;
 
         private PublicationSkuExtDTO publicationExt;
 

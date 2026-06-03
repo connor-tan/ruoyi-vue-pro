@@ -68,7 +68,7 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
                 .eqIfPresent(ProductSpuDO::getBizScene, pageReqVO.getBizScene());
         // 分类
         appendCategoryExists(query, categoryIds);
-        // 上架状态 且有库存
+        // 上架状态
         query.eq(ProductSpuDO::getStatus, ProductSpuStatusEnum.ENABLE.getStatus());
 
         // 排序逻辑
@@ -125,6 +125,22 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
         // 执行更新
         LambdaUpdateWrapper<ProductSpuDO> updateWrapper = new LambdaUpdateWrapper<ProductSpuDO>()
                 .setSql(sql)
+                .eq(ProductSpuDO::getId, id);
+        return update(null, updateWrapper);
+    }
+
+    /**
+     * 更新商品 SPU 销量，不修改库存
+     *
+     * @param id        商品 SPU 编号
+     * @param incrCount 销量变化数量，正数增加，负数减少
+     */
+    default int updateSalesCount(Long id, Integer incrCount) {
+        if (incrCount == 0) {
+            return 0;
+        }
+        LambdaUpdateWrapper<ProductSpuDO> updateWrapper = new LambdaUpdateWrapper<ProductSpuDO>()
+                .setSql(" sales_count = GREATEST(sales_count + " + incrCount + ", 0)")
                 .eq(ProductSpuDO::getId, id);
         return update(null, updateWrapper);
     }

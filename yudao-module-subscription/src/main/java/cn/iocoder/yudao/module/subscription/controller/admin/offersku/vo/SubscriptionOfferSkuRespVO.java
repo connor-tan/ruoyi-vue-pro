@@ -13,7 +13,6 @@ public class SubscriptionOfferSkuRespVO {
     private Long productSkuId;
     private String productSkuName;
     private Integer price;
-    private Integer stock;
     private String issueMode;
     private Integer issueCount;
     private Integer issueTemplateCount;

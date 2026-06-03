@@ -262,6 +262,7 @@ public class ProductPublicationServiceImpl implements ProductPublicationService 
         }
         validateGradeCatalogIds(skus);
         for (ProductSkuSaveReqVO sku : skus) {
+            sku.setStock(0);
             if (sku.getPublicationExt() == null) {
                 throw exception(PUBLICATION_SKU_EXT_REQUIRED);
             }

@@ -36,8 +36,7 @@ public class ProductSkuSaveReqVO {
     @NotNull(message = "图片地址不能为空")
     private String picUrl;
 
-    @Schema(description = "库存", requiredMode = Schema.RequiredMode.REQUIRED, example = "200")
-    @NotNull(message = "库存不能为空")
+    @Schema(description = "库存", example = "200")
     private Integer stock;
 
     @Schema(description = "商品重量,单位：kg 千克", example = "1.2")

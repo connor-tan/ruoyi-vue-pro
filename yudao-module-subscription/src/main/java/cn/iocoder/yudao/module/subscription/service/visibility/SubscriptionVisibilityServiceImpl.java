@@ -212,8 +212,7 @@ public class SubscriptionVisibilityServiceImpl implements SubscriptionVisibility
     private SubscriptionVisibilityResultBO.VisibleOfferSku buildCandidateSku(
             SubscriptionWindowOfferSkuDO offerSku,
             ProductPublicationRespDTO.PublicationSkuDTO productSku) {
-        if (productSku == null || !CommonStatusEnum.isEnable(productSku.getStatus()) || productSku.getStock() == null
-                || productSku.getStock() <= 0) {
+        if (productSku == null || !CommonStatusEnum.isEnable(productSku.getStatus())) {
             return null;
         }
         SubscriptionVisibilityResultBO.VisibleOfferSku sku = new SubscriptionVisibilityResultBO.VisibleOfferSku();
