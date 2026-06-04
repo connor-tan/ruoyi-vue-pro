@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.iocoder.yudao.module.repo.dal.mysql.supplierpublication.RepoSupplierPublicationSkuMapper">
+
+    <sql id="PublicationSkuSelect">
+        SELECT spu.id AS spuId,
+               sku.id AS skuId,
+               spu.name AS productName,
+               sku.name AS productSkuName,
+               sku_ext.isbn AS isbn
+        FROM product_sku sku
+        INNER JOIN product_spu spu ON spu.id = sku.spu_id AND spu.deleted = b'0'
+        LEFT JOIN product_publication_sku_ext sku_ext ON sku_ext.sku_id = sku.id AND sku_ext.deleted = b'0'
+    </sql>
+
+    <sql id="PublicationSkuWhere">
+        WHERE sku.deleted = b'0'
+          AND spu.biz_scene = 'PUBLICATION'
+        <if test="reqVO != null and reqVO.spuId != null">
+          AND spu.id = #{reqVO.spuId}
+        </if>
+        <if test="reqVO != null and reqVO.skuId != null">
+          AND sku.id = #{reqVO.skuId}
+        </if>
+        <if test="reqVO != null and reqVO.keyword != null and reqVO.keyword != ''">
+          AND (
+            spu.name LIKE CONCAT('%', #{reqVO.keyword}, '%')
+            OR sku.name LIKE CONCAT('%', #{reqVO.keyword}, '%')
+            OR sku_ext.isbn LIKE CONCAT('%', #{reqVO.keyword}, '%')
+          )
+        </if>
+    </sql>
+
+    <select id="selectPublicationSkuPage"
+            resultType="cn.iocoder.yudao.module.repo.service.supplierpublication.bo.RepoPublicationSkuBO">
+        <include refid="PublicationSkuSelect"/>
+        <include refid="PublicationSkuWhere"/>
+        ORDER BY spu.sort ASC, spu.id DESC, sku.id ASC
+    </select>
+
+    <select id="selectPublicationSkuBySkuId"
+            resultType="cn.iocoder.yudao.module.repo.service.supplierpublication.bo.RepoPublicationSkuBO">
+        <include refid="PublicationSkuSelect"/>
+        WHERE sku.deleted = b'0'
+          AND spu.biz_scene = 'PUBLICATION'
+          AND sku.id = #{skuId}
+    </select>
+
+    <select id="selectPublicationSkuListBySkuIds"
+            resultType="cn.iocoder.yudao.module.repo.service.supplierpublication.bo.RepoPublicationSkuBO">
+        <include refid="PublicationSkuSelect"/>
+        WHERE sku.deleted = b'0'
+          AND spu.biz_scene = 'PUBLICATION'
+          AND sku.id IN
+        <foreach collection="skuIds" item="skuId" open="(" close=")" separator=",">
+            #{skuId}
+        </foreach>
+    </select>
+
+</mapper>

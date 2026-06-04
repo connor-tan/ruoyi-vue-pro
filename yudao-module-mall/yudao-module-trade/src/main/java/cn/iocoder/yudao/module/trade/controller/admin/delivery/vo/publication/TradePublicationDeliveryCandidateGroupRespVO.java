@@ -43,4 +43,16 @@ public class TradePublicationDeliveryCandidateGroupRespVO {
     @Schema(description = "期次聚合数", example = "10")
     private Integer issueGroupCount;
 
+    @Schema(description = "已到货数量", example = "500")
+    private Integer receivedCount;
+
+    @Schema(description = "已出库占用数量", example = "200")
+    private Integer allocatedCount;
+
+    @Schema(description = "可发余额", example = "300")
+    private Integer availableCount;
+
+    @Schema(description = "缺口数量", example = "0")
+    private Integer shortageCount;
+
 }

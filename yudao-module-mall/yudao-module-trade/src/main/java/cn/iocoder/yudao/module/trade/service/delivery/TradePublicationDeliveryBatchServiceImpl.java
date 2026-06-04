@@ -5,6 +5,10 @@ import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.mybatis.core.util.MyBatisUtils;
+import cn.iocoder.yudao.module.repo.service.publicationreceipt.RepoPublicationReceiptService;
+import cn.iocoder.yudao.module.repo.service.publicationreceipt.bo.RepoPublicationReceiptBalanceBO;
+import cn.iocoder.yudao.module.repo.service.publicationreceipt.bo.RepoPublicationReceiptBalanceKey;
+import cn.iocoder.yudao.module.repo.service.publicationreceipt.bo.RepoPublicationReceiptDeliveryAllocateReqBO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchGroupCreateRespVO;
 import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryBatchCreateReqVO;
@@ -37,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -75,6 +80,8 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     private DeliveryExpressService deliveryExpressService;
     @Resource
     private TradeOrderPublicationIssueService publicationIssueService;
+    @Resource
+    private RepoPublicationReceiptService publicationReceiptService;
 
     @Override
     public PageResult<TradePublicationDeliveryCandidateRespVO> getCandidatePage(
@@ -82,6 +89,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
         IPage<TradePublicationDeliveryCandidateRespVO> page = publicationIssueMapper.selectPublicationDeliveryCandidatePage(
                 MyBatisUtils.buildPage(reqVO), reqVO, TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                 PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        fillCandidateBalances(page.getRecords());
         return new PageResult<>(page.getRecords(), page.getTotal());
     }
 
@@ -92,6 +100,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
                 .selectPublicationDeliveryCandidateGroupPage(MyBatisUtils.buildPage(reqVO), reqVO,
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        fillGroupBalances(page.getRecords());
         return new PageResult<>(page.getRecords(), page.getTotal());
     }
 
@@ -99,8 +108,10 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     public List<TradePublicationDeliveryCandidateRespVO> getCandidateChildList(
             TradePublicationDeliveryCandidateChildReqVO reqVO) {
         validateGroupScopeReq(reqVO);
-        return publicationIssueMapper.selectPublicationDeliveryCandidateChildList(reqVO,
+        List<TradePublicationDeliveryCandidateRespVO> list = publicationIssueMapper.selectPublicationDeliveryCandidateChildList(reqVO,
                 TradeOrderStatusEnum.UNDELIVERED.getStatus(), PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        fillCandidateBalances(list);
+        return list;
     }
 
     @Override
@@ -111,6 +122,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
                 .selectPublicationDeliveryCandidateChildPage(MyBatisUtils.buildPage(reqVO), reqVO,
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+        fillCandidateBalances(page.getRecords());
         return new PageResult<>(page.getRecords(), page.getTotal());
     }
 
@@ -178,6 +190,7 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
             throw exception(PUBLICATION_ISSUE_DELIVERY_DUPLICATE);
         }
 
+        allocateReceiptBalance(batch, items, operatorUserId, deliveryTime);
         Set<Long> orderIssueIds = convertSet(items, TradePublicationDeliveryCandidateItemBO::getOrderIssueId);
         updateIssueDelivered(batch.getId(), items, expressItemMap, deliveryTime);
         publicationIssueService.afterIssueDelivered(orderIssueIds, deliveryTime);
@@ -329,6 +342,82 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
         return Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType()) ? EXPRESS_BATCH_ITEM_LIMIT + 1 : null;
     }
 
+    private void fillCandidateBalances(List<TradePublicationDeliveryCandidateRespVO> candidates) {
+        if (CollUtil.isEmpty(candidates)) {
+            return;
+        }
+        Map<RepoPublicationReceiptBalanceKey, RepoPublicationReceiptBalanceBO> balanceMap =
+                publicationReceiptService.getBalanceMap(convertList(candidates, this::buildBalanceKey));
+        candidates.forEach(candidate -> fillCandidateBalance(candidate, balanceMap.get(buildBalanceKey(candidate))));
+    }
+
+    private void fillGroupBalances(List<TradePublicationDeliveryCandidateGroupRespVO> groups) {
+        if (CollUtil.isEmpty(groups)) {
+            return;
+        }
+        for (TradePublicationDeliveryCandidateGroupRespVO group : groups) {
+            TradePublicationDeliveryCandidateChildReqVO childReqVO = new TradePublicationDeliveryCandidateChildReqVO();
+            childReqVO.setDeliveryType(group.getDeliveryType())
+                    .setSchoolId(group.getSchoolId())
+                    .setWarehouseId(group.getWarehouseId())
+                    .setWindowId(group.getWindowId());
+            List<TradePublicationDeliveryCandidateRespVO> children = publicationIssueMapper
+                    .selectPublicationDeliveryCandidateChildList(childReqVO, TradeOrderStatusEnum.UNDELIVERED.getStatus(),
+                            PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+            fillCandidateBalances(children);
+            group.setReceivedCount(sum(children, TradePublicationDeliveryCandidateRespVO::getReceivedCount))
+                    .setAllocatedCount(sum(children, TradePublicationDeliveryCandidateRespVO::getAllocatedCount))
+                    .setAvailableCount(sum(children, TradePublicationDeliveryCandidateRespVO::getAvailableCount))
+                    .setShortageCount(sum(children, TradePublicationDeliveryCandidateRespVO::getShortageCount));
+        }
+    }
+
+    private void fillCandidateBalance(TradePublicationDeliveryCandidateRespVO candidate,
+                                      RepoPublicationReceiptBalanceBO balance) {
+        int receivedCount = balance == null ? 0 : defaultZero(balance.getReceivedCount());
+        int allocatedCount = balance == null ? 0 : defaultZero(balance.getAllocatedCount());
+        int availableCount = balance == null ? 0 : defaultZero(balance.getAvailableCount());
+        candidate.setReceivedCount(receivedCount)
+                .setAllocatedCount(allocatedCount)
+                .setAvailableCount(availableCount)
+                .setShortageCount(Math.max(defaultZero(candidate.getTotalCount()) - availableCount, 0));
+    }
+
+    private RepoPublicationReceiptBalanceKey buildBalanceKey(TradePublicationDeliveryCandidateRespVO candidate) {
+        return new RepoPublicationReceiptBalanceKey()
+                .setWarehouseId(candidate.getWarehouseId())
+                .setWindowId(candidate.getWindowId())
+                .setOfferId(candidate.getOfferId())
+                .setOfferSkuId(candidate.getOfferSkuId())
+                .setSkuId(candidate.getSkuId())
+                .setIssueId(candidate.getIssueId())
+                .setIssueNo(candidate.getIssueNo());
+    }
+
+    private RepoPublicationReceiptBalanceKey buildBalanceKey(TradePublicationDeliveryCandidateItemBO item) {
+        return new RepoPublicationReceiptBalanceKey()
+                .setWarehouseId(item.getWarehouseId())
+                .setWindowId(item.getWindowId())
+                .setOfferId(item.getOfferId())
+                .setOfferSkuId(item.getOfferSkuId())
+                .setSkuId(item.getSkuId())
+                .setIssueId(item.getIssueId())
+                .setIssueNo(item.getIssueNo());
+    }
+
+    private void allocateReceiptBalance(TradePublicationDeliveryBatchDO batch,
+                                        List<TradePublicationDeliveryCandidateItemBO> items,
+                                        Long operatorUserId,
+                                        LocalDateTime deliveryTime) {
+        publicationReceiptService.allocateDeliveryBatch(new RepoPublicationReceiptDeliveryAllocateReqBO()
+                .setDeliveryBatchId(batch.getId())
+                .setOperatorUserId(operatorUserId)
+                .setDeliveryTime(deliveryTime)
+                .setKey(buildBalanceKey(items.get(0)))
+                .setCount(batch.getTotalCount())
+                .setRemark(batch.getRemark()));
+    }
+
     private void validateExpressBatchSize(Integer deliveryType, List<TradePublicationDeliveryCandidateItemBO> items) {
         if (Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType()) && items.size() > EXPRESS_BATCH_ITEM_LIMIT) {
             throw exception(PUBLICATION_EXPRESS_BATCH_TOO_LARGE, EXPRESS_BATCH_ITEM_LIMIT);
@@ -377,6 +466,14 @@ public class TradePublicationDeliveryBatchServiceImpl implements TradePublicatio
     private <T> int countDistinct(List<TradePublicationDeliveryCandidateItemBO> items,
                                   java.util.function.Function<TradePublicationDeliveryCandidateItemBO, T> mapper) {
         return (int) items.stream().map(mapper).filter(Objects::nonNull).distinct().count();
+    }
+
+    private <T> int sum(Collection<T> items, java.util.function.Function<T, Integer> mapper) {
+        return items.stream().map(mapper).filter(Objects::nonNull).reduce(0, Integer::sum);
+    }
+
+    private int defaultZero(Integer value) {
+        return value == null ? 0 : value;
     }
 
 }

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.iocoder.yudao.module.repo.dal.mysql.publicationreceipt.RepoPublicationReceiptItemMapper">
+
+    <sql id="DemandFrom">
+        FROM trade_order_publication_issue pi
+        INNER JOIN trade_order o ON o.id = pi.order_id AND o.deleted = b'0'
+        LEFT JOIN product_sku sku ON sku.id = pi.sku_id AND sku.deleted = b'0'
+        LEFT JOIN product_publication_sku_ext sku_ext ON sku_ext.sku_id = pi.sku_id AND sku_ext.deleted = b'0'
+    </sql>
+
+    <sql id="DemandWhere">
+        WHERE pi.deleted = b'0'
+          AND pi.canceled = b'0'
+          AND o.status = 10
+          AND pi.delivery_status = 10
+          AND pi.warehouse_id IS NOT NULL
+        <if test="reqVO != null and reqVO.supplierId != null">
+          AND EXISTS (
+            SELECT 1
+            FROM repo_supplier_publication_sku sps
+            WHERE sps.deleted = b'0'
+              AND sps.status = 0
+              AND sps.supplier_id = #{reqVO.supplierId}
+              AND sps.sku_id = pi.sku_id
+          )
+        </if>
+        <if test="reqVO != null and reqVO.warehouseId != null">
+          AND pi.warehouse_id = #{reqVO.warehouseId}
+        </if>
+        <if test="reqVO != null and reqVO.windowId != null">
+          AND pi.window_id = #{reqVO.windowId}
+        </if>
+        <if test="reqVO != null and reqVO.offerId != null">
+          AND pi.offer_id = #{reqVO.offerId}
+        </if>
+        <if test="reqVO != null and reqVO.offerSkuId != null">
+          AND pi.offer_sku_id = #{reqVO.offerSkuId}
+        </if>
+        <if test="reqVO != null and reqVO.skuId != null">
+          AND pi.sku_id = #{reqVO.skuId}
+        </if>
+        <if test="reqVO != null and reqVO.issueNo != null">
+          AND pi.issue_no = #{reqVO.issueNo}
+        </if>
+        <if test="reqVO != null and reqVO.keyword != null and reqVO.keyword != ''">
+          AND (
+            pi.product_name_snapshot LIKE CONCAT('%', #{reqVO.keyword}, '%')
+            OR sku.name LIKE CONCAT('%', #{reqVO.keyword}, '%')
+            OR sku_ext.isbn LIKE CONCAT('%', #{reqVO.keyword}, '%')
+            OR pi.issue_name LIKE CONCAT('%', #{reqVO.keyword}, '%')
+          )
+        </if>
+    </sql>
+
+    <sql id="DemandSelect">
+        SELECT demand.warehouseId,
+               demand.warehouseNameSnapshot,
+               demand.windowId,
+               demand.windowNameSnapshot,
+               demand.offerId,
+               demand.offerSkuId,
+               demand.spuId,
+               demand.skuId,
+               demand.productNameSnapshot,
+               demand.productSkuNameSnapshot,
+               demand.isbn,
+               demand.issueId,
+               demand.issueNo,
+               demand.issueName,
+               demand.demandCount,
+               COALESCE(balance.receivedCount, 0) AS receivedCount,
+               COALESCE(balance.allocatedCount, 0) AS allocatedCount,
+               GREATEST(COALESCE(balance.receivedCount, 0) - COALESCE(balance.allocatedCount, 0), 0) AS availableCount,
+               GREATEST(demand.demandCount - GREATEST(COALESCE(balance.receivedCount, 0) - COALESCE(balance.allocatedCount, 0), 0), 0) AS shortageCount,
+               GREATEST(demand.demandCount - GREATEST(COALESCE(balance.receivedCount, 0) - COALESCE(balance.allocatedCount, 0), 0), 0) AS suggestExpectedCount
+        FROM (
+            SELECT pi.warehouse_id AS warehouseId,
+                   MAX(pi.warehouse_name_snapshot) AS warehouseNameSnapshot,
+                   pi.window_id AS windowId,
+                   MAX(pi.window_name_snapshot) AS windowNameSnapshot,
+                   pi.offer_id AS offerId,
+                   pi.offer_sku_id AS offerSkuId,
+                   MAX(pi.spu_id) AS spuId,
+                   pi.sku_id AS skuId,
+                   MAX(pi.product_name_snapshot) AS productNameSnapshot,
+                   MAX(sku.name) AS productSkuNameSnapshot,
+                   MAX(sku_ext.isbn) AS isbn,
+                   pi.issue_id AS issueId,
+                   pi.issue_no AS issueNo,
+                   MAX(pi.issue_name) AS issueName,
+                   COALESCE(SUM(pi.count), 0) AS demandCount
+            <include refid="DemandFrom"/>
+            <include refid="DemandWhere"/>
+            GROUP BY pi.warehouse_id,
+                     pi.window_id,
+                     pi.offer_id,
+                     pi.offer_sku_id,
+                     pi.sku_id,
+                     pi.issue_id,
+                     pi.issue_no
+        ) demand
+        LEFT JOIN (
+            SELECT warehouse_id,
+                   window_id,
+                   offer_id,
+                   offer_sku_id,
+                   sku_id,
+                   issue_id,
+                   issue_no,
+                   COALESCE(SUM(received_count), 0) AS receivedCount,
+                   COALESCE(SUM(allocated_count), 0) AS allocatedCount
+            FROM repo_publication_receipt_item
+            WHERE deleted = b'0'
+            GROUP BY warehouse_id, window_id, offer_id, offer_sku_id, sku_id, issue_id, issue_no
+        ) balance ON balance.warehouse_id = demand.warehouseId
+                 AND balance.window_id = demand.windowId
+                 AND balance.offer_id = demand.offerId
+                 AND balance.offer_sku_id = demand.offerSkuId
+                 AND balance.sku_id = demand.skuId
+                 AND (balance.issue_id = demand.issueId OR (balance.issue_id IS NULL AND demand.issueId IS NULL))
+                 AND balance.issue_no = demand.issueNo
+    </sql>
+
+    <select id="selectDemandPage"
+            resultType="cn.iocoder.yudao.module.repo.controller.admin.publicationreceipt.vo.RepoPublicationReceiptDemandRespVO">
+        <include refid="DemandSelect"/>
+        ORDER BY demand.windowId DESC, demand.issueNo ASC, demand.warehouseId ASC, demand.offerSkuId ASC, demand.skuId ASC
+    </select>
+
+    <select id="selectDemandByKey"
+            resultType="cn.iocoder.yudao.module.repo.controller.admin.publicationreceipt.vo.RepoPublicationReceiptDemandRespVO">
+        <include refid="DemandSelect"/>
+        WHERE demand.warehouseId = #{warehouseId}
+          AND demand.windowId = #{windowId}
+          AND demand.offerId = #{offerId}
+          AND demand.offerSkuId = #{offerSkuId}
+          AND demand.skuId = #{skuId}
+          AND (demand.issueId = #{issueId} OR (demand.issueId IS NULL AND #{issueId} IS NULL))
+          AND demand.issueNo = #{issueNo}
+    </select>
+
+    <select id="selectBalanceList"
+            resultType="cn.iocoder.yudao.module.repo.service.publicationreceipt.bo.RepoPublicationReceiptBalanceBO">
+        SELECT warehouse_id AS warehouseId,
+               window_id AS windowId,
+               offer_id AS offerId,
+               offer_sku_id AS offerSkuId,
+               sku_id AS skuId,
+               issue_id AS issueId,
+               issue_no AS issueNo,
+               COALESCE(SUM(received_count), 0) AS receivedCount,
+               COALESCE(SUM(allocated_count), 0) AS allocatedCount,
+               GREATEST(COALESCE(SUM(received_count), 0) - COALESCE(SUM(allocated_count), 0), 0) AS availableCount
+        FROM repo_publication_receipt_item
+        WHERE deleted = b'0'
+        <if test="keys != null and keys.size() > 0">
+          AND (
+            <foreach collection="keys" item="key" separator=" OR ">
+              (
+                warehouse_id = #{key.warehouseId}
+                AND window_id = #{key.windowId}
+                AND offer_id = #{key.offerId}
+                AND offer_sku_id = #{key.offerSkuId}
+                AND sku_id = #{key.skuId}
+                AND (issue_id = #{key.issueId} OR (issue_id IS NULL AND #{key.issueId} IS NULL))
+                AND issue_no = #{key.issueNo}
+              )
+            </foreach>
+          )
+        </if>
+        GROUP BY warehouse_id, window_id, offer_id, offer_sku_id, sku_id, issue_id, issue_no
+    </select>
+
+    <select id="selectAvailableListForUpdate"
+            resultType="cn.iocoder.yudao.module.repo.dal.dataobject.publicationreceipt.RepoPublicationReceiptItemDO">
+        SELECT item.*
+        FROM repo_publication_receipt_item item
+        INNER JOIN repo_publication_receipt receipt ON receipt.id = item.receipt_id AND receipt.deleted = b'0'
+        WHERE item.deleted = b'0'
+          AND receipt.status IN (20, 30, 40)
+          AND item.warehouse_id = #{key.warehouseId}
+          AND item.window_id = #{key.windowId}
+          AND item.offer_id = #{key.offerId}
+          AND item.offer_sku_id = #{key.offerSkuId}
+          AND item.sku_id = #{key.skuId}
+          AND (item.issue_id = #{key.issueId} OR (item.issue_id IS NULL AND #{key.issueId} IS NULL))
+          AND item.issue_no = #{key.issueNo}
+          AND item.received_count &gt; item.allocated_count
+        ORDER BY item.id ASC
+        FOR UPDATE
+    </select>
+
+</mapper>

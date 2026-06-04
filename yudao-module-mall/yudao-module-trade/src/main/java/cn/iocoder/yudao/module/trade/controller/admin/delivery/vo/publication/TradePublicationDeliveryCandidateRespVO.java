@@ -74,4 +74,16 @@ public class TradePublicationDeliveryCandidateRespVO {
     @Schema(description = "涉及学生数", example = "18")
     private Integer studentCount;
 
+    @Schema(description = "已到货数量", example = "100")
+    private Integer receivedCount;
+
+    @Schema(description = "已出库占用数量", example = "60")
+    private Integer allocatedCount;
+
+    @Schema(description = "可发余额", example = "40")
+    private Integer availableCount;
+
+    @Schema(description = "缺口数量", example = "0")
+    private Integer shortageCount;
+
 }
