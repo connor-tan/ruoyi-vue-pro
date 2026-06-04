@@ -323,8 +323,6 @@ yudao:
       - mail_account
       - mail_template
       - sms_template
-      - iot:device
-      - iot:thing_model_list
   sms-code: # 短信验证码相关的配置项
     expire-times: 10m
     send-frequency: 1m
@@ -346,8 +344,4 @@ yudao:
       kd100:
         key: pLXUGAwK5305
         customer: E77DF18BE109F454A5CD319E44BF5177
-  iot:
-    message-bus:
-      type: redis # 消息总线的类型
-
 debug: false

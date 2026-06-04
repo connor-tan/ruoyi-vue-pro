@@ -12,19 +12,13 @@ import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeC
 
 /**
  * 默认 Controller，解决部分 module 未开启时的 404 提示。
- * 例如说，/bpm/** 路径，工作流
+ * 例如说，/mp/** 路径，微信公众号
  *
  * @author 芋道源码
  */
 @RestController
 @Slf4j
 public class DefaultController {
-
-    @RequestMapping("/admin-api/bpm/**")
-    public CommonResult<Boolean> bpm404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[工作流模块 yudao-module-bpm - 已禁用][参考 https://doc.iocoder.cn/bpm/ 开启]");
-    }
 
     @RequestMapping("/admin-api/mp/**")
     public CommonResult<Boolean> mp404() {
@@ -38,18 +32,6 @@ public class DefaultController {
     public CommonResult<Boolean> mall404() {
         return CommonResult.error(NOT_IMPLEMENTED.getCode(),
                 "[商城系统 yudao-module-mall - 已禁用][参考 https://doc.iocoder.cn/mall/build/ 开启]");
-    }
-
-    @RequestMapping("/admin-api/erp/**")
-    public CommonResult<Boolean> erp404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[ERP 模块 yudao-module-erp - 已禁用][参考 https://doc.iocoder.cn/erp/build/ 开启]");
-    }
-
-    @RequestMapping("/admin-api/crm/**")
-    public CommonResult<Boolean> crm404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[CRM 模块 yudao-module-crm - 已禁用][参考 https://doc.iocoder.cn/crm/build/ 开启]");
     }
 
     @RequestMapping(value = { "/admin-api/report/**"})
@@ -68,12 +50,6 @@ public class DefaultController {
     public CommonResult<Boolean> ai404() {
         return CommonResult.error(NOT_IMPLEMENTED.getCode(),
                 "[AI 大模型 yudao-module-ai - 已禁用][参考 https://doc.iocoder.cn/ai/build/ 开启]");
-    }
-
-    @RequestMapping(value = { "/admin-api/iot/**"})
-    public CommonResult<Boolean> iot404() {
-        return CommonResult.error(NOT_IMPLEMENTED.getCode(),
-                "[IoT 物联网 yudao-module-iot - 已禁用][参考 https://doc.iocoder.cn/iot/build/ 开启]");
     }
 
     /**

@@ -45,12 +45,6 @@
 <!--            <artifactId>yudao-module-report</artifactId>-->
 <!--            <version>${revision}</version>-->
 <!--        </dependency>-->
-        <!-- 工作流。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.boot</groupId>-->
-<!--            <artifactId>yudao-module-bpm</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
         <!-- 支付服务。默认注释，保证编译速度 -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
@@ -87,20 +81,6 @@
             <version>${revision}</version>
         </dependency>
 
-        <!-- CRM 相关模块。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.boot</groupId>-->
-<!--            <artifactId>yudao-module-crm</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
-
-        <!-- ERP 相关模块。默认注释，保证编译速度 -->
-        <dependency>
-            <groupId>cn.iocoder.boot</groupId>
-            <artifactId>yudao-module-erp</artifactId>
-            <version>${revision}</version>
-        </dependency>
-
         <!-- AI 大模型相关模块。默认注释，保证编译速度 -->
 <!--        <dependency>-->
 <!--            <groupId>cn.iocoder.boot</groupId>-->
@@ -108,19 +88,6 @@
 <!--            <version>${revision}</version>-->
 <!--        </dependency>-->
 
-        <!-- IoT 物联网相关模块。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.boot</groupId>-->
-<!--            <artifactId>yudao-module-iot-biz</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
-
-        <!-- MES 制造执行系统相关模块 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.iocoder.boot</groupId>-->
-<!--            <artifactId>yudao-module-mes</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-module-edu</artifactId>
