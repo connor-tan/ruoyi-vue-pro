@@ -42,7 +42,7 @@
     </sql>
 
     <select id="selectPublicationDeliveryCandidatePage"
-            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
+            resultType="cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateRespDTO">
         SELECT pi.delivery_type AS deliveryType,
                pi.school_id AS schoolId,
                MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
@@ -80,7 +80,7 @@
     </select>
 
     <select id="selectPublicationDeliveryCandidateGroupPage"
-            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupRespVO">
+            resultType="cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateGroupRespDTO">
         SELECT pi.delivery_type AS deliveryType,
                pi.school_id AS schoolId,
                MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
@@ -146,17 +146,17 @@
     </sql>
 
     <select id="selectPublicationDeliveryCandidateChildList"
-            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
+            resultType="cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateRespDTO">
         <include refid="PublicationDeliveryCandidateChildSelect"/>
     </select>
 
     <select id="selectPublicationDeliveryCandidateChildPage"
-            resultType="cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO">
+            resultType="cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateRespDTO">
         <include refid="PublicationDeliveryCandidateChildSelect"/>
     </select>
 
     <select id="selectPublicationDeliveryCandidateItemList"
-            resultType="cn.iocoder.yudao.module.trade.service.delivery.bo.TradePublicationDeliveryCandidateItemBO">
+            resultType="cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateItemRespDTO">
         SELECT pi.id AS orderIssueId,
                pi.order_id AS orderId,
                pi.order_no AS orderNo,

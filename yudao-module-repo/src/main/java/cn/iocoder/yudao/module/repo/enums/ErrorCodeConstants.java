@@ -34,4 +34,9 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_RECEIPT_WAREHOUSE_REQUIRED = new ErrorCode(1_017_003_008, "刊物发货必须先确定出库仓库");
     ErrorCode PUBLICATION_RECEIPT_DEMAND_NOT_EXISTS = new ErrorCode(1_017_003_009, "未找到对应的待发刊物需求");
 
+    ErrorCode PUBLICATION_DELIVERY_BATCH_NOT_EXISTS = new ErrorCode(1_017_004_001, "刊物发货批次不存在");
+    ErrorCode PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND = new ErrorCode(1_017_004_002, "未找到可发货的刊物订单期次");
+    ErrorCode PUBLICATION_DELIVERY_GROUP_EXPRESS_NOT_SUPPORTED = new ErrorCode(1_017_004_003, "快递刊物必须逐单维护物流，不能按主表批量发货");
+    ErrorCode PUBLICATION_DELIVERY_ISSUE_DUPLICATE = new ErrorCode(1_017_004_004, "订单期次已存在发货批次，不能重复发货");
+
 }

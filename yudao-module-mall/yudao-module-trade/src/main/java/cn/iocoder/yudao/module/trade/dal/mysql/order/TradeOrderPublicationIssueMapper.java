@@ -3,11 +3,11 @@ package cn.iocoder.yudao.module.trade.dal.mysql.order;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupRespVO;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidatePageReqVO;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateGroupRespDTO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateItemRespDTO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidatePageReqDTO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateRespDTO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
-import cn.iocoder.yudao.module.trade.service.delivery.bo.TradePublicationDeliveryCandidateItemBO;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.ibatis.annotations.Mapper;
@@ -54,31 +54,31 @@ public interface TradeOrderPublicationIssueMapper extends BaseMapperX<TradeOrder
                 .eq(TradeOrderPublicationIssueDO::getUserId, userId));
     }
 
-    IPage<TradePublicationDeliveryCandidateRespVO> selectPublicationDeliveryCandidatePage(
+    IPage<TradePublicationDeliveryCandidateRespDTO> selectPublicationDeliveryCandidatePage(
             IPage<?> page,
-            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqDTO reqVO,
             @Param("orderStatus") Integer orderStatus,
             @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus);
 
-    IPage<TradePublicationDeliveryCandidateGroupRespVO> selectPublicationDeliveryCandidateGroupPage(
+    IPage<TradePublicationDeliveryCandidateGroupRespDTO> selectPublicationDeliveryCandidateGroupPage(
             IPage<?> page,
-            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqDTO reqVO,
             @Param("orderStatus") Integer orderStatus,
             @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus);
 
-    List<TradePublicationDeliveryCandidateRespVO> selectPublicationDeliveryCandidateChildList(
-            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+    List<TradePublicationDeliveryCandidateRespDTO> selectPublicationDeliveryCandidateChildList(
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqDTO reqVO,
             @Param("orderStatus") Integer orderStatus,
             @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus);
 
-    IPage<TradePublicationDeliveryCandidateRespVO> selectPublicationDeliveryCandidateChildPage(
+    IPage<TradePublicationDeliveryCandidateRespDTO> selectPublicationDeliveryCandidateChildPage(
             IPage<?> page,
-            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqDTO reqVO,
             @Param("orderStatus") Integer orderStatus,
             @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus);
 
-    List<TradePublicationDeliveryCandidateItemBO> selectPublicationDeliveryCandidateItemList(
-            @Param("reqVO") TradePublicationDeliveryCandidatePageReqVO reqVO,
+    List<TradePublicationDeliveryCandidateItemRespDTO> selectPublicationDeliveryCandidateItemList(
+            @Param("reqVO") TradePublicationDeliveryCandidatePageReqDTO reqVO,
             @Param("orderStatus") Integer orderStatus,
             @Param("publicationDeliveryStatus") Integer publicationDeliveryStatus,
             @Param("limit") Integer limit);

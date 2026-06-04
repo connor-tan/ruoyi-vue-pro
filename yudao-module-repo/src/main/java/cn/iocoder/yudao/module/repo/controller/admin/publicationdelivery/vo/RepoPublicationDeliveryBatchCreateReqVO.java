@@ -1,14 +1,16 @@
-package cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication;
+package cn.iocoder.yudao.module.repo.controller.admin.publicationdelivery.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.util.List;
 
-@Schema(description = "管理后台 - 刊物学校配送批次创建并发货 Request VO")
+@Schema(description = "管理后台 - 仓库刊物批次创建并发货 Request VO")
 @Data
-public class TradePublicationDeliveryBatchCreateReqVO {
+@Accessors(chain = true)
+public class RepoPublicationDeliveryBatchCreateReqVO {
 
     @Schema(description = "配送方式", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
     @NotNull(message = "配送方式不能为空")
@@ -51,6 +53,7 @@ public class TradePublicationDeliveryBatchCreateReqVO {
     private List<ExpressItem> expressItems;
 
     @Data
+    @Accessors(chain = true)
     public static class ExpressItem {
 
         @Schema(description = "订单期次编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1000")

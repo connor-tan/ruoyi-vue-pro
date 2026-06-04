@@ -2,9 +2,10 @@ package cn.iocoder.yudao.module.trade.dal.mysql.order;
 
 import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
 import cn.iocoder.yudao.framework.test.core.ut.BaseDbUnitTest;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateGroupRespVO;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidatePageReqVO;
-import cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication.TradePublicationDeliveryCandidateRespVO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateGroupRespDTO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateItemRespDTO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidatePageReqDTO;
+import cn.iocoder.yudao.module.trade.api.delivery.dto.TradePublicationDeliveryCandidateRespDTO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderPublicationIssueDO;
 import cn.iocoder.yudao.module.trade.enums.delivery.DeliveryTypeEnum;
@@ -13,7 +14,6 @@ import cn.iocoder.yudao.module.trade.enums.delivery.PublicationReceiveStatusEnum
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderRefundStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
-import cn.iocoder.yudao.module.trade.service.delivery.bo.TradePublicationDeliveryCandidateItemBO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
@@ -41,7 +41,7 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         insertOrder(1L, TradeOrderStatusEnum.UNDELIVERED.getStatus(), TradeOrderRefundStatusEnum.PART.getStatus());
         insertIssue(9001L, 1L, false, PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
 
-        List<TradePublicationDeliveryCandidateItemBO> items = publicationIssueMapper.selectPublicationDeliveryCandidateItemList(
+        List<TradePublicationDeliveryCandidateItemRespDTO> items = publicationIssueMapper.selectPublicationDeliveryCandidateItemList(
                 candidateReqVO(), TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                 PublicationDeliveryStatusEnum.UNDELIVERED.getStatus(), null);
 
@@ -58,7 +58,7 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         insertIssue(9001L, 1L, true, PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
         insertIssue(9002L, 1L, false, PublicationDeliveryStatusEnum.DELIVERED.getStatus());
 
-        List<TradePublicationDeliveryCandidateItemBO> items = publicationIssueMapper.selectPublicationDeliveryCandidateItemList(
+        List<TradePublicationDeliveryCandidateItemRespDTO> items = publicationIssueMapper.selectPublicationDeliveryCandidateItemList(
                 candidateReqVO(), TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                 PublicationDeliveryStatusEnum.UNDELIVERED.getStatus(), null);
 
@@ -71,13 +71,13 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         insertIssue(9001L, 1L, false, PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
         insertSku(6L, "测试刊物 SKU-全学年", "ISBN978-7-5436-9310-0");
 
-        IPage<TradePublicationDeliveryCandidateRespVO> page = publicationIssueMapper
+        IPage<TradePublicationDeliveryCandidateRespDTO> page = publicationIssueMapper
                 .selectPublicationDeliveryCandidatePage(new Page<>(1, 10), candidateReqVO(),
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
 
         assertEquals(1, page.getRecords().size());
-        TradePublicationDeliveryCandidateRespVO candidate = page.getRecords().get(0);
+        TradePublicationDeliveryCandidateRespDTO candidate = page.getRecords().get(0);
         assertEquals("测试刊物 SKU-全学年", candidate.getProductSkuName());
         assertEquals("ISBN978-7-5436-9310-0", candidate.getIsbn());
         assertEquals(1, candidate.getTotalCount());
@@ -92,13 +92,13 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         insertIssue(9002L, 1L, 4L, 6L, 7L, 1, 1000L);
         insertIssue(9003L, 2L, 4L, 6L, 7L, 2, 1000L);
 
-        IPage<TradePublicationDeliveryCandidateGroupRespVO> page = publicationIssueMapper
+        IPage<TradePublicationDeliveryCandidateGroupRespDTO> page = publicationIssueMapper
                 .selectPublicationDeliveryCandidateGroupPage(new Page<>(1, 10), groupReqVO(),
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
 
         assertEquals(1, page.getRecords().size());
-        TradePublicationDeliveryCandidateGroupRespVO group = page.getRecords().get(0);
+        TradePublicationDeliveryCandidateGroupRespDTO group = page.getRecords().get(0);
         assertEquals(3, group.getTotalCount());
         assertEquals(2, group.getOrderCount());
         assertEquals(1, group.getStudentCount());
@@ -115,17 +115,17 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         insertIssue(9002L, 2L, 4L, 5L, 6L, 1, 1001L,
                 "实验小学旧名", "城北仓", "2026 春季订刊旧名", "测试刊物旧名", "第一期", LocalDate.of(2026, 5, 2));
 
-        IPage<TradePublicationDeliveryCandidateGroupRespVO> page = publicationIssueMapper
+        IPage<TradePublicationDeliveryCandidateGroupRespDTO> page = publicationIssueMapper
                 .selectPublicationDeliveryCandidateGroupPage(new Page<>(1, 10), groupReqVO(),
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
-        List<TradePublicationDeliveryCandidateRespVO> children = publicationIssueMapper
+        List<TradePublicationDeliveryCandidateRespDTO> children = publicationIssueMapper
                 .selectPublicationDeliveryCandidateChildList(groupReqVO(),
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
 
         assertEquals(1, page.getRecords().size());
-        TradePublicationDeliveryCandidateGroupRespVO group = page.getRecords().get(0);
+        TradePublicationDeliveryCandidateGroupRespDTO group = page.getRecords().get(0);
         assertEquals(2, group.getTotalCount());
         assertEquals(2, group.getOrderCount());
         assertEquals(2, group.getStudentCount());
@@ -145,7 +145,7 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         insertSku(6L, "测试刊物 SKU-一年级", "ISBN-1");
         insertSku(7L, "测试刊物 SKU-二年级", "ISBN-2");
 
-        List<TradePublicationDeliveryCandidateRespVO> children = publicationIssueMapper
+        List<TradePublicationDeliveryCandidateRespDTO> children = publicationIssueMapper
                 .selectPublicationDeliveryCandidateChildList(groupReqVO(),
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
@@ -165,7 +165,7 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         insertIssue(9002L, 1L, 4L, 6L, 7L, 2, 1000L);
         insertIssue(9003L, 1L, 4L, 7L, 8L, 3, 1000L);
 
-        IPage<TradePublicationDeliveryCandidateRespVO> page = publicationIssueMapper
+        IPage<TradePublicationDeliveryCandidateRespDTO> page = publicationIssueMapper
                 .selectPublicationDeliveryCandidateChildPage(new Page<>(2, 1), groupReqVO(),
                         TradeOrderStatusEnum.UNDELIVERED.getStatus(),
                         PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
@@ -176,8 +176,8 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
         assertEquals(2, page.getRecords().get(0).getIssueNo());
     }
 
-    private TradePublicationDeliveryCandidatePageReqVO candidateReqVO() {
-        return new TradePublicationDeliveryCandidatePageReqVO()
+    private TradePublicationDeliveryCandidatePageReqDTO candidateReqVO() {
+        return new TradePublicationDeliveryCandidatePageReqDTO()
                 .setDeliveryType(DeliveryTypeEnum.SCHOOL.getType())
                 .setWindowId(3L)
                 .setOfferId(4L)
@@ -186,8 +186,8 @@ class TradeOrderPublicationIssueMapperTest extends BaseDbUnitTest {
                 .setIssueNo(1);
     }
 
-    private TradePublicationDeliveryCandidatePageReqVO groupReqVO() {
-        return new TradePublicationDeliveryCandidatePageReqVO()
+    private TradePublicationDeliveryCandidatePageReqDTO groupReqVO() {
+        return new TradePublicationDeliveryCandidatePageReqDTO()
                 .setDeliveryType(DeliveryTypeEnum.SCHOOL.getType())
                 .setSchoolId(100L)
                 .setWarehouseId(200L)

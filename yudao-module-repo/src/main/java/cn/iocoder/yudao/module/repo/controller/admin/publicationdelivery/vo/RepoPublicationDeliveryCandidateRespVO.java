@@ -1,4 +1,4 @@
-package cn.iocoder.yudao.module.trade.controller.admin.delivery.vo.publication;
+package cn.iocoder.yudao.module.repo.controller.admin.publicationdelivery.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -9,9 +9,9 @@ import java.time.LocalDate;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY;
 import static cn.iocoder.yudao.framework.common.util.date.DateUtils.TIME_ZONE_DEFAULT;
 
-@Schema(description = "管理后台 - 刊物学校配送批次发货候选 Response VO")
+@Schema(description = "管理后台 - 仓库刊物发货候选 Response VO")
 @Data
-public class TradePublicationDeliveryCandidateRespVO {
+public class RepoPublicationDeliveryCandidateRespVO {
 
     @Schema(description = "配送方式", example = "3")
     private Integer deliveryType;

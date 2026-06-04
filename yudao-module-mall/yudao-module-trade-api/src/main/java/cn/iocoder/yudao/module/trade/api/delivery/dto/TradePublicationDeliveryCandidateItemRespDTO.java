@@ -1,14 +1,13 @@
-package cn.iocoder.yudao.module.trade.service.delivery.bo;
+package cn.iocoder.yudao.module.trade.api.delivery.dto;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.time.LocalDate;
 
-/**
- * 刊物期次批次发货候选订单期次。
- */
 @Data
-public class TradePublicationDeliveryCandidateItemBO {
+@Accessors(chain = true)
+public class TradePublicationDeliveryCandidateItemRespDTO {
 
     private Long orderIssueId;
 
