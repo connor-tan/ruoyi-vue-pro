@@ -104,7 +104,6 @@ class AppSubscriptionPublicationControllerTest {
         ProductPublicationRespDTO.PublicationSkuDTO productSku = new ProductPublicationRespDTO.PublicationSkuDTO();
         productSku.setId(productSkuId);
         productSku.setName("SKU " + productSkuId);
-        productSku.setStock(10);
         visibleSku.setProductSku(productSku);
         return visibleSku;
     }

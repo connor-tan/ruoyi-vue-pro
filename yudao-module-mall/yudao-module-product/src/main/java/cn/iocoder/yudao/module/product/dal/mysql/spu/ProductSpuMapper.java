@@ -9,6 +9,7 @@ import cn.iocoder.yudao.module.product.controller.app.spu.vo.AppProductSpuPageRe
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.enums.ProductConstants;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
+import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -162,10 +163,12 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
         }
         // 已售空商品
         if (ObjectUtil.equals(ProductSpuPageReqVO.SOLD_OUT, tabType)) {
+            appendStockManagedBizScene(query);
             query.eqIfPresent(ProductSpuDO::getStock, 0);
         }
         // 警戒库存
         if (ObjectUtil.equals(ProductSpuPageReqVO.ALERT_STOCK, tabType)) {
+            appendStockManagedBizScene(query);
             query.le(ProductSpuDO::getStock, ProductConstants.ALERT_STOCK)
                     // 如果库存触发警戒库存且状态为回收站的话则不在警戒库存列表展示
                     .notIn(ProductSpuDO::getStatus, ProductSpuStatusEnum.RECYCLE.getStatus());
@@ -174,6 +177,10 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
         if (ObjectUtil.equals(ProductSpuPageReqVO.RECYCLE_BIN, tabType)) {
             query.eqIfPresent(ProductSpuDO::getStatus, ProductSpuStatusEnum.RECYCLE.getStatus());
         }
+    }
+
+    static void appendStockManagedBizScene(LambdaQueryWrapperX<ProductSpuDO> query) {
+        query.eq(ProductSpuDO::getBizScene, BizSceneEnum.NORMAL.getCode());
     }
 
     /**

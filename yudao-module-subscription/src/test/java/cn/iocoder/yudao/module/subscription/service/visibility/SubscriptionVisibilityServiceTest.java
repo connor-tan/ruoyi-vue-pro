@@ -262,7 +262,6 @@ class SubscriptionVisibilityServiceTest {
         sku.setId(productSkuId);
         sku.setName(name);
         sku.setStatus(CommonStatusEnum.ENABLE.getStatus());
-        sku.setStock(10);
         sku.setPrice(1000);
         sku.setPublicationExt(skuExt);
         sku.setApplicableGradeCatalogIds(gradeIds);
