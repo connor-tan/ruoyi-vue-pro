@@ -184,6 +184,8 @@ public class SubscriptionOrderEligibilityServiceImpl implements SubscriptionOrde
             respDTO.setSchoolId(student.getSchoolId());
             respDTO.setSchoolNameSnapshot(student.getSchoolName());
             respDTO.setSchoolAddressSnapshot(student.getSchoolAddress());
+            respDTO.setStationId(student.getStationId());
+            respDTO.setStationNameSnapshot(student.getStationName());
             respDTO.setClassId(student.getClassId());
             respDTO.setClassNameSnapshot(student.getClassName());
             respDTO.setGradeCatalogId(student.getGradeCatalogId());

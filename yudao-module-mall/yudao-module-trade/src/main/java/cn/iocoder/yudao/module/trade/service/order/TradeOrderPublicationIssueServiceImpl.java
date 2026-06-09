@@ -84,6 +84,8 @@ public class TradeOrderPublicationIssueServiceImpl implements TradeOrderPublicat
                         .setStudentNameSnapshot(orderItem.getSubscriptionStudentNameSnapshot())
                         .setSchoolId(orderItem.getSubscriptionSchoolId())
                         .setSchoolNameSnapshot(orderItem.getSubscriptionSchoolNameSnapshot())
+                        .setStationId(calculateItem.getSubscriptionStationId())
+                        .setStationNameSnapshot(calculateItem.getSubscriptionStationNameSnapshot())
                         .setClassId(orderItem.getSubscriptionClassId())
                         .setClassNameSnapshot(orderItem.getSubscriptionClassNameSnapshot())
                         .setWarehouseId(calculateItem.getSubscriptionWarehouseId())

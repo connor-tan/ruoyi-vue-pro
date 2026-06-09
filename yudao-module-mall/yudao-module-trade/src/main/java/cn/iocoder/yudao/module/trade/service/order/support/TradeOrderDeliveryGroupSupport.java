@@ -93,13 +93,6 @@ public class TradeOrderDeliveryGroupSupport {
                 group.getItemIndexes().add(i);
                 continue;
             }
-            if (Objects.equals(resolvedDeliveryType, DeliveryTypeEnum.PICK_UP.getType())) {
-                String key = buildNormalGroupKey(resolvedDeliveryType);
-                TradeOrderDeliveryGroupDraft group = planMap.computeIfAbsent(key,
-                        ignore -> TradeOrderDeliveryGroupDraft.forNormal(resolvedDeliveryType));
-                group.getItemIndexes().add(i);
-                continue;
-            }
             throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
         }
         List<TradeOrderDeliveryGroupDraft> plans = new ArrayList<>(planMap.values());

@@ -6,7 +6,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.repo.controller.admin.warehouse.vo.RepoWarehousePageReqVO;
 import cn.iocoder.yudao.module.repo.dal.dataobject.warehouse.RepoWarehouseDO;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -36,7 +36,6 @@ public interface RepoWarehouseMapper extends BaseMapperX<RepoWarehouseDO> {
                 .orderByDesc(RepoWarehouseDO::getId));
     }
 
-    @Select("SELECT COUNT(1) FROM edu_school WHERE deleted = FALSE AND warehouse_id = #{warehouseId}")
-    long countBoundSchoolByWarehouseId(Long warehouseId);
+    long countBoundSchoolByWarehouseId(@Param("warehouseId") Long warehouseId);
 
 }

@@ -143,9 +143,9 @@ public class RepoPublicationReceiptServiceImpl implements RepoPublicationReceipt
             if (item == null) {
                 throw exception(PUBLICATION_RECEIPT_ITEM_NOT_EXISTS);
             }
-            publicationReceiptItemMapper.updateById(new RepoPublicationReceiptItemDO()
-                    .setId(item.getId())
-                    .setReceivedCount(defaultZero(item.getReceivedCount()) + itemReqVO.getReceivedCount()));
+            if (publicationReceiptItemMapper.incrementReceivedCount(item.getId(), itemReqVO.getReceivedCount()) == 0) {
+                throw exception(PUBLICATION_RECEIPT_ITEM_NOT_EXISTS);
+            }
             publicationReceiptRecordMapper.insert(new RepoPublicationReceiptRecordDO()
                     .setReceiptId(receipt.getId())
                     .setReceiptItemId(item.getId())

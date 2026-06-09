@@ -14,6 +14,8 @@ public class SubscriptionOrderEligibilityRespDTO {
     private Long schoolId;
     private String schoolNameSnapshot;
     private String schoolAddressSnapshot;
+    private Long stationId;
+    private String stationNameSnapshot;
     private Long classId;
     private String classNameSnapshot;
     private Long gradeCatalogId;

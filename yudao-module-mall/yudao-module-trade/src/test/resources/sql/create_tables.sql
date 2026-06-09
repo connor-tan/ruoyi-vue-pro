@@ -142,6 +142,8 @@ CREATE TABLE IF NOT EXISTS "trade_order_publication_issue"
     "student_name_snapshot"  varchar  NULL,
     "school_id"              bigint   NULL,
     "school_name_snapshot"   varchar  NULL,
+    "station_id"             bigint   NULL,
+    "station_name_snapshot"  varchar  NULL,
     "class_id"               bigint   NULL,
     "class_name_snapshot"    varchar  NULL,
     "warehouse_id"             bigint   NULL,

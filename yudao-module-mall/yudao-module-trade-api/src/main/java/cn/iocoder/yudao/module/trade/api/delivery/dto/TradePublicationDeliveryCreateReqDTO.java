@@ -13,6 +13,8 @@ public class TradePublicationDeliveryCreateReqDTO {
 
     private Long schoolId;
 
+    private Long stationId;
+
     private Long warehouseId;
 
     private Long windowId;

@@ -73,7 +73,7 @@ public class TradeDeliveryPriceCalculator implements TradePriceCalculator {
 
         if (CollectionUtils.anyMatch(selectedItems,
                 item -> DeliveryTypeEnum.PICK_UP.getType().equals(getEffectiveDeliveryType(param, item)))) {
-            calculateByPickUp(param);
+            throw exception(PRICE_CALCULATE_DELIVERY_PRICE_TYPE_ILLEGAL);
         }
 
         List<OrderItem> expressItems = filterList(selectedItems,

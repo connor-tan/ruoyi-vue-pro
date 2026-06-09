@@ -101,13 +101,7 @@ public class TradeOrderReceiveServiceImpl implements TradeOrderReceiveService {
             throw exception(ORDER_RECEIVE_FAIL_DELIVERY_STATUS_NOT_DELIVERED);
         }
         if (BizSceneEnum.isPublication(delivery.getBizScene())) {
-            publicationIssueService.receiveDeliveryIssues(userId, deliveryId);
-            TradeOrderDO refreshedOrder = statusAggregateSupport.refreshOrderStatusByDeliveries(order);
-            if (TradeOrderStatusEnum.isCompleted(refreshedOrder.getStatus())) {
-                TradeOrderLogUtils.setOrderInfo(order.getId(), order.getStatus(), TradeOrderStatusEnum.COMPLETED.getStatus());
-                tradeOrderHandlers.forEach(handler -> handler.afterReceiveOrder(refreshedOrder));
-            }
-            return;
+            throw exception(ORDER_RECEIVE_FAIL_SPLIT_DELIVERY_REQUIRED);
         }
         boolean changed = receiveDelivery0(order, delivery, true);
         if (changed) {

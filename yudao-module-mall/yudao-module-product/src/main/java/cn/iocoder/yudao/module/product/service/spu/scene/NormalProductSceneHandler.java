@@ -27,8 +27,7 @@ import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_STOCK
 @Component
 public class NormalProductSceneHandler implements ProductSceneHandler {
 
-    private static final Set<Integer> NORMAL_DELIVERY_TYPES = Set.of(
-            DeliveryTypeEnum.EXPRESS.getType(), DeliveryTypeEnum.PICK_UP.getType());
+    private static final Set<Integer> NORMAL_DELIVERY_TYPES = Set.of(DeliveryTypeEnum.EXPRESS.getType());
 
     @Resource
     private ProductBrandService brandService;

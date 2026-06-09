@@ -52,7 +52,7 @@ public interface ErrorCodeConstants {
     ErrorCode SPU_NOT_RECYCLE = new ErrorCode(1_008_005_004, "商品 SPU 不处于回收站状态");
     ErrorCode NORMAL_PRODUCT_BRAND_REQUIRED = new ErrorCode(1_008_005_005, "普通商品品牌不能为空");
     ErrorCode NORMAL_PRODUCT_DELIVERY_REQUIRED = new ErrorCode(1_008_005_006, "普通商品配送方式不能为空");
-    ErrorCode NORMAL_PRODUCT_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_005_007, "普通商品配送方式只允许快递发货或用户自提");
+    ErrorCode NORMAL_PRODUCT_DELIVERY_TYPE_INVALID = new ErrorCode(1_008_005_007, "普通商品配送方式只允许快递发货");
     ErrorCode NORMAL_PRODUCT_DELIVERY_TEMPLATE_REQUIRED = new ErrorCode(1_008_005_008, "普通商品选择快递发货时，运费模板不能为空");
     ErrorCode SPU_SAVE_FAIL_CATEGORY_REQUIRED = new ErrorCode(1_008_005_009, "商品分类不能为空");
     ErrorCode SPU_SAVE_FAIL_CATEGORY_BIZ_SCENE_INCONSISTENT = new ErrorCode(1_008_005_010, "商品分类业务场景必须与商品业务场景一致");
@@ -65,6 +65,7 @@ public interface ErrorCodeConstants {
     ErrorCode SKU_STOCK_NOT_ENOUGH = new ErrorCode(1_008_006_004, "商品 SKU 库存不足");
     ErrorCode SKU_STOCK_REQUIRED = new ErrorCode(1_008_006_005, "商品 SKU 库存不能为空");
     ErrorCode SKU_STOCK_INVALID = new ErrorCode(1_008_006_006, "商品 SKU 库存必须大于等于 0");
+    ErrorCode SKU_NOT_ENABLE = new ErrorCode(1_008_006_007, "商品 SKU 不处于启用状态");
 
     // ========== 商品 评价 1-008-007-000 ==========
     ErrorCode COMMENT_NOT_EXISTS = new ErrorCode(1_008_007_000, "商品评价不存在");

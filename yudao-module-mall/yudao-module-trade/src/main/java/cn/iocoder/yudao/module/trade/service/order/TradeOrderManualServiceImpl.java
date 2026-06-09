@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
@@ -71,6 +72,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getSumValue;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_ENABLE;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.*;
 
 @Service
@@ -278,6 +280,9 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
             if (sku == null) {
                 throw exception(ORDER_ITEM_NOT_FOUND);
             }
+            if (!CommonStatusEnum.isEnable(sku.getStatus())) {
+                throw exception(SKU_NOT_ENABLE);
+            }
             ProductSpuRespDTO spu = spuMap.get(sku.getSpuId());
             if (spu == null) {
                 throw exception(ORDER_ITEM_NOT_FOUND);
@@ -294,6 +299,9 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
             if (!BizSceneEnum.isPublication(spu.getBizScene())) {
                 if (item.getSubscriptionStudentId() != null || item.getSubscriptionOfferSkuId() != null) {
                     throw exception(ORDER_NORMAL_STUDENT_NOT_ALLOWED);
+                }
+                if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())) {
+                    throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
                 }
                 continue;
             }
@@ -373,6 +381,8 @@ public class TradeOrderManualServiceImpl implements TradeOrderManualService {
                 .setSubscriptionSchoolId(eligibility.getSchoolId())
                 .setSubscriptionSchoolNameSnapshot(eligibility.getSchoolNameSnapshot())
                 .setSubscriptionSchoolAddressSnapshot(eligibility.getSchoolAddressSnapshot())
+                .setSubscriptionStationId(eligibility.getStationId())
+                .setSubscriptionStationNameSnapshot(eligibility.getStationNameSnapshot())
                 .setSubscriptionClassId(eligibility.getClassId())
                 .setSubscriptionClassNameSnapshot(eligibility.getClassNameSnapshot())
                 .setSubscriptionGradeCatalogId(eligibility.getGradeCatalogId())

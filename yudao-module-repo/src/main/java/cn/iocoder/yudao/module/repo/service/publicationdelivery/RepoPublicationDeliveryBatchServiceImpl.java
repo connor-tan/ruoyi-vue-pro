@@ -51,6 +51,7 @@ import static cn.iocoder.yudao.module.repo.enums.ErrorCodeConstants.PUBLICATION_
 import static cn.iocoder.yudao.module.repo.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND;
 import static cn.iocoder.yudao.module.repo.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_GROUP_EXPRESS_NOT_SUPPORTED;
 import static cn.iocoder.yudao.module.repo.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_ISSUE_DUPLICATE;
+import static cn.iocoder.yudao.module.repo.enums.ErrorCodeConstants.PUBLICATION_RECEIPT_WAREHOUSE_REQUIRED;
 
 @Service
 public class RepoPublicationDeliveryBatchServiceImpl implements RepoPublicationDeliveryBatchService {
@@ -84,7 +85,7 @@ public class RepoPublicationDeliveryBatchServiceImpl implements RepoPublicationD
                 BeanUtils.toBean(reqVO, TradePublicationDeliveryCandidatePageReqDTO.class));
         List<RepoPublicationDeliveryCandidateGroupRespVO> list = BeanUtils.toBean(page.getList(),
                 RepoPublicationDeliveryCandidateGroupRespVO.class);
-        fillGroupBalances(list);
+        fillGroupBalances(reqVO, list);
         return new PageResult<>(list, page.getTotal());
     }
 
@@ -172,8 +173,10 @@ public class RepoPublicationDeliveryBatchServiceImpl implements RepoPublicationD
 
     private Long createAndDeliverInternal(RepoPublicationDeliveryBatchCreateReqVO reqVO, Long operatorUserId,
                                           LocalDateTime deliveryTime) {
+        validateCreateScope(reqVO);
         List<TradePublicationDeliveryCandidateItemRespDTO> deliverableItems = tradePublicationDeliveryApi
                 .getDeliverableItemList(BeanUtils.toBean(reqVO, TradePublicationDeliveryCreateReqDTO.class));
+        validateDeliverableItems(reqVO, deliverableItems);
         Map<Long, RepoPublicationDeliveryBatchCreateReqVO.ExpressItem> expressItemMap = buildExpressItemMap(reqVO);
 
         RepoPublicationDeliveryBatchDO batch = buildBatch(deliverableItems, operatorUserId, reqVO.getRemark(), deliveryTime);
@@ -190,11 +193,45 @@ public class RepoPublicationDeliveryBatchServiceImpl implements RepoPublicationD
         return batch.getId();
     }
 
+    private void validateCreateScope(RepoPublicationDeliveryBatchCreateReqVO reqVO) {
+        if (reqVO.getWarehouseId() == null) {
+            throw exception(PUBLICATION_RECEIPT_WAREHOUSE_REQUIRED);
+        }
+        if (reqVO.getDeliveryType() == null || reqVO.getSchoolId() == null || reqVO.getStationId() == null
+                || reqVO.getWindowId() == null
+                || reqVO.getOfferId() == null || reqVO.getOfferSkuId() == null || reqVO.getSkuId() == null
+                || reqVO.getIssueNo() == null) {
+            throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+        }
+    }
+
+    private void validateDeliverableItems(RepoPublicationDeliveryBatchCreateReqVO reqVO,
+                                          List<TradePublicationDeliveryCandidateItemRespDTO> items) {
+        if (CollUtil.isEmpty(items)) {
+            throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+        }
+        boolean scopeMismatch = items.stream().anyMatch(item ->
+                !Objects.equals(reqVO.getDeliveryType(), item.getDeliveryType())
+                        || !Objects.equals(reqVO.getSchoolId(), item.getSchoolId())
+                        || !Objects.equals(reqVO.getStationId(), item.getStationId())
+                        || !Objects.equals(reqVO.getWarehouseId(), item.getWarehouseId())
+                        || !Objects.equals(reqVO.getWindowId(), item.getWindowId())
+                        || !Objects.equals(reqVO.getOfferId(), item.getOfferId())
+                        || !Objects.equals(reqVO.getOfferSkuId(), item.getOfferSkuId())
+                        || !Objects.equals(reqVO.getSkuId(), item.getSkuId())
+                        || !Objects.equals(reqVO.getIssueId(), item.getIssueId())
+                        || !Objects.equals(reqVO.getIssueNo(), item.getIssueNo()));
+        if (scopeMismatch) {
+            throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+        }
+    }
+
     private RepoPublicationDeliveryBatchCreateReqVO buildCreateReqVO(RepoPublicationDeliveryCandidateRespVO child,
                                                                      String remark) {
         return new RepoPublicationDeliveryBatchCreateReqVO()
                 .setDeliveryType(child.getDeliveryType())
                 .setSchoolId(child.getSchoolId())
+                .setStationId(child.getStationId())
                 .setWarehouseId(child.getWarehouseId())
                 .setWindowId(child.getWindowId())
                 .setOfferId(child.getOfferId())
@@ -213,6 +250,8 @@ public class RepoPublicationDeliveryBatchServiceImpl implements RepoPublicationD
                 .setDeliveryType(first.getDeliveryType())
                 .setSchoolId(first.getSchoolId())
                 .setSchoolNameSnapshot(first.getSchoolNameSnapshot())
+                .setStationId(first.getStationId())
+                .setStationNameSnapshot(first.getStationNameSnapshot())
                 .setWarehouseId(first.getWarehouseId())
                 .setWarehouseNameSnapshot(first.getWarehouseNameSnapshot())
                 .setWindowId(first.getWindowId())
@@ -294,22 +333,45 @@ public class RepoPublicationDeliveryBatchServiceImpl implements RepoPublicationD
         candidates.forEach(candidate -> fillCandidateBalance(candidate, balanceMap.get(buildBalanceKey(candidate))));
     }
 
-    private void fillGroupBalances(List<RepoPublicationDeliveryCandidateGroupRespVO> groups) {
+    private void fillGroupBalances(RepoPublicationDeliveryCandidatePageReqVO reqVO,
+                                   List<RepoPublicationDeliveryCandidateGroupRespVO> groups) {
         if (CollUtil.isEmpty(groups)) {
             return;
         }
-        for (RepoPublicationDeliveryCandidateGroupRespVO group : groups) {
-            RepoPublicationDeliveryCandidateChildReqVO childReqVO = new RepoPublicationDeliveryCandidateChildReqVO();
-            childReqVO.setDeliveryType(group.getDeliveryType())
-                    .setSchoolId(group.getSchoolId())
-                    .setWarehouseId(group.getWarehouseId())
-                    .setWindowId(group.getWindowId());
-            List<RepoPublicationDeliveryCandidateRespVO> children = getCandidateChildList(childReqVO);
-            group.setReceivedCount(sum(children, RepoPublicationDeliveryCandidateRespVO::getReceivedCount))
-                    .setAllocatedCount(sum(children, RepoPublicationDeliveryCandidateRespVO::getAllocatedCount))
-                    .setAvailableCount(sum(children, RepoPublicationDeliveryCandidateRespVO::getAvailableCount))
-                    .setShortageCount(sum(children, RepoPublicationDeliveryCandidateRespVO::getShortageCount));
+        List<TradePublicationDeliveryCandidateRespDTO> children = tradePublicationDeliveryApi.getCandidateList(
+                BeanUtils.toBean(reqVO, TradePublicationDeliveryCandidatePageReqDTO.class));
+        List<RepoPublicationDeliveryCandidateRespVO> childList = BeanUtils.toBean(children,
+                RepoPublicationDeliveryCandidateRespVO.class);
+        fillCandidateBalances(childList);
+        Map<String, List<RepoPublicationDeliveryCandidateRespVO>> childMap = new java.util.HashMap<>();
+        for (RepoPublicationDeliveryCandidateRespVO child : childList) {
+            childMap.computeIfAbsent(buildGroupKey(child), ignored -> new ArrayList<>()).add(child);
         }
+        for (RepoPublicationDeliveryCandidateGroupRespVO group : groups) {
+            List<RepoPublicationDeliveryCandidateRespVO> groupChildren = childMap.get(buildGroupKey(group));
+            group.setReceivedCount(sum(groupChildren == null ? List.of() : groupChildren,
+                            RepoPublicationDeliveryCandidateRespVO::getReceivedCount))
+                    .setAllocatedCount(sum(groupChildren == null ? List.of() : groupChildren,
+                            RepoPublicationDeliveryCandidateRespVO::getAllocatedCount))
+                    .setAvailableCount(sum(groupChildren == null ? List.of() : groupChildren,
+                            RepoPublicationDeliveryCandidateRespVO::getAvailableCount))
+                    .setShortageCount(sum(groupChildren == null ? List.of() : groupChildren,
+                            RepoPublicationDeliveryCandidateRespVO::getShortageCount));
+        }
+    }
+
+    private String buildGroupKey(RepoPublicationDeliveryCandidateGroupRespVO group) {
+        return buildGroupKey(group.getDeliveryType(), group.getSchoolId(), group.getStationId(),
+                group.getWarehouseId(), group.getWindowId());
+    }
+
+    private String buildGroupKey(RepoPublicationDeliveryCandidateRespVO child) {
+        return buildGroupKey(child.getDeliveryType(), child.getSchoolId(), child.getStationId(),
+                child.getWarehouseId(), child.getWindowId());
+    }
+
+    private String buildGroupKey(Integer deliveryType, Long schoolId, Long stationId, Long warehouseId, Long windowId) {
+        return deliveryType + ":" + schoolId + ":" + stationId + ":" + warehouseId + ":" + windowId;
     }
 
     private void fillCandidateBalance(RepoPublicationDeliveryCandidateRespVO candidate,

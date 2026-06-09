@@ -29,6 +29,10 @@ public class TradePublicationDeliveryCandidateItemRespDTO {
 
     private String schoolNameSnapshot;
 
+    private Long stationId;
+
+    private String stationNameSnapshot;
+
     private Long warehouseId;
 
     private String warehouseNameSnapshot;

@@ -24,10 +24,13 @@ import cn.iocoder.yudao.module.subscription.service.offersku.SubscriptionOfferSk
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -36,6 +39,9 @@ import static cn.iocoder.yudao.module.subscription.enums.ErrorCodeConstants.*;
 @Service
 @Validated
 public class SubscriptionWindowServiceImpl implements SubscriptionWindowService {
+
+    private static final String WINDOW_MUTATION_LOCK_NAME = "xiaokanhui:subscription:window:enabled";
+    private static final int WINDOW_MUTATION_LOCK_TIMEOUT_SECONDS = 10;
 
     @Resource
     private SubscriptionWindowMapper windowMapper;
@@ -55,42 +61,48 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
     private SubscriptionOfferSkuAvailabilityValidator offerSkuAvailabilityValidator;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long createWindow(SubscriptionWindowSaveReqVO reqVO) {
+        acquireWindowMutationLock();
         SubscriptionWindowDO window = buildWindow(reqVO);
         if (CommonStatusEnum.isEnable(window.getStatus())) {
             validateNoOtherEnabledWindowOverlap(window);
+            validateEnabledOfferSkusIfWindowEnabled(window);
         }
         windowMapper.insert(window);
         return window.getId();
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateWindow(SubscriptionWindowSaveReqVO reqVO) {
+        acquireWindowMutationLock();
         validateWindowExists(reqVO.getId());
         SubscriptionWindowDO window = buildWindow(reqVO);
         if (CommonStatusEnum.isEnable(window.getStatus())) {
             validateNoOtherEnabledWindowOverlap(window);
+            validateEnabledOfferSkusIfWindowEnabled(window);
         }
         windowMapper.updateById(window);
-        validateEnabledOfferSkusIfWindowEnabled(window);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateWindowStatus(SubscriptionWindowUpdateStatusReqVO reqVO) {
         updateWindowStatus(reqVO.getId(), reqVO.getStatus());
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateWindowStatus(Long id, Integer status) {
+        acquireWindowMutationLock();
         SubscriptionWindowDO window = validateWindowExists(id);
         if (CommonStatusEnum.isEnable(status)) {
-            validateNoOtherEnabledWindowOverlap(window);
-        }
-        windowMapper.updateById(new SubscriptionWindowDO().setId(id).setStatus(status));
-        if (CommonStatusEnum.isEnable(status)) {
             window.setStatus(status);
+            validateNoOtherEnabledWindowOverlap(window);
             validateEnabledOfferSkusIfWindowEnabled(window);
         }
+        windowMapper.updateById(new SubscriptionWindowDO().setId(id).setStatus(status));
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -134,6 +146,12 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
     @Override
     public PageResult<SubscriptionWindowRespVO> getWindowPageResp(SubscriptionWindowPageReqVO reqVO) {
         return BeanUtils.toBean(getWindowPage(reqVO), SubscriptionWindowRespVO.class, this::fillWindowResp);
+    }
+
+    @Override
+    public List<SubscriptionWindowRespVO> getWindowSimpleList(Integer status) {
+        return BeanUtils.toBean(windowMapper.selectListByStatus(status), SubscriptionWindowRespVO.class,
+                this::fillWindowResp);
     }
 
     @Override
@@ -199,12 +217,42 @@ public class SubscriptionWindowServiceImpl implements SubscriptionWindowService 
         }
     }
 
+    private void acquireWindowMutationLock() {
+        Integer result = windowMapper.getWindowMutationLock(WINDOW_MUTATION_LOCK_NAME,
+                WINDOW_MUTATION_LOCK_TIMEOUT_SECONDS);
+        if (!Objects.equals(result, 1)) {
+            throw exception(WINDOW_TIME_OVERLAP);
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            windowMapper.releaseWindowMutationLock(WINDOW_MUTATION_LOCK_NAME);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                windowMapper.releaseWindowMutationLock(WINDOW_MUTATION_LOCK_NAME);
+            }
+        });
+    }
+
     private void validateEnabledOfferSkusIfWindowEnabled(SubscriptionWindowDO window) {
         if (!CommonStatusEnum.isEnable(window.getStatus())) {
             return;
         }
-        offerMapper.selectListByWindowId(window.getId()).stream()
-                .filter(offer -> CommonStatusEnum.isEnable(offer.getStatus()))
-                .forEach(offer -> offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(offer.getId()));
+        if (window.getId() == null) {
+            throw exception(OFFER_SKU_EFFECTIVE_REQUIRED);
+        }
+        List<SubscriptionWindowOfferDO> offers = offerMapper.selectListByWindowId(window.getId());
+        boolean hasEnabledOffer = false;
+        for (SubscriptionWindowOfferDO offer : offers) {
+            if (!CommonStatusEnum.isEnable(offer.getStatus())) {
+                continue;
+            }
+            hasEnabledOffer = true;
+            offerSkuAvailabilityValidator.validateEnabledOfferHasEffectiveSku(offer.getId());
+        }
+        if (!hasEnabledOffer) {
+            throw exception(OFFER_SKU_EFFECTIVE_REQUIRED);
+        }
     }
 }

@@ -20,7 +20,12 @@ public class RepoPublicationDeliveryBatchCreateReqVO {
     @NotNull(message = "学校不能为空")
     private Long schoolId;
 
-    @Schema(description = "学校配送仓库编号；学校配送必填", example = "200")
+    @Schema(description = "站点编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "300")
+    @NotNull(message = "站点不能为空")
+    private Long stationId;
+
+    @Schema(description = "出库仓库编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "200")
+    @NotNull(message = "出库仓库不能为空")
     private Long warehouseId;
 
     @Schema(description = "订刊窗口编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")

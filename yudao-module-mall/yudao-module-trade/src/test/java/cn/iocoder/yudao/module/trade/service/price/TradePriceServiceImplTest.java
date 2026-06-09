@@ -56,13 +56,13 @@ public class TradePriceServiceImplTest extends BaseMockitoUnitTest {
                 ));
         // mock 方法
         List<ProductSkuRespDTO> skuList = Arrays.asList(
-                new ProductSkuRespDTO().setId(100L).setStock(500).setPrice(1000).setPicUrl("https://t.cn/1.png").setSpuId(1001L)
+                new ProductSkuRespDTO().setId(100L).setStock(500).setStatus(0).setPrice(1000).setPicUrl("https://t.cn/1.png").setSpuId(1001L)
                         .setProperties(singletonList(new ProductPropertyValueDetailRespDTO().setPropertyId(1L).setPropertyName("颜色")
                                 .setValueId(2L).setValueName("红色"))),
-                new ProductSkuRespDTO().setId(200L).setStock(400).setPrice(2000).setPicUrl("https://t.cn/2.png").setSpuId(1001L)
+                new ProductSkuRespDTO().setId(200L).setStock(400).setStatus(0).setPrice(2000).setPicUrl("https://t.cn/2.png").setSpuId(1001L)
                         .setProperties(singletonList(new ProductPropertyValueDetailRespDTO().setPropertyId(1L).setPropertyName("颜色")
                                 .setValueId(3L).setValueName("黄色"))),
-                new ProductSkuRespDTO().setId(300L).setStock(600).setPrice(3000).setPicUrl("https://t.cn/3.png").setSpuId(1001L)
+                new ProductSkuRespDTO().setId(300L).setStock(600).setStatus(0).setPrice(3000).setPicUrl("https://t.cn/3.png").setSpuId(1001L)
                         .setProperties(singletonList(new ProductPropertyValueDetailRespDTO().setPropertyId(1L).setPropertyName("颜色")
                                 .setValueId(4L).setValueName("黑色")))
         );

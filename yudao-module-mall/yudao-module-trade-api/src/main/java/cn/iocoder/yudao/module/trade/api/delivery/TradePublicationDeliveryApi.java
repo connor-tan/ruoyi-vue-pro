@@ -23,6 +23,9 @@ public interface TradePublicationDeliveryApi {
     PageResult<TradePublicationDeliveryCandidateGroupRespDTO> getCandidateGroupPage(
             TradePublicationDeliveryCandidatePageReqDTO reqDTO);
 
+    List<TradePublicationDeliveryCandidateRespDTO> getCandidateList(
+            TradePublicationDeliveryCandidatePageReqDTO reqDTO);
+
     List<TradePublicationDeliveryCandidateRespDTO> getCandidateChildList(
             TradePublicationDeliveryCandidatePageReqDTO reqDTO);
 

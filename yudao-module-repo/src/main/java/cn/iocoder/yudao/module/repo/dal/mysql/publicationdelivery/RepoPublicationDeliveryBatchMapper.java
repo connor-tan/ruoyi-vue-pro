@@ -15,6 +15,7 @@ public interface RepoPublicationDeliveryBatchMapper extends BaseMapperX<RepoPubl
                 .likeIfPresent(RepoPublicationDeliveryBatchDO::getBatchNo, reqVO.getBatchNo())
                 .eqIfPresent(RepoPublicationDeliveryBatchDO::getDeliveryType, reqVO.getDeliveryType())
                 .eqIfPresent(RepoPublicationDeliveryBatchDO::getSchoolId, reqVO.getSchoolId())
+                .eqIfPresent(RepoPublicationDeliveryBatchDO::getStationId, reqVO.getStationId())
                 .eqIfPresent(RepoPublicationDeliveryBatchDO::getWarehouseId, reqVO.getWarehouseId())
                 .eqIfPresent(RepoPublicationDeliveryBatchDO::getWindowId, reqVO.getWindowId())
                 .eqIfPresent(RepoPublicationDeliveryBatchDO::getOfferId, reqVO.getOfferId())

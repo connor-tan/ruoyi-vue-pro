@@ -26,6 +26,9 @@ public class RepoPublicationDeliveryBatchPageReqVO extends PageParam {
     @Schema(description = "学校编号", example = "100")
     private Long schoolId;
 
+    @Schema(description = "站点编号", example = "300")
+    private Long stationId;
+
     @Schema(description = "学校配送仓库编号", example = "200")
     private Long warehouseId;
 

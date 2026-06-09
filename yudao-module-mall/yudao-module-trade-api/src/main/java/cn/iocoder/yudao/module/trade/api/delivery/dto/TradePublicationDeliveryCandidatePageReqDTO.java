@@ -14,6 +14,8 @@ public class TradePublicationDeliveryCandidatePageReqDTO extends PageParam {
 
     private Long schoolId;
 
+    private Long stationId;
+
     private Long warehouseId;
 
     private Long windowId;

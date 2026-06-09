@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.trade.service.price;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.member.api.level.dto.MemberLevelRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
@@ -30,6 +31,7 @@ import java.util.Map;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_ENABLE;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_STOCK_NOT_ENOUGH;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PRICE_CALCULATE_PAY_PRICE_ILLEGAL;
 
@@ -86,12 +88,18 @@ public class TradePriceServiceImpl implements TradePriceService {
         Map<Long, Integer> skuIdCountMap = convertMap(reqBO.getItems(),
                 TradePriceCalculateReqBO.Item::getSkuId, TradePriceCalculateReqBO.Item::getCount);
         List<ProductSkuRespDTO> skus = productSkuApi.getSkuList(skuIdCountMap.keySet());
+        if (skus.size() != skuIdCountMap.size()) {
+            throw exception(SKU_NOT_EXISTS);
+        }
 
         // 校验商品 SKU
         skus.forEach(sku -> {
             Integer count = skuIdCountMap.get(sku.getId());
             if (count == null) {
                 throw exception(SKU_NOT_EXISTS);
+            }
+            if (!CommonStatusEnum.isEnable(sku.getStatus())) {
+                throw exception(SKU_NOT_ENABLE);
             }
         });
         return skus;

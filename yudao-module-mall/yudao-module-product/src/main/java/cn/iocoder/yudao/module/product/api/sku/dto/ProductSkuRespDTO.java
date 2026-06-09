@@ -52,6 +52,10 @@ public class ProductSkuRespDTO {
      */
     private Integer stock;
     /**
+     * 状态
+     */
+    private Integer status;
+    /**
      * 商品重量，单位：kg 千克
      */
     private Double weight;

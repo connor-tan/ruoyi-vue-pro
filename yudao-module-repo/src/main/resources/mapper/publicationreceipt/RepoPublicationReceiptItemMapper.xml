@@ -4,14 +4,14 @@
 
     <sql id="DemandFrom">
         FROM trade_order_publication_issue pi
-        INNER JOIN trade_order o ON o.id = pi.order_id AND o.deleted = b'0'
-        LEFT JOIN product_sku sku ON sku.id = pi.sku_id AND sku.deleted = b'0'
-        LEFT JOIN product_publication_sku_ext sku_ext ON sku_ext.sku_id = pi.sku_id AND sku_ext.deleted = b'0'
+        INNER JOIN trade_order o ON o.id = pi.order_id AND o.deleted = FALSE
+        LEFT JOIN product_sku sku ON sku.id = pi.sku_id AND sku.deleted = FALSE
+        LEFT JOIN product_publication_sku_ext sku_ext ON sku_ext.sku_id = pi.sku_id AND sku_ext.deleted = FALSE
     </sql>
 
     <sql id="DemandWhere">
-        WHERE pi.deleted = b'0'
-          AND pi.canceled = b'0'
+        WHERE pi.deleted = FALSE
+          AND pi.canceled = FALSE
           AND o.status = 10
           AND pi.delivery_status = 10
           AND pi.warehouse_id IS NOT NULL
@@ -19,7 +19,7 @@
           AND EXISTS (
             SELECT 1
             FROM repo_supplier_publication_sku sps
-            WHERE sps.deleted = b'0'
+            WHERE sps.deleted = FALSE
               AND sps.status = 0
               AND sps.supplier_id = #{reqVO.supplierId}
               AND sps.sku_id = pi.sku_id
@@ -111,7 +111,7 @@
                    COALESCE(SUM(received_count), 0) AS receivedCount,
                    COALESCE(SUM(allocated_count), 0) AS allocatedCount
             FROM repo_publication_receipt_item
-            WHERE deleted = b'0'
+            WHERE deleted = FALSE
             GROUP BY warehouse_id, window_id, offer_id, offer_sku_id, sku_id, issue_id, issue_no
         ) balance ON balance.warehouse_id = demand.warehouseId
                  AND balance.window_id = demand.windowId
@@ -153,7 +153,7 @@
                COALESCE(SUM(allocated_count), 0) AS allocatedCount,
                GREATEST(COALESCE(SUM(received_count), 0) - COALESCE(SUM(allocated_count), 0), 0) AS availableCount
         FROM repo_publication_receipt_item
-        WHERE deleted = b'0'
+        WHERE deleted = FALSE
         <if test="keys != null and keys.size() > 0">
           AND (
             <foreach collection="keys" item="key" separator=" OR ">
@@ -176,9 +176,9 @@
             resultType="cn.iocoder.yudao.module.repo.dal.dataobject.publicationreceipt.RepoPublicationReceiptItemDO">
         SELECT item.*
         FROM repo_publication_receipt_item item
-        INNER JOIN repo_publication_receipt receipt ON receipt.id = item.receipt_id AND receipt.deleted = b'0'
-        WHERE item.deleted = b'0'
-          AND receipt.status IN (20, 30, 40)
+        INNER JOIN repo_publication_receipt receipt ON receipt.id = item.receipt_id AND receipt.deleted = FALSE
+        WHERE item.deleted = FALSE
+          AND receipt.status IN (20, 30, 40, 50)
           AND item.warehouse_id = #{key.warehouseId}
           AND item.window_id = #{key.windowId}
           AND item.offer_id = #{key.offerId}
@@ -190,5 +190,13 @@
         ORDER BY item.id ASC
         FOR UPDATE
     </select>
+
+    <update id="incrementReceivedCount">
+        UPDATE repo_publication_receipt_item
+        SET received_count = COALESCE(received_count, 0) + #{receivedCount},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND deleted = FALSE
+    </update>
 
 </mapper>

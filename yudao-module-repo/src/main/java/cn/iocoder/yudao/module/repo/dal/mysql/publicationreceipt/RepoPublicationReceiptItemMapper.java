@@ -40,4 +40,6 @@ public interface RepoPublicationReceiptItemMapper extends BaseMapperX<RepoPublic
 
     List<RepoPublicationReceiptItemDO> selectAvailableListForUpdate(@Param("key") RepoPublicationReceiptBalanceKey key);
 
+    int incrementReceivedCount(@Param("id") Long id, @Param("receivedCount") Integer receivedCount);
+
 }

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.LongStream;
 
+import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_DELIVERY_ITEM_UPDATE_FAIL;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_EXPRESS_BATCH_TOO_LARGE;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.PUBLICATION_EXPRESS_LOGISTICS_REQUIRED;
@@ -63,6 +64,15 @@ class TradePublicationDeliveryApiImplTest {
                 () -> api.getDeliverableItemList(createReq(DeliveryTypeEnum.EXPRESS.getType())));
 
         assertEquals(PUBLICATION_EXPRESS_LOGISTICS_REQUIRED.getCode(), ex.getCode());
+    }
+
+    @Test
+    void getDeliverableItemList_shouldRejectExpressWhenWarehouseMissing() {
+        TradePublicationDeliveryCreateReqDTO reqDTO = expressCreateReq().setWarehouseId(null);
+
+        ServiceException ex = assertThrows(ServiceException.class, () -> api.getDeliverableItemList(reqDTO));
+
+        assertEquals(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND.getCode(), ex.getCode());
     }
 
     @Test
@@ -118,7 +128,8 @@ class TradePublicationDeliveryApiImplTest {
         return new TradePublicationDeliveryCreateReqDTO()
                 .setDeliveryType(deliveryType)
                 .setSchoolId(1L)
-                .setWarehouseId(DeliveryTypeEnum.SCHOOL.getType().equals(deliveryType) ? 2L : null)
+                .setStationId(9L)
+                .setWarehouseId(2L)
                 .setWindowId(3L)
                 .setOfferId(4L)
                 .setOfferSkuId(5L)
@@ -150,7 +161,9 @@ class TradePublicationDeliveryApiImplTest {
                 .setCount(1)
                 .setSchoolId(1L)
                 .setSchoolNameSnapshot("实验小学")
-                .setWarehouseId(DeliveryTypeEnum.SCHOOL.getType().equals(deliveryType) ? 2L : null)
+                .setStationId(9L)
+                .setStationNameSnapshot("城北站点")
+                .setWarehouseId(2L)
                 .setWarehouseNameSnapshot("城北站")
                 .setWindowId(3L)
                 .setWindowNameSnapshot("2026 春季订刊")

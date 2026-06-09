@@ -6,12 +6,17 @@ import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowPageReqVO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
 public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindowDO> {
+
+    Integer getWindowMutationLock(@Param("lockName") String lockName, @Param("timeoutSeconds") Integer timeoutSeconds);
+
+    Integer releaseWindowMutationLock(@Param("lockName") String lockName);
 
     default PageResult<SubscriptionWindowDO> selectPage(SubscriptionWindowPageReqVO reqVO) {
         return selectPage(reqVO, new LambdaQueryWrapperX<SubscriptionWindowDO>()
@@ -27,6 +32,12 @@ public interface SubscriptionWindowMapper extends BaseMapperX<SubscriptionWindow
                 .le(SubscriptionWindowDO::getStartTime, now)
                 .gt(SubscriptionWindowDO::getEndTime, now)
                 .orderByDesc(SubscriptionWindowDO::getStartTime)
+                .orderByDesc(SubscriptionWindowDO::getId));
+    }
+
+    default List<SubscriptionWindowDO> selectListByStatus(Integer status) {
+        return selectList(new LambdaQueryWrapperX<SubscriptionWindowDO>()
+                .eqIfPresent(SubscriptionWindowDO::getStatus, status)
                 .orderByDesc(SubscriptionWindowDO::getId));
     }
 

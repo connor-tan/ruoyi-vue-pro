@@ -186,6 +186,7 @@ class TradeOrderManualServiceImplTest {
         sku.setSpuId(spuId);
         sku.setPrice(PRODUCT_PRICE);
         sku.setStock(100);
+        sku.setStatus(0);
         return sku;
     }
 

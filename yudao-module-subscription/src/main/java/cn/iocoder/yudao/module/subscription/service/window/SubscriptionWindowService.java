@@ -7,6 +7,8 @@ import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.Subscript
 import cn.iocoder.yudao.module.subscription.controller.admin.window.vo.SubscriptionWindowUpdateStatusReqVO;
 import cn.iocoder.yudao.module.subscription.dal.dataobject.SubscriptionWindowDO;
 
+import java.util.List;
+
 /**
  * 订刊窗口 Service 接口
  */
@@ -31,6 +33,8 @@ public interface SubscriptionWindowService {
     SubscriptionWindowRespVO getWindowResp(Long id);
 
     PageResult<SubscriptionWindowRespVO> getWindowPageResp(SubscriptionWindowPageReqVO reqVO);
+
+    List<SubscriptionWindowRespVO> getWindowSimpleList(Integer status);
 
     SubscriptionWindowRespVO getCurrentOpenWindowResp();
 

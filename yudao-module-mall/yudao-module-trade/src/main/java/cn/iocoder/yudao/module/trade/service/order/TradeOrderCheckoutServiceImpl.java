@@ -5,6 +5,7 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.TerminalEnum;
 import cn.iocoder.yudao.module.edu.api.student.EduStudentApi;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentSubscriptionContextRespDTO;
@@ -71,6 +72,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.getSumValue;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_ENABLE;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ITEM_DELIVERY_TYPE_ILLEGAL;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ITEM_DELIVERY_TYPE_REQUIRED;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_ADMIN_ONLINE_EXPRESS_ADDRESS_REQUIRED;
@@ -300,6 +302,9 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
             TradePriceCalculateReqBO.Item item = baseReqBO.getItems().get(i);
             ProductSkuRespDTO sku = skuMap.get(item.getSkuId());
             Assert.notNull(sku, "商品 SKU({}) 不存在", item.getSkuId());
+            if (!CommonStatusEnum.isEnable(sku.getStatus())) {
+                throw exception(SKU_NOT_ENABLE);
+            }
             ProductSpuRespDTO spu = spuMap.get(sku.getSpuId());
             Assert.notNull(spu, "商品 SPU({}) 不存在", sku.getSpuId());
 
@@ -345,8 +350,7 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
             if (item.getSubscriptionStudentId() != null || resolveSubscriptionOfferSkuId(item) != null) {
                 throw exception(ORDER_NORMAL_STUDENT_NOT_ALLOWED);
             }
-            if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())
-                    && !Objects.equals(deliveryType, DeliveryTypeEnum.PICK_UP.getType())) {
+            if (!Objects.equals(deliveryType, DeliveryTypeEnum.EXPRESS.getType())) {
                 throw exception(ORDER_ITEM_DELIVERY_TYPE_ILLEGAL);
             }
         }
@@ -447,6 +451,8 @@ public class TradeOrderCheckoutServiceImpl implements TradeOrderCheckoutService 
                 .setSubscriptionSchoolId(eligibility.getSchoolId())
                 .setSubscriptionSchoolNameSnapshot(eligibility.getSchoolNameSnapshot())
                 .setSubscriptionSchoolAddressSnapshot(eligibility.getSchoolAddressSnapshot())
+                .setSubscriptionStationId(eligibility.getStationId())
+                .setSubscriptionStationNameSnapshot(eligibility.getStationNameSnapshot())
                 .setSubscriptionClassId(eligibility.getClassId())
                 .setSubscriptionClassNameSnapshot(eligibility.getClassNameSnapshot())
                 .setSubscriptionGradeCatalogId(eligibility.getGradeCatalogId())

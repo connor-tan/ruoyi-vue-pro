@@ -142,7 +142,9 @@ CREATE TABLE IF NOT EXISTS `subscription_window_offer` (
     `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `deleted` bit NOT NULL DEFAULT FALSE,
     `tenant_id` bigint NOT NULL DEFAULT 0,
-    PRIMARY KEY (`id`)
+    `active_product_spu_id` bigint GENERATED ALWAYS AS (CASE WHEN `deleted` = FALSE THEN `product_spu_id` ELSE NULL END),
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_subscription_offer_product` (`tenant_id`, `window_id`, `active_product_spu_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `subscription_window` (
@@ -181,7 +183,9 @@ CREATE TABLE IF NOT EXISTS `subscription_window_offer_sku` (
     `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `deleted` bit NOT NULL DEFAULT FALSE,
     `tenant_id` bigint NOT NULL DEFAULT 0,
-    PRIMARY KEY (`id`)
+    `active_product_sku_id` bigint GENERATED ALWAYS AS (CASE WHEN `deleted` = FALSE THEN `product_sku_id` ELSE NULL END),
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_subscription_offer_sku_product` (`tenant_id`, `offer_id`, `active_product_sku_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `subscription_offer_sku_issue` (

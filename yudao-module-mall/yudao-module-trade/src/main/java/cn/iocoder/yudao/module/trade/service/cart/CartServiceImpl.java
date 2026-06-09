@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.trade.service.cart;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.module.edu.api.student.EduStudentApi;
 import cn.iocoder.yudao.module.edu.api.student.dto.EduStudentOrderContextRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
@@ -24,6 +25,7 @@ import java.util.*;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_EXISTS;
+import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_NOT_ENABLE;
 import static cn.iocoder.yudao.module.product.enums.ErrorCodeConstants.SKU_STOCK_NOT_ENOUGH;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.CARD_ITEM_NOT_FOUND;
 import static cn.iocoder.yudao.module.trade.enums.ErrorCodeConstants.ORDER_NORMAL_STUDENT_NOT_ALLOWED;
@@ -240,6 +242,9 @@ public class CartServiceImpl implements CartService {
         ProductSkuRespDTO sku = productSkuApi.getSku(skuId);
         if (sku == null) {
             throw exception(SKU_NOT_EXISTS);
+        }
+        if (!CommonStatusEnum.isEnable(sku.getStatus())) {
+            throw exception(SKU_NOT_ENABLE);
         }
         return sku;
     }

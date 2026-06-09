@@ -75,6 +75,13 @@ public class TradePublicationDeliveryApiImpl implements TradePublicationDelivery
     }
 
     @Override
+    public List<TradePublicationDeliveryCandidateRespDTO> getCandidateList(
+            TradePublicationDeliveryCandidatePageReqDTO reqDTO) {
+        return publicationIssueMapper.selectPublicationDeliveryCandidateChildList(reqDTO,
+                TradeOrderStatusEnum.UNDELIVERED.getStatus(), PublicationDeliveryStatusEnum.UNDELIVERED.getStatus());
+    }
+
+    @Override
     public List<TradePublicationDeliveryCandidateRespDTO> getCandidateChildList(
             TradePublicationDeliveryCandidatePageReqDTO reqDTO) {
         validateGroupScopeReq(reqDTO);
@@ -164,6 +171,7 @@ public class TradePublicationDeliveryApiImpl implements TradePublicationDelivery
         return new TradePublicationDeliveryCandidatePageReqDTO()
                 .setDeliveryType(reqDTO.getDeliveryType())
                 .setSchoolId(reqDTO.getSchoolId())
+                .setStationId(reqDTO.getStationId())
                 .setWarehouseId(reqDTO.getWarehouseId())
                 .setWindowId(reqDTO.getWindowId())
                 .setOfferId(reqDTO.getOfferId())
@@ -174,13 +182,14 @@ public class TradePublicationDeliveryApiImpl implements TradePublicationDelivery
     }
 
     private void validateGroupScopeReq(TradePublicationDeliveryCandidatePageReqDTO reqDTO) {
-        if (reqDTO.getDeliveryType() == null || reqDTO.getSchoolId() == null || reqDTO.getWindowId() == null) {
+        if (reqDTO.getDeliveryType() == null || reqDTO.getSchoolId() == null || reqDTO.getStationId() == null
+                || reqDTO.getWindowId() == null) {
+            throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+        }
+        if (reqDTO.getWarehouseId() == null) {
             throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
         }
         if (Objects.equals(reqDTO.getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType())) {
-            if (reqDTO.getWarehouseId() == null) {
-                throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
-            }
             return;
         }
         if (!Objects.equals(reqDTO.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
@@ -190,12 +199,15 @@ public class TradePublicationDeliveryApiImpl implements TradePublicationDelivery
 
     private void validateCreateReq(TradePublicationDeliveryCreateReqDTO reqDTO) {
         if (Objects.equals(reqDTO.getDeliveryType(), DeliveryTypeEnum.SCHOOL.getType())) {
-            if (reqDTO.getWarehouseId() == null) {
+            if (reqDTO.getStationId() == null || reqDTO.getWarehouseId() == null) {
                 throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
             }
             return;
         }
         if (Objects.equals(reqDTO.getDeliveryType(), DeliveryTypeEnum.EXPRESS.getType())) {
+            if (reqDTO.getStationId() == null || reqDTO.getWarehouseId() == null) {
+                throw exception(PUBLICATION_DELIVERY_CANDIDATE_NOT_FOUND);
+            }
             if (CollUtil.isEmpty(reqDTO.getExpressItems())) {
                 throw exception(PUBLICATION_EXPRESS_LOGISTICS_REQUIRED);
             }

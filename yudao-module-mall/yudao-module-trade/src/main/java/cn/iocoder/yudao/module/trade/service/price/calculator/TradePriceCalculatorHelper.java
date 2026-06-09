@@ -71,6 +71,8 @@ public class TradePriceCalculatorHelper {
                     .setSubscriptionSchoolId(item.getSubscriptionSchoolId())
                     .setSubscriptionSchoolNameSnapshot(item.getSubscriptionSchoolNameSnapshot())
                     .setSubscriptionSchoolAddressSnapshot(item.getSubscriptionSchoolAddressSnapshot())
+                    .setSubscriptionStationId(item.getSubscriptionStationId())
+                    .setSubscriptionStationNameSnapshot(item.getSubscriptionStationNameSnapshot())
                     .setSubscriptionClassId(item.getSubscriptionClassId())
                     .setSubscriptionClassNameSnapshot(item.getSubscriptionClassNameSnapshot())
                     .setSubscriptionGradeCatalogId(item.getSubscriptionGradeCatalogId())

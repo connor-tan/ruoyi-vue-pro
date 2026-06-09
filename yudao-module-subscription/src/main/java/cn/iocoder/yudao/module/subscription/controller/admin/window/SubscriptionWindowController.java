@@ -16,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
 @Tag(name = "管理后台 - 订刊窗口")
@@ -72,6 +74,13 @@ public class SubscriptionWindowController {
     @PreAuthorize("@ss.hasPermission('subscription:window:query')")
     public CommonResult<PageResult<SubscriptionWindowRespVO>> page(@Valid SubscriptionWindowPageReqVO reqVO) {
         return success(windowService.getWindowPageResp(reqVO));
+    }
+
+    @GetMapping("/simple-list")
+    @Operation(summary = "订刊窗口简表")
+    @PreAuthorize("@ss.hasPermission('subscription:window:query')")
+    public CommonResult<List<SubscriptionWindowRespVO>> simpleList(@RequestParam(value = "status", required = false) Integer status) {
+        return success(windowService.getWindowSimpleList(status));
     }
 
     @GetMapping("/current")

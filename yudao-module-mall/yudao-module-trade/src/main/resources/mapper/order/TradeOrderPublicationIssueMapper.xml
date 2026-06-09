@@ -18,6 +18,9 @@
         <if test="reqVO.schoolId != null">
           AND pi.school_id = #{reqVO.schoolId}
         </if>
+        <if test="reqVO.stationId != null">
+          AND pi.station_id = #{reqVO.stationId}
+        </if>
         <if test="reqVO.warehouseId != null">
           AND pi.warehouse_id = #{reqVO.warehouseId}
         </if>
@@ -46,6 +49,8 @@
         SELECT pi.delivery_type AS deliveryType,
                pi.school_id AS schoolId,
                MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
+               pi.station_id AS stationId,
+               MAX(pi.station_name_snapshot) AS stationNameSnapshot,
                pi.warehouse_id AS warehouseId,
                MAX(pi.warehouse_name_snapshot) AS warehouseNameSnapshot,
                pi.window_id AS windowId,
@@ -69,6 +74,7 @@
         <include refid="PublicationIssueCandidateWhere"/>
         GROUP BY pi.delivery_type,
                  pi.school_id,
+                 pi.station_id,
                  pi.warehouse_id,
                  pi.window_id,
                  pi.offer_id,
@@ -76,7 +82,7 @@
                  pi.sku_id,
                  pi.issue_id,
                  pi.issue_no
-        ORDER BY pi.delivery_type ASC, pi.issue_no ASC, pi.warehouse_id ASC, pi.offer_sku_id ASC, pi.sku_id ASC
+        ORDER BY pi.delivery_type ASC, pi.issue_no ASC, pi.warehouse_id ASC, pi.station_id ASC, pi.offer_sku_id ASC, pi.sku_id ASC
     </select>
 
     <select id="selectPublicationDeliveryCandidateGroupPage"
@@ -84,6 +90,8 @@
         SELECT pi.delivery_type AS deliveryType,
                pi.school_id AS schoolId,
                MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
+               pi.station_id AS stationId,
+               MAX(pi.station_name_snapshot) AS stationNameSnapshot,
                pi.warehouse_id AS warehouseId,
                MAX(pi.warehouse_name_snapshot) AS warehouseNameSnapshot,
                pi.window_id AS windowId,
@@ -103,15 +111,18 @@
         <include refid="PublicationIssueCandidateWhere"/>
         GROUP BY pi.delivery_type,
                  pi.school_id,
+                 pi.station_id,
                  pi.warehouse_id,
                  pi.window_id
-        ORDER BY pi.delivery_type ASC, pi.warehouse_id ASC, pi.school_id ASC, pi.window_id ASC
+        ORDER BY pi.delivery_type ASC, pi.warehouse_id ASC, pi.school_id ASC, pi.station_id ASC, pi.window_id ASC
     </select>
 
     <sql id="PublicationDeliveryCandidateChildSelect">
         SELECT pi.delivery_type AS deliveryType,
                pi.school_id AS schoolId,
                MAX(pi.school_name_snapshot) AS schoolNameSnapshot,
+               pi.station_id AS stationId,
+               MAX(pi.station_name_snapshot) AS stationNameSnapshot,
                pi.warehouse_id AS warehouseId,
                MAX(pi.warehouse_name_snapshot) AS warehouseNameSnapshot,
                pi.window_id AS windowId,
@@ -135,6 +146,7 @@
         <include refid="PublicationIssueCandidateWhere"/>
         GROUP BY pi.delivery_type,
                  pi.school_id,
+                 pi.station_id,
                  pi.warehouse_id,
                  pi.window_id,
                  pi.offer_id,
@@ -142,7 +154,7 @@
                  pi.sku_id,
                  pi.issue_id,
                  pi.issue_no
-        ORDER BY pi.delivery_type ASC, pi.issue_no ASC, pi.warehouse_id ASC, pi.offer_sku_id ASC, pi.sku_id ASC
+        ORDER BY pi.delivery_type ASC, pi.issue_no ASC, pi.warehouse_id ASC, pi.station_id ASC, pi.offer_sku_id ASC, pi.sku_id ASC
     </sql>
 
     <select id="selectPublicationDeliveryCandidateChildList"
@@ -167,6 +179,8 @@
                pi.count AS count,
                pi.school_id AS schoolId,
                pi.school_name_snapshot AS schoolNameSnapshot,
+               pi.station_id AS stationId,
+               pi.station_name_snapshot AS stationNameSnapshot,
                pi.warehouse_id AS warehouseId,
                pi.warehouse_name_snapshot AS warehouseNameSnapshot,
                pi.window_id AS windowId,

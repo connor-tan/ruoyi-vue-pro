@@ -16,6 +16,12 @@ public class RepoPublicationDeliveryCandidateGroupRespVO {
     @Schema(description = "学校名称快照", example = "实验小学")
     private String schoolNameSnapshot;
 
+    @Schema(description = "站点编号", example = "300")
+    private Long stationId;
+
+    @Schema(description = "站点名称快照", example = "梁溪站点")
+    private String stationNameSnapshot;
+
     @Schema(description = "学校配送仓库编号", example = "200")
     private Long warehouseId;
 

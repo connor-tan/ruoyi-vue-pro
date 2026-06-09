@@ -161,6 +161,16 @@ public class TradePriceCalculateReqBO {
         private String subscriptionSchoolAddressSnapshot;
 
         /**
+         * 订刊站点编号
+         */
+        private Long subscriptionStationId;
+
+        /**
+         * 订刊站点名称快照
+         */
+        private String subscriptionStationNameSnapshot;
+
+        /**
          * 订刊班级编号
          */
         private Long subscriptionClassId;
