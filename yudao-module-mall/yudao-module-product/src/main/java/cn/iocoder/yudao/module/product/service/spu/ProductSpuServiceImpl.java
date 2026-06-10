@@ -25,6 +25,7 @@ import cn.iocoder.yudao.module.product.service.publication.ProductPublicationSer
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import cn.iocoder.yudao.module.product.service.spu.scene.ProductSceneHandler;
 import cn.iocoder.yudao.module.publication.api.enums.BizSceneEnum;
+import cn.iocoder.yudao.module.trade.api.order.TradeSubscriptionOrderApi;
 import com.google.common.collect.Maps;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
@@ -63,6 +64,8 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     @Resource
     private ProductPublicationService productPublicationService;
     @Resource
+    private TradeSubscriptionOrderApi tradeSubscriptionOrderApi;
+    @Resource
     private List<ProductSceneHandler> productSceneHandlers;
     @Resource
     private ProductSpuProducer productSpuProducer;
@@ -94,12 +97,13 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     public void updateSpu(ProductSpuSaveReqVO updateReqVO) {
         // 校验 SPU 是否存在
         ProductSpuDO spu = validateSpuExists(updateReqVO.getId());
+        List<ProductSkuDO> oldSkus = productSkuService.getSkuListBySpuId(spu.getId());
+        validatePublicationUpdateOrderReference(spu, updateReqVO, oldSkus);
         List<ProductCategoryDO> categories = categoryService.validateLeafCategoryList(
                 updateReqVO.getBizScene(), updateReqVO.getCategoryIds());
         updateReqVO.setCategoryIds(convertList(categories, ProductCategoryDO::getId));
         ProductSceneHandler sceneHandler = getSceneHandler(updateReqVO.getBizScene());
         sceneHandler.validateForSave(updateReqVO);
-        List<ProductSkuDO> oldSkus = productSkuService.getSkuListBySpuId(spu.getId());
 
         // 更新 SPU
         ProductSpuDO updateObj = BeanUtils.toBean(updateReqVO, ProductSpuDO.class).setStatus(spu.getStatus());
@@ -194,13 +198,12 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteSpu(Long id) {
         // 校验存在
-        validateSpuExists(id);
-        // 校验商品状态不是回收站不能删除
-        ProductSpuDO spuDO = productSpuMapper.selectById(id);
+        ProductSpuDO spuDO = validateSpuExists(id);
         // 判断 SPU 状态是否为回收站
         if (ObjectUtil.notEqual(spuDO.getStatus(), ProductSpuStatusEnum.RECYCLE.getStatus())) {
             throw exception(SPU_NOT_RECYCLE);
         }
+        validatePublicationProductNotReferenced(spuDO);
         // TODO 芋艿：【可选】参与活动中的商品，不允许删除？？？
 
         // 删除 SPU
@@ -296,12 +299,58 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     @Transactional(rollbackFor = Exception.class)
     public void updateSpuStatus(ProductSpuUpdateStatusReqVO updateReqVO) {
         // 校验存在
-        validateSpuExists(updateReqVO.getId());
+        ProductSpuDO spuDO = validateSpuExists(updateReqVO.getId());
+        if (ObjectUtil.equal(updateReqVO.getStatus(), ProductSpuStatusEnum.RECYCLE.getStatus())) {
+            validatePublicationProductNotReferenced(spuDO);
+        }
         // TODO 芋艿：【可选】参与活动中的商品，不允许下架？？？
 
         // 更新状态
-        ProductSpuDO productSpuDO = productSpuMapper.selectById(updateReqVO.getId()).setStatus(updateReqVO.getStatus());
+        ProductSpuDO productSpuDO = spuDO.setStatus(updateReqVO.getStatus());
         productSpuMapper.updateById(productSpuDO);
+    }
+
+    private void validatePublicationProductNotReferenced(ProductSpuDO spu) {
+        if (!BizSceneEnum.isPublication(spu.getBizScene())) {
+            return;
+        }
+        if (tradeSubscriptionOrderApi.hasPublicationOrderReferenceByProductSpuId(spu.getId())) {
+            throw exception(PUBLICATION_PRODUCT_ORDER_REFERENCED);
+        }
+    }
+
+    private void validatePublicationUpdateOrderReference(ProductSpuDO spu, ProductSpuSaveReqVO updateReqVO,
+                                                         List<ProductSkuDO> oldSkus) {
+        if (!BizSceneEnum.isPublication(spu.getBizScene())) {
+            return;
+        }
+        Set<Long> oldSkuIds = CollUtil.isEmpty(oldSkus) ? Collections.emptySet()
+                : new LinkedHashSet<>(convertSet(oldSkus, ProductSkuDO::getId));
+        if (!BizSceneEnum.isPublication(updateReqVO.getBizScene())
+                && (tradeSubscriptionOrderApi.hasPublicationOrderReferenceByProductSpuId(spu.getId())
+                || hasPublicationSkuOrderReference(oldSkuIds))) {
+            throw exception(PUBLICATION_PRODUCT_ORDER_REFERENCED);
+        }
+        if (CollUtil.isEmpty(oldSkuIds)) {
+            return;
+        }
+        Set<Long> updateSkuIds = updateReqVO.getSkus() == null ? Collections.emptySet() : updateReqVO.getSkus().stream()
+                .map(ProductSkuSaveReqVO::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        oldSkuIds.removeAll(updateSkuIds);
+        if (CollUtil.isEmpty(oldSkuIds)) {
+            return;
+        }
+        Set<Long> referencedSkuIds = tradeSubscriptionOrderApi.getPublicationOrderReferencedProductSkuIds(oldSkuIds);
+        if (CollUtil.isNotEmpty(referencedSkuIds)) {
+            throw exception(PUBLICATION_SKU_ORDER_REFERENCED);
+        }
+    }
+
+    private boolean hasPublicationSkuOrderReference(Set<Long> skuIds) {
+        return CollUtil.isNotEmpty(skuIds)
+                && CollUtil.isNotEmpty(tradeSubscriptionOrderApi.getPublicationOrderReferencedProductSkuIds(skuIds));
     }
 
     @Override

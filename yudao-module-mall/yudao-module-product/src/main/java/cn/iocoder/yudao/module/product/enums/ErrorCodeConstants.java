@@ -100,5 +100,7 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLICATION_SKU_ISSUE_TEMPLATE_PERIODICAL_REQUIRED = new ErrorCode(1_008_010_015, "只有期刊 SKU 才能维护默认期次模板");
     ErrorCode PUBLICATION_SKU_ISSUE_TEMPLATE_NOT_EXISTS = new ErrorCode(1_008_010_016, "刊物 SKU 默认期次模板不存在");
     ErrorCode PUBLICATION_SKU_ISSUE_TEMPLATE_DUPLICATE = new ErrorCode(1_008_010_017, "刊物 SKU 默认期号已存在");
+    ErrorCode PUBLICATION_PRODUCT_ORDER_REFERENCED = new ErrorCode(1_008_010_018, "刊物商品已生成订单，不能回收、删除或变更业务场景");
+    ErrorCode PUBLICATION_SKU_ORDER_REFERENCED = new ErrorCode(1_008_010_019, "刊物 SKU 已生成订单，不能删除");
 
 }

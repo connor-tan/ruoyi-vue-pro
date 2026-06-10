@@ -35,4 +35,39 @@
         GROUP BY i.subscription_offer_sku_id
     </select>
 
+    <select id="selectPublicationOrderReferenceCountBySpuId" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(t.reference_count), 0)
+        FROM (
+            SELECT COUNT(1) AS reference_count
+            FROM trade_order_item i
+            WHERE i.deleted = 0
+              AND i.spu_id = #{productSpuId}
+              AND i.subscription_offer_sku_id IS NOT NULL
+            UNION ALL
+            SELECT COUNT(1) AS reference_count
+            FROM trade_order_publication_issue pi
+            WHERE pi.deleted = 0
+              AND pi.spu_id = #{productSpuId}
+        ) t
+    </select>
+
+    <select id="selectPublicationOrderReferencedSkuIds" resultType="java.lang.Long">
+        SELECT i.sku_id AS skuId
+        FROM trade_order_item i
+        WHERE i.deleted = 0
+          AND i.subscription_offer_sku_id IS NOT NULL
+          AND i.sku_id IN
+          <foreach collection="productSkuIds" item="productSkuId" open="(" separator="," close=")">
+              #{productSkuId}
+          </foreach>
+        UNION
+        SELECT pi.sku_id AS skuId
+        FROM trade_order_publication_issue pi
+        WHERE pi.deleted = 0
+          AND pi.sku_id IN
+          <foreach collection="productSkuIds" item="productSkuId" open="(" separator="," close=")">
+              #{productSkuId}
+          </foreach>
+    </select>
+
 </mapper>

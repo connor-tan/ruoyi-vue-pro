@@ -91,6 +91,8 @@ CREATE TABLE IF NOT EXISTS "trade_order_item"
     "vip_price"         int      NULL,
     "after_sale_id"     long     NULL,
     "after_sale_status" int      NOT NULL,
+    "subscription_student_id" bigint NULL,
+    "subscription_offer_sku_id" bigint NULL,
     "creator"           varchar           DEFAULT '',
     "create_time"       datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updater"           varchar           DEFAULT '',

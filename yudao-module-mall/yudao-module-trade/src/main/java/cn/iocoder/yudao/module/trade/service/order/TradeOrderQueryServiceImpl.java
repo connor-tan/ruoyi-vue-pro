@@ -358,6 +358,23 @@ public class TradeOrderQueryServiceImpl implements TradeOrderQueryService {
         return quantityMap;
     }
 
+    @Override
+    public boolean hasPublicationOrderReferenceByProductSpuId(Long productSpuId) {
+        if (productSpuId == null) {
+            return false;
+        }
+        Long count = tradeOrderItemMapper.selectPublicationOrderReferenceCountBySpuId(productSpuId);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public Set<Long> getPublicationOrderReferencedProductSkuIds(Collection<Long> productSkuIds) {
+        if (CollUtil.isEmpty(productSkuIds)) {
+            return Collections.emptySet();
+        }
+        return tradeOrderItemMapper.selectPublicationOrderReferencedSkuIds(productSkuIds);
+    }
+
     /**
      * 获得自身的代理对象，解决 AOP 生效问题
      *

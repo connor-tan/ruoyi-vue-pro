@@ -63,4 +63,8 @@ public interface TradeOrderItemMapper extends BaseMapperX<TradeOrderItemDO> {
             @Param("offerSkuIds") Collection<Long> offerSkuIds,
             @Param("canceledStatus") Integer canceledStatus);
 
+    Long selectPublicationOrderReferenceCountBySpuId(@Param("productSpuId") Long productSpuId);
+
+    Set<Long> selectPublicationOrderReferencedSkuIds(@Param("productSkuIds") Collection<Long> productSkuIds);
+
 }
