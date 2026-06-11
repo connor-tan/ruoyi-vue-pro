@@ -189,8 +189,15 @@ services:
   gateway:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    command: >
+      /bin/sh -c 'while :; do
+      sleep ${NGINX_RELOAD_INTERVAL_SECONDS:-43200};
+      nginx -s reload;
+      done &
+      nginx -g "daemon off;"'
     ports:
       - "${GATEWAY_DOMAIN_BIND_HOST:-0.0.0.0}:${GATEWAY_HTTP_PORT:-18080}:80"
+      - "${GATEWAY_DOMAIN_BIND_HOST:-0.0.0.0}:${GATEWAY_HTTPS_PORT:-18443}:443"
       - "${GATEWAY_FALLBACK_BIND_HOST:-0.0.0.0}:${GATEWAY_ADMIN_PORT:-18081}:8081"
       - "${GATEWAY_FALLBACK_BIND_HOST:-0.0.0.0}:${GATEWAY_H5_PORT:-18082}:8082"
       - "${GATEWAY_FALLBACK_BIND_HOST:-0.0.0.0}:${GATEWAY_API_PORT:-18083}:8083"
@@ -198,8 +205,13 @@ services:
       ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.dev.localhost}
       H5_DOMAIN: ${H5_DOMAIN:-h5.dev.localhost}
       API_DOMAIN: ${API_DOMAIN:-api.dev.localhost}
+      WWW_DOMAIN: ${WWW_DOMAIN:-www.dev.localhost}
+      CERTBOT_CERT_NAME: ${CERTBOT_CERT_NAME:-xiaokanhui-dev}
+      NGINX_RELOAD_INTERVAL_SECONDS: ${NGINX_RELOAD_INTERVAL_SECONDS:-43200}
     volumes:
-      - ./nginx/templates/edge-gateway.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/templates/${GATEWAY_TEMPLATE:-edge-gateway.conf.template}:/etc/nginx/templates/default.conf.template:ro
+      - ${LETSENCRYPT_HOST_PATH:-./certbot/conf}:/etc/letsencrypt:ro
+      - ${CERTBOT_WEBROOT_HOST_PATH:-./certbot/www}:/var/www/certbot:ro
     depends_on:
       admin:
         condition: service_healthy

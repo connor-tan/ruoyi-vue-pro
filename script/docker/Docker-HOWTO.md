@@ -71,12 +71,13 @@ API 无域名入口：http://服务器IP:38083/actuator/health
 ### prod
 
 ```text
-管理后台：http://admin.xiaokanhui.com
-H5：http://h5.xiaokanhui.com
-API：http://api.xiaokanhui.com/actuator/health
+管理后台：https://admin.xiaoyuanyuedu.cn
+H5：https://h5.xiaoyuanyuedu.cn
+H5 备用入口：https://www.xiaoyuanyuedu.cn
+API：https://api.xiaoyuanyuedu.cn/actuator/health
 ```
 
-生产 `gateway` 的域名入口默认发布宿主机 `80`；无域名 fallback 端口和 admin/app 调试端口绑定 `127.0.0.1`，不对公网开放。
+生产 `gateway` 的域名入口默认发布宿主机 `80` 和 `443`；无域名 fallback 端口和 admin/app 调试端口绑定 `127.0.0.1`，不对公网开放。
 
 ## Gateway
 
@@ -84,14 +85,16 @@ API：http://api.xiaokanhui.com/actuator/health
 
 ```text
 /Users/connor/workspace/xiaokanhui/ruoyi-vue-pro/script/docker/nginx/templates/edge-gateway.conf.template
+/Users/connor/workspace/xiaokanhui/ruoyi-vue-pro/script/docker/nginx/templates/edge-gateway-https.conf.template
 ```
 
-启动时 Nginx 自动将环境变量渲染成 `/etc/nginx/conf.d/default.conf`。
+启动时 Nginx 自动将 `GATEWAY_TEMPLATE` 指定的模板渲染成 `/etc/nginx/conf.d/default.conf`。
 
 支持两种访问模式：
 
 - 有域名：`ADMIN_DOMAIN`、`H5_DOMAIN`、`API_DOMAIN` 通过 `GATEWAY_HTTP_PORT` 分流。
 - 无域名：`GATEWAY_ADMIN_PORT`、`GATEWAY_H5_PORT`、`GATEWAY_API_PORT` 分别进入管理后台、H5、API。
+- 生产 HTTPS：`edge-gateway-https.conf.template` 监听 `443`，`80` 保留 `/nginx-health`、`/.well-known/acme-challenge/` 和 HTTP 到 HTTPS 跳转。
 
 本地可通过 Host 头验证域名分流：
 
@@ -107,7 +110,53 @@ curl -H "Host: api.dev.localhost" http://localhost:18080/actuator/health
 docker compose --env-file env/dev.env up -d --force-recreate gateway
 ```
 
-TLS 证书、HTTPS 监听和真实生产域名解析在部署环境中补充；当前 compose 只提供 HTTP 入口。
+生产证书挂载由环境变量控制：
+
+```dotenv
+GATEWAY_TEMPLATE=edge-gateway-https.conf.template
+GATEWAY_HTTPS_PORT=443
+CERTBOT_CERT_NAME=xiaoyuanyuedu.cn
+LETSENCRYPT_HOST_PATH=/etc/letsencrypt
+CERTBOT_WEBROOT_HOST_PATH=/var/www/certbot
+```
+
+`gateway` 会以只读方式挂载宿主机证书目录，并每 12 小时执行一次 `nginx -s reload`，用于读取 Certbot 续签后的新证书。
+
+## Let's Encrypt
+
+当前生产证书名为 `xiaoyuanyuedu.cn`，覆盖：
+
+```text
+www.xiaoyuanyuedu.cn
+admin.xiaoyuanyuedu.cn
+h5.xiaoyuanyuedu.cn
+api.xiaoyuanyuedu.cn
+```
+
+证书路径：
+
+```text
+/etc/letsencrypt/live/xiaoyuanyuedu.cn/fullchain.pem
+/etc/letsencrypt/live/xiaoyuanyuedu.cn/privkey.pem
+```
+
+由于生产 `gateway` 会占用宿主机 `80`，Certbot 续签应使用 webroot 模式，而不是 standalone 模式：
+
+```shell
+sudo mkdir -p /var/www/certbot
+sudo certbot certonly --webroot \
+  -w /var/www/certbot \
+  --cert-name xiaoyuanyuedu.cn \
+  --expand \
+  -d www.xiaoyuanyuedu.cn \
+  -d admin.xiaoyuanyuedu.cn \
+  -d h5.xiaoyuanyuedu.cn \
+  -d api.xiaoyuanyuedu.cn
+
+sudo certbot renew --dry-run --cert-name xiaoyuanyuedu.cn --no-random-sleep-on-renew
+```
+
+如果后续需要把根域名 `xiaoyuanyuedu.cn` 加入证书，必须先确认 `@` 的 A 记录解析到生产服务器，再在上面的命令中追加 `-d xiaoyuanyuedu.cn`。
 
 ## 构建参数
 
@@ -160,6 +209,11 @@ docker compose --env-file env/dev.env logs -f gateway
 # 验证 gateway
 curl http://localhost:18080/nginx-health
 curl http://localhost:18083/actuator/health
+
+# 验证生产 HTTPS gateway
+curl -I https://admin.xiaoyuanyuedu.cn/
+curl -I https://h5.xiaoyuanyuedu.cn/
+curl -I https://api.xiaoyuanyuedu.cn/actuator/health
 
 # 验证后端健康。后端不发布宿主机端口，健康检查在容器内执行。
 docker compose --env-file env/dev.env exec server \
