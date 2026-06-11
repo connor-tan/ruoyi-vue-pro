@@ -194,7 +194,7 @@ services:
       sleep ${NGINX_RELOAD_INTERVAL_SECONDS:-43200};
       nginx -s reload;
       done &
-      nginx -g "daemon off;"'
+      /docker-entrypoint.sh nginx -g "daemon off;"'
     ports:
       - "${GATEWAY_DOMAIN_BIND_HOST:-0.0.0.0}:${GATEWAY_HTTP_PORT:-18080}:80"
       - "${GATEWAY_DOMAIN_BIND_HOST:-0.0.0.0}:${GATEWAY_HTTPS_PORT:-18443}:443"
